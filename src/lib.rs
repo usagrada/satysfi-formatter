@@ -10,21 +10,25 @@ struct OptionData {
   indent_space: usize,
 }
 
-const option: OptionData = OptionData {
+// format 設定のオプション
+static option: OptionData = OptionData {
   row_length: 100,
   indent_space: 4,
 };
 
-// for debug
+// for debug called by main.rs
 pub fn input() {
   let text = r#"@import: hello
 @require: local
 % comment
 document(|title = hello|)'<+p{hello world}>"#;
   let output = format(text);
-  println!("{}", output);
+  dbg!(output);
 }
 
+/// satysfi の文字列を渡すと format したものを返す
+/// * `input` - satysfi のコード  
+/// * `output` - format された文字列
 pub fn format(input: &str) -> String {
   /*
   CstText {
@@ -37,13 +41,17 @@ pub fn format(input: &str) -> String {
   unsafe {
     PROGRAM_TEXT = input.to_string();
   }
-  println!("csttext\n{:?}\n\n", csttext.cst);
+  dbg!(&csttext.cst);
   let mut output = String::new();
   let depth = 0;
   for node in csttext.cst.inner.iter() {
     output += &to_string_csts(node.inner.clone(), depth);
   }
-  println!("end format\n");
+  // 末尾に改行がない場合、改行を挿入して終了
+  if output.chars().nth_back(0) != Some('\n') {
+    output += "\n";
+  }
+
   output
 }
 
@@ -74,12 +82,12 @@ fn to_string_cst(cst: &Cst, depth: usize) -> String {
     _ => depth,
   };
 
-  use satysfi_parser::Rule;
   let output = to_string_csts(cst.inner.clone(), new_depth);
   let self_text = unsafe { PROGRAM_TEXT.get(cst.span.start..cst.span.end) }
     .unwrap()
     .to_string();
 
+  use satysfi_parser::Rule;
   match cst.rule {
     // header
     Rule::header_import => "@import: ".to_string() + &output + "\n",
@@ -91,9 +99,9 @@ fn to_string_cst(cst: &Cst, depth: usize) -> String {
     Rule::unary_prefix => output,
     Rule::block_text => {
       if self_text.chars().nth(0) == Some('\'') {
-        format!("'<\n{output}\n>")
+        format!("'<\n{output}>")
       } else {
-        format!("<\n{output}\n>")
+        format!("<\n{output}>")
       }
     }
     Rule::horizontal_text => self_text,
@@ -121,7 +129,7 @@ fn to_string_cst(cst: &Cst, depth: usize) -> String {
       } else {
         " ".to_string()
       };
-      format!(" {{{space}{output}{space}}}")
+      format!(" {{{space}{output}{space}}}\n")
     }
     Rule::inline_cmd => self_text,
     Rule::inline_cmd_name => self_text,
@@ -155,14 +163,14 @@ fn to_string_cst(cst: &Cst, depth: usize) -> String {
     Rule::variant_constructor => output,
 
     // horizontal
-    Rule::horizontal_single => output,      // TODO
-    Rule::horizontal_list => output,        // TODO
-    Rule::horizontal_bullet_list => output, // TODO
-    Rule::horizontal_bullet => output,      // TODO
-    Rule::horizontal_bullet_star => output, // TODO
-    Rule::regular_text => self_text,
-    Rule::horizontal_escaped_char => output, // TODO
-    Rule::inline_text_embedding => output,   // TODO
+    Rule::horizontal_single => output,                  // TODO
+    Rule::horizontal_list => output,                    // TODO
+    Rule::horizontal_bullet_list => output,             // TODO
+    Rule::horizontal_bullet => output,                  // TODO
+    Rule::horizontal_bullet_star => output,             // TODO
+    Rule::regular_text => self_text.trim().to_string(), // remove space of start and end
+    Rule::horizontal_escaped_char => output,            // TODO
+    Rule::inline_text_embedding => output,              // TODO
 
     // vertical
     Rule::vertical => output,             // TODO

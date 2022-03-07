@@ -11,6 +11,24 @@ document(|title = hello|)'<+p{hello world}>"#;
 @require: local
 document(|title = hello|)'<
     +p { hello world }
->"#;
-    assert_eq!(output, expect);
+>
+"#;
+  assert_eq!(output, expect);
+}
+
+#[test]
+pub fn test2() {
+  let text = r#"@import: hello
+@require: local
+% comment
+document(|title = hello|)'<+p{hello world}+p { hello world }>"#;
+  let output = format(text);
+  let expect = r#"@import: hello
+@require: local
+document(|title = hello|)'<
+    +p { hello world }
+    +p { hello world }
+>
+"#;
+  assert_eq!(output, expect);
 }
