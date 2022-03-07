@@ -41,7 +41,7 @@ pub fn format(input: &str) -> String {
   dbg!(&csttext.cst);
   let depth = 0;
   for node in csttext.cst.inner.iter() {
-    output += &to_string_csts(input, node.inner.clone(), depth);
+    output += &to_string_cst_inner(input, node, depth);
   }
 
   // 末尾に改行がない場合、改行を挿入して終了
@@ -52,17 +52,26 @@ pub fn format(input: &str) -> String {
   output
 }
 
-fn to_string_csts(text: &str, csts: Vec<Cst>, depth: usize) -> String {
+fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
   /*
   Cst {
     rule: Rule,
     span: Span { start: number, end: number },
     inner: [Cst] }
   */
-  let mut output = String::new();
-  for cst in csts {
-    output += &to_string_cst(text, &cst, depth);
-  }
+  let csts = cst.inner.clone();
+  let is_block = cst.rule == satysfi_parser::Rule::horizontal_single;
+  let sep = if is_block { " " } else { "" };
+  let output = csts.iter().fold(String::new(), |current, cst| {
+    let s = to_string_cst(text, &cst, depth);
+    if current == "" {
+      s
+    } else if s == "" {
+      current
+    }else {
+      current + sep + &s
+    }
+  });
 
   output
 }
@@ -81,7 +90,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
     _ => depth,
   };
 
-  let output = to_string_csts(text, cst.inner.clone(), new_depth);
+  let output = to_string_cst_inner(text, cst, new_depth);
   let self_text = text.get(cst.span.start..cst.span.end).unwrap().to_string();
 
   use satysfi_parser::Rule;
@@ -128,7 +137,13 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
       };
       format!(" {{{space}{output}{space}}}\n")
     }
-    Rule::inline_cmd => self_text,
+    Rule::inline_cmd => {
+      if self_text.chars().nth_back(0) == Some(';') {
+        output + ";"
+      } else {
+        output
+      }
+    }
     Rule::inline_cmd_name => self_text,
     Rule::block_cmd => output,
     Rule::block_cmd_name => {
