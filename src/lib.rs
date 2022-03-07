@@ -3,8 +3,6 @@ mod tests;
 
 use satysfi_parser::{grammar, Cst, CstText};
 
-static mut PROGRAM_TEXT: String = String::new();
-
 struct OptionData {
   row_length: usize,
   indent_space: usize,
@@ -21,7 +19,7 @@ pub fn input() {
   let text = r#"@import: hello
 @require: local
 % comment
-document(|title = hello|)'<+p{hello world}>"#;
+document(|title = hello|)'<+p{hello world}+p { \SATYSFI; }>"#;
   let output = format(text);
   dbg!(output);
 }
@@ -38,15 +36,14 @@ pub fn format(input: &str) -> String {
   }
   */
   let csttext = CstText::parse(input, grammar::program).unwrap();
-  unsafe {
-    PROGRAM_TEXT = input.to_string();
-  }
-  dbg!(&csttext.cst);
   let mut output = String::new();
+
+  dbg!(&csttext.cst);
   let depth = 0;
   for node in csttext.cst.inner.iter() {
-    output += &to_string_csts(node.inner.clone(), depth);
+    output += &to_string_csts(input, node.inner.clone(), depth);
   }
+
   // 末尾に改行がない場合、改行を挿入して終了
   if output.chars().nth_back(0) != Some('\n') {
     output += "\n";
@@ -55,7 +52,7 @@ pub fn format(input: &str) -> String {
   output
 }
 
-fn to_string_csts(csts: Vec<Cst>, depth: usize) -> String {
+fn to_string_csts(text: &str, csts: Vec<Cst>, depth: usize) -> String {
   /*
   Cst {
     rule: Rule,
@@ -64,17 +61,19 @@ fn to_string_csts(csts: Vec<Cst>, depth: usize) -> String {
   */
   let mut output = String::new();
   for cst in csts {
-    output += &to_string_cst(&cst, depth);
+    output += &to_string_cst(text, &cst, depth);
   }
 
   output
 }
 
 // 中身をそのまま返すものは output をそのまま返す
-fn to_string_cst(cst: &Cst, depth: usize) -> String {
-  println!("{:?}, {:?}", cst.rule, unsafe {
-    PROGRAM_TEXT.get(cst.span.start..cst.span.end).unwrap()
-  });
+fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
+  println!(
+    "{:?}, {:?}",
+    cst.rule,
+    text.get(cst.span.start..cst.span.end).unwrap()
+  );
 
   // インデントを制御するための変数
   let new_depth = match cst.rule {
@@ -82,10 +81,8 @@ fn to_string_cst(cst: &Cst, depth: usize) -> String {
     _ => depth,
   };
 
-  let output = to_string_csts(cst.inner.clone(), new_depth);
-  let self_text = unsafe { PROGRAM_TEXT.get(cst.span.start..cst.span.end) }
-    .unwrap()
-    .to_string();
+  let output = to_string_csts(text, cst.inner.clone(), new_depth);
+  let self_text = text.get(cst.span.start..cst.span.end).unwrap().to_string();
 
   use satysfi_parser::Rule;
   match cst.rule {
