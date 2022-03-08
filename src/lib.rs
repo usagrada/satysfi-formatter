@@ -101,7 +101,7 @@ pub struct OptionData {
 #[allow(non_upper_case_globals)]
 // format 設定のオプション
 static default_option: OptionData = OptionData {
-    row_length: 40,
+    row_length: 80,
     indent_space: 4,
 };
 
@@ -143,7 +143,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
     use satysfi_parser::Rule;
     let csts = cst.inner.clone();
     let sep = &match cst.rule {
-        Rule::block_cmd | Rule::horizontal_single => " ".to_string(),
+        Rule::block_cmd | Rule::inline_cmd | Rule::horizontal_single => " ".to_string(),
         Rule::vertical | Rule::horizontal_bullet_list => format!("\n{}", indent_space(depth)),
         Rule::record => format!(";\n{}", indent_space(depth)),
         _ => "".to_string(),
@@ -162,9 +162,21 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     Rule::expr => current + " = " + &to_string_cst(text, now_cst, depth),
                     _ => String::new(),
                 }
-                // current + &to_string_cst_inner(text, cst, depth)
             })
         }
+        Rule::horizontal_single => csts.iter().fold((String::new(), 0), |current, now_cst| {
+            let s = to_string_cst(text, &now_cst, depth);
+            if current.0.is_empty() {
+                (s.clone(), s.chars().count())
+            } else if s.is_empty() {
+                current
+            } else if now_cst.rule != Rule::regular_text && (current.1 > default_option.row_length || current.1 + s.chars().count() > default_option.row_length) {
+                // 一定以上の長さの時は改行を挿入
+                (current.0 + "\n" + &indent_space(depth) + &s, s.chars().count())
+            } else {
+                (current.0.clone() + sep + &s, current.1 + s.chars().count())
+            }
+        }).0,
         _ => csts.iter().fold(String::new(), |current, now_cst| {
             let s = to_string_cst(text, &now_cst, depth);
             if current.is_empty() {
@@ -284,7 +296,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         }
         Rule::inline_cmd => {
             if self_text.chars().nth_back(0) == Some(';') {
-                format!("{output};")
+                output + ";"
             } else {
                 output
             }
