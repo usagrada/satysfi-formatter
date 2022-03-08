@@ -36,7 +36,8 @@ cargo install --path .
     +section{formatter の使い方}<
         +p {
             \SATySFi; を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。
-            \footnote{このドキュメントは format のテストも兼ねて書いています。}
+            \footnote{このドキュメントは format のテストも兼ねて書いています。} 
+            % comment
             
         }
         +code-printer ?:(
@@ -46,6 +47,21 @@ cargo install --path .
   (`satysfi-fmt $input -o $output`);
         +p {
             `output` を指定しなかった場合、コマンドラインの標準出力に結果が表示されます。
+        }
+    >
+    +section{開発者の方}<
+        +p {
+            release build でない場合、 `src/visualize.rs` にある関数が呼び出されるようになっており、ファイルの構造を確認できるようになってます。
+            \code-printer ?:(
+  CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
+  |> CodePrinter.set-basic-font-size 9pt
+  |> CodePrinter.set-number-fun CodeDesign.number-fun-null)
+  (`cargo run -- $input`);
+            `lib.rs` の `format` を開始地点とし、
+            コードから `satysfi-parser` で CST 化し、文字列に戻して結合しています。
+            現状では、かなり愚直な実装をしている + 一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える、etc.)ため、
+            修正等があれば、 Pull Request や Issue にお願いいたします。
+            % 例えばこのコメントが消える
         }
     >
 >
