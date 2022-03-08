@@ -1,15 +1,16 @@
 use crate::format;
 
-
 #[test]
 fn test1() {
   let text1 = r#"@import: hello
   @require: local
   % comment
-  document(|title = {hello}|)'<+p{hello world}>"#;
+  
+document(|title = {hello}|)'<+p{hello world}>"#;
   let output = format(text1);
   let expect = r#"@import: hello
 @require: local
+
 document(|title = {hello}|)'<
     +p { hello world }
 >
@@ -17,16 +18,17 @@ document(|title = {hello}|)'<
   assert_eq!(output, expect);
 }
 
-
 #[test]
 fn test2() {
   let text2 = r#"@import: hello
   @require: local
   % comment
-  document(|title = {hello}|)'<+p{hello world}+p { hello world }>"#;
+  
+document(|title = {hello}|)'<+p{hello world}+p { hello world }>"#;
   let output = format(text2);
   let expect = r#"@import: hello
 @require: local
+
 document(|title = {hello}|)'<
     +p { hello world }
     +p { hello world }
@@ -40,10 +42,12 @@ fn test3() {
   let text = r#"@import: hello
 @require: local
 % comment
+
 document(|title = {hello}|)'<+p{hello world}+p { \SATYSFI; }>"#;
   let output = format(text);
   let expect = r#"@import: hello
 @require: local
+
 document(|title = {hello}|)'<
     +p { hello world }
     +p { \SATYSFI; }
@@ -57,10 +61,12 @@ fn test4() {
   let text = r#"@import: hello
 @require: local
 % comment
+
 document(|title = {hello}|)'<+p{hello world}+p {\SATYSFI;format}>"#;
   let output = format(text);
   let expect = r#"@import: hello
 @require: local
+
 document(|title = {hello}|)'<
     +p { hello world }
     +p { \SATYSFI; format }
@@ -74,10 +80,12 @@ fn test5() {
   let text = r#"@import: hello
 @require: local
 % comment
+
 document(|title = {hello}|)'<+p{hello world}+p {format\SATYSFI;format}>"#;
   let output = format(text);
   let expect = r#"@import: hello
 @require: local
+
 document(|title = {hello}|)'<
     +p { hello world }
     +p { format \SATYSFI; format }
@@ -89,9 +97,11 @@ document(|title = {hello}|)'<
 #[test]
 fn test6() {
   let text = r#"
+
 document(|title = {hello}|)'<+p{hello world}+p {${ax^2 + bx + c = 0}}>"#;
   let output = format(text);
-  let expect = r#"document(|title = {hello}|)'<
+  let expect = r#"
+document(|title = {hello}|)'<
     +p { hello world }
     +p { ${ax^2 + bx + c = 0} }
 >
@@ -101,9 +111,11 @@ document(|title = {hello}|)'<+p{hello world}+p {${ax^2 + bx + c = 0}}>"#;
 
 #[test]
 fn test7() {
-  let text = r#"document(|title = {hello}; author = {author};|)'<>"#;
+  let text = r#"
+document(|title = {hello}; author = {author};|)'<>"#;
   let output = format(text);
-  let expect = r#"document(|
+  let expect = r#"
+document(|
     title = {hello};
     author = {author};
 |)'<>
@@ -115,6 +127,7 @@ fn test7() {
 fn test8() {
   let text = r#"@require: stdja
 @require: itemize
+
 
 document(|
     author = {author};
@@ -137,6 +150,7 @@ document(|
   let output = format(text);
   let expect = r#"@require: stdja
 @require: itemize
+
 document(|
     author = {author};
     show-title = false;
@@ -160,7 +174,8 @@ document(|
 #[test]
 fn test9() {
   let text = r#"
-  document(||)'<
+  
+document(||)'<
 +section{ section }<
 +p {
         \listing{
@@ -171,7 +186,8 @@ fn test9() {
 }
 >>"#;
   let output = format(text);
-  let expect = r#"document(||)'<
+  let expect = r#"
+document(||)'<
     +section { section } <
         +p {
             \listing{
@@ -186,11 +202,11 @@ fn test9() {
   assert_eq!(output, expect);
 }
 
-
 #[test]
 fn test10() {
   let text = r#"
-  document(||)'<
+  
+document(||)'<
 +section{ section }<
 +p {
 hello
@@ -198,7 +214,8 @@ hello
 }
 >>"#;
   let output = format(text);
-  let expect = r#"document(||)'<
+  let expect = r#"
+document(||)'<
     +section { section } <
         +p {
             hello
@@ -213,12 +230,14 @@ hello
 #[test]
 fn test_unicode() {
   let text = r#"
-  document(||)'<
+  
+document(||)'<
 +section{ section }<
 +p {日本語}
 >>"#;
   let output = format(text);
-  let expect = r#"document(||)'<
+  let expect = r#"
+document(||)'<
     +section { section } <
         +p { 日本語 }
     >
@@ -227,3 +246,31 @@ fn test_unicode() {
   assert_eq!(output, expect);
 }
 
+#[test]
+fn test_let_block2() {
+  let text = r#"
+@require: stdja
+
+let-block ctx +newpage = clear-page
+in
+
+document(||)'<
+    +newpage;
+    
+    +p{hello
+    }
+>
+"#;
+  let output = format(text);
+  let expect = r#"@require: stdja
+
+let-block ctx +newpage = clear-page
+in
+
+document(||)'<
+    +newpage;
+    +p { hello }
+>
+"#;
+  assert_eq!(output, expect);
+}

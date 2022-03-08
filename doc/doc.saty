@@ -1,0 +1,54 @@
+@require: stdjabook
+@require: code-printer/code-printer
+@require: code-printer/code-syntax
+@require: code-printer/code-theme
+@require: code-printer/code-design
+
+let-block  ctx +newpage = clear-page
+in
+
+document(|
+    title = {\SATySFi;-formatter};
+    author = {usagrada};
+    show-toc = true;
+    show-title = true;
+|)'<
+    +newpage;
+
+    +section { Formatter の install 方法 } <
+        +p {
+            以下のどちらかの方法で、入れることができます。
+            ターミナルに以下のコマンドを打ち込んでください。
+        }
+        +code-printer ?:(
+  CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
+  |> CodePrinter.set-basic-font-size 9pt
+  |> CodePrinter.set-number-fun CodeDesign.number-fun-null
+) (`cargo install --git https://github.com/usagrada/satysfi-formatter.git`);
+
+        +code-printer ?:(
+  CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
+  |> CodePrinter.set-basic-font-size 9pt
+  |> CodePrinter.set-number-fun CodeDesign.number-fun-null
+) (`git clone https://github.com/usagrada/satysfi-formatter.git
+cd satysfi-formatter
+cargo install --path .
+`);
+
+    >
+    +section { Formatter の使い方 } <
+        +p {
+            \SATySFi; を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。 \footnote{
+                このドキュメントは format のテストも兼ねて書いています。
+            }
+        }
+        +code-printer ?:(
+  CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
+  |> CodePrinter.set-basic-font-size 9pt
+  |> CodePrinter.set-number-fun CodeDesign.number-fun-null) (`satysfi-fmt $input -o $output`);
+
+        +p {
+            `output` を指定しなかった場合、コマンドラインの標準出力に結果が表示されます。
+        }
+    >
+>

@@ -1,0 +1,4 @@
+*.satysfi-aux
+*.pdf
+!doc.saty
+!doc.pdf

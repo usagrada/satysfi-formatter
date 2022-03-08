@@ -5,6 +5,37 @@ pub use visualize::*;
 
 use satysfi_parser::{grammar, Cst, CstText};
 
+type ReservedText = &'static str;
+struct ReservedWord {
+  let_block: ReservedText,
+  let_math: ReservedText,
+  let_mutable: ReservedText,
+  type_stmt: ReservedText,
+  let_inline: ReservedText,
+  constraint: ReservedText,
+  inline_command: ReservedText,
+  block_command: ReservedText,
+  math_command: ReservedText,
+  let_rec: ReservedText,
+}
+
+const RESERVED_WORD: ReservedWord = ReservedWord {
+  constraint: "constraint",
+  inline_command: "inline-cmd",
+  block_command: "block-cmd",
+  math_command: "math-cmd",
+  let_mutable: "let-mutable",
+  let_inline: "let-inline",
+  let_block: "let-block",
+  let_math: "let-math",
+  type_stmt: "type",
+  let_rec: "let-rec", // / "controls" / "command" / "before" / "module" / "direct" / "struct"
+                      // / "cycle" / "match" / "while" / "false"
+                      // / "else" / "open" / "then" / "true" / "type" / "when" / "with"
+                      // / "and" / "end" / "fun" / "let" / "mod" / "not" / "sig" / "val"
+                      // / "as" / "do" / "if" / "in" / "of")
+};
+
 struct OptionData {
   row_length: usize,
   indent_space: usize,
@@ -28,12 +59,12 @@ pub fn format(input: &str) -> String {
   }
   */
   let csttext = CstText::parse(input, grammar::program).expect("parse error");
-  let mut output = String::new();
+
+  #[cfg(debug_assertions)]
+  visualize_csttext_tree(&csttext);
 
   let depth = 0;
-  for node in csttext.cst.inner.iter() {
-    output += &to_string_cst_inner(input, node, depth);
-  }
+  let mut output = to_string_cst_inner(input, &csttext.cst, depth);
 
   // 末尾に改行がない場合、改行を挿入して終了
   if output.chars().nth_back(0) != Some('\n') {
@@ -59,16 +90,35 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
     Rule::record => format!(";\n{}", indent_space(depth)),
     _ => "".to_string(),
   };
-  let output = csts.iter().fold(String::new(), |current, cst| {
-    let s = to_string_cst(text, &cst, depth);
-    if current.is_empty() {
-      s
-    } else if s.is_empty() {
-      current
-    } else {
-      current + sep + &s
+
+  let output = match cst.rule {
+    Rule::let_block_stmt_ctx
+    | Rule::let_block_stmt_ctx
+    | Rule::let_inline_stmt_ctx
+    | Rule::let_inline_stmt_noctx
+    | Rule::let_math_stmt
+    | Rule::let_math_stmt => {
+      csts.iter().fold(String::new(), |current, now_cst| {
+        match now_cst.rule {
+          Rule::var => current + " " + &to_string_cst(text, now_cst, depth),
+          Rule::block_cmd_name => current + " " + &to_string_cst(text, now_cst, depth),
+          Rule::expr => current + " = " + &to_string_cst(text, now_cst, depth),
+          _ => String::new(),
+        }
+        // current + &to_string_cst_inner(text, cst, depth)
+      })
     }
-  });
+    _ => csts.iter().fold(String::new(), |current, now_cst| {
+      let s = to_string_cst(text, &now_cst, depth);
+      if current.is_empty() {
+        s
+      } else if s.is_empty() {
+        current
+      } else {
+        current + sep + &s
+      }
+    }),
+  };
 
   output
 }
@@ -90,9 +140,30 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
   // 中身をそのまま返すものは output をそのまま返す
   match cst.rule {
     // header
-    Rule::header_import => "@import: ".to_string() + &output + "\n",
+    Rule::stage => output,
+    Rule::headers => output + "\n",
     Rule::header_require => "@require: ".to_string() + &output + "\n",
+    Rule::header_import => "@import: ".to_string() + &output + "\n",
     Rule::pkgname => self_text,
+
+    // statement
+    Rule::let_stmt => output,
+    Rule::let_rec_stmt => format!("{}{}", RESERVED_WORD.let_rec, output),
+    Rule::let_rec_inner => output,
+    Rule::let_rec_matcharm => output,
+    Rule::let_inline_stmt_ctx => format!("{}{}", RESERVED_WORD.let_inline, output),
+    Rule::let_inline_stmt_noctx => format!("{}{}", RESERVED_WORD.let_inline, output),
+    Rule::let_block_stmt_ctx => format!("{}{}", RESERVED_WORD.let_block, output),
+
+    Rule::let_block_stmt_noctx => format!("{}{}", RESERVED_WORD.let_block, output),
+    Rule::let_math_stmt => format!("{}{}", RESERVED_WORD.let_math, output),
+    Rule::let_mutable_stmt => format!("{}{}", RESERVED_WORD.let_mutable, output),
+    Rule::type_stmt => format!("{}{}", RESERVED_WORD.type_stmt, output),
+    Rule::type_inner => output,
+    Rule::type_variant => output,
+    Rule::module_stmt => output,
+    Rule::open_stmt => output,
+    Rule::arg => output,
 
     // unary
     Rule::unary => output,
@@ -163,7 +234,11 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
     }
     Rule::inline_cmd_name => self_text,
     Rule::block_cmd => {
-      format!("{output}")
+      if self_text.chars().nth_back(0) == Some(';') {
+        format!("{output};")
+      } else {
+        output
+      }
     }
 
     Rule::block_cmd_name => self_text,
@@ -218,11 +293,25 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
     Rule::vertical => output,             // TODO
     Rule::block_text_embedding => output, // TODO
 
+    // constants
+    Rule::const_unit => self_text,
+    Rule::const_bool => self_text,
+    Rule::const_int => self_text,
+    Rule::const_float => self_text,
+    Rule::const_length => self_text,
+    Rule::const_string => self_text,
+
     // TODO other things
     Rule::misc => " ".to_string(),
     Rule::program_saty => output,
     Rule::program_satyh => output,
-    Rule::preamble => self_text,
+    Rule::preamble => {
+      if output.len() > 0 {
+        format!("{output}\nin\n\n")
+      } else {
+        output
+      }
+    }
     // TODO
     // _ => self_text,
     _ => "".to_string(),
