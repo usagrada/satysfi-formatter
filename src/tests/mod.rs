@@ -185,3 +185,27 @@ fn test9() {
 "#;
   assert_eq!(output, expect);
 }
+
+
+#[test]
+fn test10() {
+  let text = r#"
+  document(||)'<
++section{ section }<
++p {
+hello
+        world
+}
+>>"#;
+  let output = format(text);
+  let expect = r#"document(||)'<
+    +section { section } <
+        +p {
+            hello
+            world
+        }
+    >
+>
+"#;
+  assert_eq!(output, expect);
+}

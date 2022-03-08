@@ -10,3 +10,4 @@ repository = "https://github.com/usagrada/"
 
 [dependencies]
 satysfi-parser = "*"
+clap = { version = "3", features = ["derive"] }
