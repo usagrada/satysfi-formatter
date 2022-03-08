@@ -1,0 +1,19 @@
+@require: stdja
+@require: itemize
+
+document(|
+    author = {author};
+    show-title = false;
+    show-toc = true;
+    title = {title};
+|)'<
++section{section}<
+        +p {
+            
+            \listing{ * item1
+* item2
+            * item3}
+    }
+    >
+    
+>

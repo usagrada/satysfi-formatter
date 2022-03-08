@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests;
+mod visualize;
+pub use visualize::*;
 
 use satysfi_parser::{grammar, Cst, CstText};
 
@@ -10,19 +12,9 @@ struct OptionData {
 
 // format 設定のオプション
 static option: OptionData = OptionData {
-  row_length: 100,
+  row_length: 40,
   indent_space: 4,
 };
-
-// for debug called by main.rs
-pub fn input() {
-  let text = r#"@import: hello
-@require: local
-% comment
-document(|title = hello|)'<+p{hello world}+p { \SATYSFI; }>"#;
-  let output = format(text);
-  dbg!(output);
-}
 
 /// satysfi の文字列を渡すと format したものを返す
 /// * `input` - satysfi のコード  
@@ -35,13 +27,12 @@ pub fn format(input: &str) -> String {
     cst: Cst,
   }
   */
-  let csttext = CstText::parse(input, grammar::program).unwrap();
+  let csttext = CstText::parse(input, grammar::program).expect("parse error");
   let mut output = String::new();
 
-  dbg!(&csttext.cst);
   let depth = 0;
   for node in csttext.cst.inner.iter() {
-    output += &to_string_csts(input, node.inner.clone(), depth);
+    output += &to_string_cst_inner(input, node, depth);
   }
 
   // 末尾に改行がない場合、改行を挿入して終了
@@ -52,39 +43,51 @@ pub fn format(input: &str) -> String {
   output
 }
 
-fn to_string_csts(text: &str, csts: Vec<Cst>, depth: usize) -> String {
+/// cst の inner の要素を結合して文字列に変換する関数
+fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
   /*
   Cst {
     rule: Rule,
     span: Span { start: number, end: number },
     inner: [Cst] }
   */
-  let mut output = String::new();
-  for cst in csts {
-    output += &to_string_cst(text, &cst, depth);
-  }
+  use satysfi_parser::Rule;
+  let csts = cst.inner.clone();
+  let sep = &match cst.rule {
+    Rule::block_cmd | Rule::horizontal_single => " ".to_string(),
+    Rule::vertical | Rule::horizontal_bullet_list => format!("\n{}", indent_space(depth)),
+    Rule::record => format!(";\n{}", indent_space(depth)),
+    _ => "".to_string(),
+  };
+  let output = csts.iter().fold(String::new(), |current, cst| {
+    let s = to_string_cst(text, &cst, depth);
+    if current.is_empty() {
+      s
+    } else if s.is_empty() {
+      current
+    } else {
+      current + sep + &s
+    }
+  });
 
   output
 }
 
-// 中身をそのまま返すものは output をそのまま返す
+/// cst を文字列にするための関数
 fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
-  println!(
-    "{:?}, {:?}",
-    cst.rule,
-    text.get(cst.span.start..cst.span.end).unwrap()
-  );
-
   // インデントを制御するための変数
   let new_depth = match cst.rule {
-    Rule::block_cmd => depth + 1,
+    Rule::block_text | Rule::cmd_text_arg | Rule::record => depth + 1,
     _ => depth,
   };
+  let start_indent = "\n".to_string() + &indent_space(new_depth);
+  let end_indent = "\n".to_string() + &indent_space(depth);
 
-  let output = to_string_csts(text, cst.inner.clone(), new_depth);
+  let output = to_string_cst_inner(text, cst, new_depth);
   let self_text = text.get(cst.span.start..cst.span.end).unwrap().to_string();
 
   use satysfi_parser::Rule;
+  // 中身をそのまま返すものは output をそのまま返す
   match cst.rule {
     // header
     Rule::header_import => "@import: ".to_string() + &output + "\n",
@@ -96,16 +99,33 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
     Rule::unary_prefix => output,
     Rule::block_text => {
       if self_text.chars().nth(0) == Some('\'') {
-        format!("'<\n{output}>")
+        if output.len() > 0 {
+          format!("'<{start_indent}{output}{end_indent}>")
+        } else {
+          format!("'<{output}>")
+        }
       } else {
-        format!("<\n{output}>")
+        if output.len() > 0 {
+          format!("<{start_indent}{output}{end_indent}>")
+        } else {
+          format!("<{output}>")
+        }
       }
     }
     Rule::horizontal_text => self_text,
     Rule::math_text => self_text,
     Rule::list => self_text,
-    Rule::record => self_text,
-    Rule::record_unit => self_text,
+    Rule::record => {
+      // TODO: consider
+      if cst.inner.len() > 1 {
+        // 2 つ以上のときは改行
+        format!("(|{start_indent}{output};{end_indent}|)")
+      } else {
+        // 1つだけの時は、改行しない
+        format!("(|{output}|)")
+      }
+    }
+    Rule::record_unit => self_text, // TODO
     Rule::tuple => self_text,
     Rule::bin_operator => self_text,
     Rule::expr_with_mod => self_text,
@@ -121,19 +141,32 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
     Rule::cmd_expr_arg => self_text,
     Rule::cmd_expr_option => self_text,
     Rule::cmd_text_arg => {
-      let space = if output.len() > option.row_length {
-        format!("\n{}", indent_space(depth))
+      // 括弧の種類を取得
+      let start_arg = self_text.chars().nth(0).unwrap();
+      let end_arg = self_text.chars().nth_back(0).unwrap();
+      // 改行を含んでいたら、改行を入れる
+      let include_kaigyou = output.find("\n") != None || start_arg == '<';
+      match output.trim().len() {
+        0 => format!("{start_arg}{end_arg}"),
+        num if include_kaigyou || num > option.row_length => {
+          format!("{start_arg}{start_indent}{output}{end_indent}{end_arg}")
+        }
+        _ => format!("{start_arg} {output} {end_arg}"),
+      }
+    }
+    Rule::inline_cmd => {
+      if self_text.chars().nth_back(0) == Some(';') {
+        format!("{output};")
       } else {
-        " ".to_string()
-      };
-      format!(" {{{space}{output}{space}}}\n")
+        output
+      }
     }
-    Rule::inline_cmd => self_text,
     Rule::inline_cmd_name => self_text,
-    Rule::block_cmd => output,
-    Rule::block_cmd_name => {
-      format!("{}{}", indent_space(depth), self_text)
+    Rule::block_cmd => {
+      format!("{output}")
     }
+
+    Rule::block_cmd_name => self_text,
     Rule::math_cmd => self_text,
     Rule::math_cmd_name => self_text,
     Rule::math_cmd_expr_arg => self_text,
@@ -160,14 +193,26 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
     Rule::variant_constructor => output,
 
     // horizontal
-    Rule::horizontal_single => output,                  // TODO
-    Rule::horizontal_list => output,                    // TODO
-    Rule::horizontal_bullet_list => output,             // TODO
-    Rule::horizontal_bullet => output,                  // TODO
-    Rule::horizontal_bullet_star => output,             // TODO
-    Rule::regular_text => self_text.trim().to_string(), // remove space of start and end
-    Rule::horizontal_escaped_char => output,            // TODO
-    Rule::inline_text_embedding => output,              // TODO
+    Rule::horizontal_single => output,
+    Rule::horizontal_list => output,                  // TODO
+    Rule::horizontal_bullet_list => output,           // TODO
+    Rule::horizontal_bullet => output,                // TODO
+    Rule::horizontal_bullet_star => "* ".to_string(), // TODO
+    Rule::regular_text => {
+      let sep = format!("\n{}", indent_space(depth));
+      let output = self_text
+        .split("\n")
+        .into_iter()
+        .map(|line| line.trim().to_string())
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<String>>()
+        .join(&sep);
+      // remove space of start and end
+      // self_text.trim().to_string()
+      output
+    }
+    Rule::horizontal_escaped_char => output, // TODO
+    Rule::inline_text_embedding => output,   // TODO
 
     // vertical
     Rule::vertical => output,             // TODO
@@ -175,15 +220,16 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
 
     // TODO other things
     Rule::misc => " ".to_string(),
-    Rule::program_saty => " ".to_string(),
-    Rule::program_satyh => " ".to_string(),
-    Rule::preamble => " ".to_string(),
+    Rule::program_saty => output,
+    Rule::program_satyh => output,
+    Rule::preamble => self_text,
     // TODO
     // _ => self_text,
     _ => "".to_string(),
   }
 }
 
+#[inline]
 fn indent_space(depth: usize) -> String {
   let mut output = String::new();
   for _ in 0..option.indent_space * depth {
