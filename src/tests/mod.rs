@@ -209,3 +209,21 @@ hello
 "#;
   assert_eq!(output, expect);
 }
+
+#[test]
+fn test_unicode() {
+  let text = r#"
+  document(||)'<
++section{ section }<
++p {日本語}
+>>"#;
+  let output = format(text);
+  let expect = r#"document(||)'<
+    +section { section } <
+        +p { 日本語 }
+    >
+>
+"#;
+  assert_eq!(output, expect);
+}
+

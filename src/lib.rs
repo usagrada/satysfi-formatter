@@ -25,12 +25,9 @@ pub fn format(input: &str) -> String {
     cst: Cst,
   }
   */
-  let csttext = CstText::parse(input, grammar::program).unwrap();
+  let csttext = CstText::parse(input, grammar::program).expect("parse error");
   let mut output = String::new();
 
-  // dbg!(&csttext.cst);
-  // dbg!(&csttext.pritty_cst_recursive(&csttext.cst));
-  visualize_csttext_tree(&csttext);
   let depth = 0;
   for node in csttext.cst.inner.iter() {
     output += &to_string_cst_inner(input, node, depth);
@@ -45,28 +42,33 @@ pub fn format(input: &str) -> String {
 }
 
 // for debug
-fn visualize_csttext_tree(csttext: &CstText) {
+pub fn visualize_csttext_tree(csttext: &CstText) {
   for node in csttext.cst.inner.iter() {
-    visualize_cst_tree(&csttext.text, node, 0);
+    visualize_cst_tree(&csttext, node, 0);
   }
 }
 
 // for debug
-fn visualize_cst_tree(text: &str, cst: &Cst, depth: usize) {
+fn visualize_cst_tree(csttext: &CstText, cst: &Cst, depth: usize) {
   // println!("{}{:?}: {{", " ".repeat(depth * 2), cst.rule);
-  let start = cst.span.start;
-  let end = std::cmp::min(start + 5, cst.span.end);
-  let self_text = if end == cst.span.end {
-    text.get(start..end).unwrap().trim().to_string()
+  let max_len = std::cmp::min(cst.span.end - cst.span.start, 10);
+  let self_text = csttext
+    .get_text_from_span(cst.span)
+    .chars()
+    .take(max_len)
+    .collect::<String>()
+    .replace("\n", ""); // 改行を削除
+  // overlide for 省略の表示
+  let self_text = if cst.span.end - cst.span.start <= max_len {
+    self_text
   } else {
-    text.get(start..end).unwrap().trim().to_string() + "..."
+    format!("{}...", self_text)
   };
   println!("{}* {:?}: {}", " ".repeat(depth * 2), cst.rule, self_text);
   // println!("{}└─ {:?}", cst.rule);
   for node in cst.inner.iter() {
-    visualize_cst_tree(text, node, depth + 1);
+    visualize_cst_tree(csttext, node, depth + 1);
   }
-  // println!("{}}"," ".repeat(depth * 2));
 }
 
 fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
@@ -100,13 +102,13 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
 
 // 中身をそのまま返すものは output をそのまま返す
 fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
-  if cst.rule == Rule::regular_text {
-    println!(
-      "{:?}, {:?}",
-      cst.rule,
-      text.get(cst.span.start..cst.span.end).unwrap()
-    );
-  }
+  // if cst.rule == Rule::regular_text {
+  //   println!(
+  //     "{:?}, {:?}",
+  //     cst.rule,
+  //     text.get(cst.span.start..cst.span.end).unwrap()
+  //   );
+  // }
 
   // インデントを制御するための変数
   let new_depth = match cst.rule {
@@ -177,11 +179,13 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
       let start_arg = self_text.chars().nth(0).unwrap();
       let end_arg = self_text.chars().nth_back(0).unwrap();
       // 改行を含んでいたら、改行を入れる
-      let include_kaigyou = output.find("\n") != None;
+      let include_kaigyou = output.find("\n") != None || start_arg == '<';
       match output.trim().len() {
         0 => format!("{start_arg}{end_arg}"),
-        num if !include_kaigyou && num < option.row_length => format!("{start_arg} {output} {end_arg}"),
-        _ => format!("{start_arg}{start_indent}{output}{end_indent}{end_arg}"),
+        num if include_kaigyou || num > option.row_length => {
+          format!("{start_arg}{start_indent}{output}{end_indent}{end_arg}")
+        }
+        _ => format!("{start_arg} {output} {end_arg}"),
       }
     }
     Rule::inline_cmd => {
