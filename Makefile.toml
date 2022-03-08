@@ -1,0 +1,8 @@
+[tasks.build-doc]
+script = [
+'''
+#!/usr/bin/env bash
+cargo run --release -- doc/draft.saty -o doc.saty
+satysfi doc/doc.saty
+'''
+]

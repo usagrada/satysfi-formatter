@@ -1,5 +1,5 @@
 use clap::Parser;
-use satysfi_formatter::format;
+use satysfi_formatter::{format, visualize_csttext_tree};
 use std::{fs, path::PathBuf};
 
 #[derive(Parser, Debug)]
@@ -16,6 +16,7 @@ fn main() {
   let cli = Cli::parse();
   let code = fs::read_to_string(&cli.file).expect("Failed to read file");
   let output = format(&code);
+  
   match cli.output {
     Some(path) => fs::write(&path, output).expect("Failed to write file"),
     None => println!("{}", output),
