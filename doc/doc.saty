@@ -4,7 +4,7 @@
 @require: code-printer/code-theme
 @require: code-printer/code-design
 
-let-block  ctx +newpage = clear-page
+let-block ctx +newpage = clear-page
 in
 
 document(|
@@ -14,8 +14,7 @@ document(|
     show-title = true;
 |)'<
     +newpage;
-
-    +section { Formatter の install 方法 } <
+    +section { formatter の install 方法 } <
         +p {
             以下のどちらかの方法で、入れることができます。
             ターミナルに以下のコマンドを打ち込んでください。
@@ -25,7 +24,6 @@ document(|
   |> CodePrinter.set-basic-font-size 9pt
   |> CodePrinter.set-number-fun CodeDesign.number-fun-null
 ) (`cargo install --git https://github.com/usagrada/satysfi-formatter.git`);
-
         +code-printer ?:(
   CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
   |> CodePrinter.set-basic-font-size 9pt
@@ -34,9 +32,8 @@ document(|
 cd satysfi-formatter
 cargo install --path .
 `);
-
     >
-    +section { Formatter の使い方 } <
+    +section { formatter の使い方 } <
         +p {
             \SATySFi; を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。 \footnote{
                 このドキュメントは format のテストも兼ねて書いています。
@@ -46,7 +43,6 @@ cargo install --path .
   CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
   |> CodePrinter.set-basic-font-size 9pt
   |> CodePrinter.set-number-fun CodeDesign.number-fun-null) (`satysfi-fmt $input -o $output`);
-
         +p {
             `output` を指定しなかった場合、コマンドラインの標準出力に結果が表示されます。
         }
