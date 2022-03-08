@@ -19,6 +19,35 @@ struct ReservedWord {
     block_command: ReservedText,
     math_command: ReservedText,
     let_rec: ReservedText,
+    controls: ReservedText,
+    command: ReservedText,
+    before: ReservedText,
+    module: ReservedText,
+    direct: ReservedText,
+    struct_stmt: ReservedText,
+    cycle: ReservedText,
+    match_stmt: ReservedText,
+    while_stmt: ReservedText,
+    if_stmt: ReservedText,
+    else_stmt: ReservedText,
+    true_stmt: ReservedText,
+    false_stmt: ReservedText,
+    open: ReservedText,
+    then: ReservedText,
+    when: ReservedText,
+    with: ReservedText,
+    and: ReservedText,
+    end: ReservedText,
+    fun: ReservedText,
+    let_stmt: ReservedText,
+    mod_stmt: ReservedText,
+    not: ReservedText,
+    sig: ReservedText,
+    val: ReservedText,
+    as_stmt: ReservedText,
+    do_stmt: ReservedText,
+    in_stmt: ReservedText,
+    of: ReservedText,
 }
 
 const RESERVED_WORD: ReservedWord = ReservedWord {
@@ -31,11 +60,37 @@ const RESERVED_WORD: ReservedWord = ReservedWord {
     let_block: "let-block",
     let_math: "let-math",
     type_stmt: "type",
-    let_rec: "let-rec", // / "controls" / "command" / "before" / "module" / "direct" / "struct"
-                        // / "cycle" / "match" / "while" / "false"
-                        // / "else" / "open" / "then" / "true" / "type" / "when" / "with"
-                        // / "and" / "end" / "fun" / "let" / "mod" / "not" / "sig" / "val"
-                        // / "as" / "do" / "if" / "in" / "of")
+    let_rec: "let-rec",
+    controls: "controls",
+    command: "command",
+    before: "before",
+    module: "module",
+    direct: "direct",
+    struct_stmt: "struct",
+    cycle: "cycle",
+    match_stmt: "match",
+    while_stmt: "while",
+    if_stmt: "if",
+    else_stmt: "else",
+    true_stmt: "true",
+    false_stmt: "false",
+    open: "open",
+    then: "then",
+    when: "when",
+    
+    with: "with",
+    and: "and",
+    end: "end",
+    fun: "fun",
+    let_stmt: "let",
+    mod_stmt: "mod",
+    not: "not",
+    sig: "sig",
+    val: "val",
+    as_stmt: "as",
+    do_stmt: "do",
+    in_stmt: "in",
+    of: "of",
 };
 
 pub struct OptionData {
@@ -99,8 +154,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
         | Rule::let_block_stmt_noctx
         | Rule::let_inline_stmt_ctx
         | Rule::let_inline_stmt_noctx
-        | Rule::let_math_stmt
-        => {
+        | Rule::let_math_stmt => {
             csts.iter().fold(String::new(), |current, now_cst| {
                 match now_cst.rule {
                     Rule::var => current + " " + &to_string_cst(text, now_cst, depth),
