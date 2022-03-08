@@ -14,33 +14,6 @@ static option: OptionData = OptionData {
   indent_space: 4,
 };
 
-// for debug called by main.rs
-pub fn input() {
-  let text = r#"@require: stdja
-@require: itemize
-
-document(|
-    author = {author};
-    show-title = false;
-    show-toc = true;
-    title = {title};
-|)'<
-    +section {section} <
-        +p {
-            
-            \listing{
-                * item1
-                * item2
-                * item3
-            }
-    }
-    >
-    
->"#;
-  let output = format(text);
-  println!("{output}");
-}
-
 /// satysfi の文字列を渡すと format したものを返す
 /// * `input` - satysfi のコード  
 /// * `output` - format された文字列
@@ -127,11 +100,13 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
 
 // 中身をそのまま返すものは output をそのまま返す
 fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
-  // println!(
-  // "{:?}, {:?}",
-  // cst.rule,
-  // text.get(cst.span.start..cst.span.end).unwrap()
-  // );
+  if cst.rule == Rule::regular_text {
+    println!(
+      "{:?}, {:?}",
+      cst.rule,
+      text.get(cst.span.start..cst.span.end).unwrap()
+    );
+  }
 
   // インデントを制御するための変数
   let new_depth = match cst.rule {
@@ -201,9 +176,11 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
       // 括弧の種類を取得
       let start_arg = self_text.chars().nth(0).unwrap();
       let end_arg = self_text.chars().nth_back(0).unwrap();
+      // 改行を含んでいたら、改行を入れる
+      let include_kaigyou = output.find("\n") != None;
       match output.trim().len() {
         0 => format!("{start_arg}{end_arg}"),
-        num if num < option.row_length => format!("{start_arg} {output} {end_arg}"),
+        num if !include_kaigyou && num < option.row_length => format!("{start_arg} {output} {end_arg}"),
         _ => format!("{start_arg}{start_indent}{output}{end_indent}{end_arg}"),
       }
     }
@@ -247,13 +224,25 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
 
     // horizontal
     Rule::horizontal_single => output,
-    Rule::horizontal_list => output,                    // TODO
-    Rule::horizontal_bullet_list => output,             // TODO
-    Rule::horizontal_bullet => output,                  // TODO
-    Rule::horizontal_bullet_star => "* ".to_string(),   // TODO
-    Rule::regular_text => self_text.trim().to_string(), // remove space of start and end
-    Rule::horizontal_escaped_char => output,            // TODO
-    Rule::inline_text_embedding => output,              // TODO
+    Rule::horizontal_list => output,                  // TODO
+    Rule::horizontal_bullet_list => output,           // TODO
+    Rule::horizontal_bullet => output,                // TODO
+    Rule::horizontal_bullet_star => "* ".to_string(), // TODO
+    Rule::regular_text => {
+      let sep = format!("\n{}", indent_space(depth));
+      let output = self_text
+        .split("\n")
+        .into_iter()
+        .map(|line| line.trim().to_string())
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<String>>()
+        .join(&sep);
+      // remove space of start and end
+      // self_text.trim().to_string()
+      output
+    }
+    Rule::horizontal_escaped_char => output, // TODO
+    Rule::inline_text_embedding => output,   // TODO
 
     // vertical
     Rule::vertical => output,             // TODO
