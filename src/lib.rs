@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests;
+mod visualize;
+pub use visualize::*;
 
 use satysfi_parser::{grammar, Cst, CstText};
 
@@ -41,36 +43,7 @@ pub fn format(input: &str) -> String {
   output
 }
 
-// for debug
-pub fn visualize_csttext_tree(csttext: &CstText) {
-  for node in csttext.cst.inner.iter() {
-    visualize_cst_tree(&csttext, node, 0);
-  }
-}
-
-// for debug
-fn visualize_cst_tree(csttext: &CstText, cst: &Cst, depth: usize) {
-  // println!("{}{:?}: {{", " ".repeat(depth * 2), cst.rule);
-  let max_len = std::cmp::min(cst.span.end - cst.span.start, 10);
-  let self_text = csttext
-    .get_text_from_span(cst.span)
-    .chars()
-    .take(max_len)
-    .collect::<String>()
-    .replace("\n", ""); // 改行を削除
-  // overlide for 省略の表示
-  let self_text = if cst.span.end - cst.span.start <= max_len {
-    self_text
-  } else {
-    format!("{}...", self_text)
-  };
-  println!("{}* {:?}: {}", " ".repeat(depth * 2), cst.rule, self_text);
-  // println!("{}└─ {:?}", cst.rule);
-  for node in cst.inner.iter() {
-    visualize_cst_tree(csttext, node, depth + 1);
-  }
-}
-
+/// cst の inner の要素を結合して文字列に変換する関数
 fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
   /*
   Cst {
@@ -100,16 +73,8 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
   output
 }
 
-// 中身をそのまま返すものは output をそのまま返す
+/// cst を文字列にするための関数
 fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
-  // if cst.rule == Rule::regular_text {
-  //   println!(
-  //     "{:?}, {:?}",
-  //     cst.rule,
-  //     text.get(cst.span.start..cst.span.end).unwrap()
-  //   );
-  // }
-
   // インデントを制御するための変数
   let new_depth = match cst.rule {
     Rule::block_text | Rule::cmd_text_arg | Rule::record => depth + 1,
@@ -122,6 +87,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
   let self_text = text.get(cst.span.start..cst.span.end).unwrap().to_string();
 
   use satysfi_parser::Rule;
+  // 中身をそのまま返すものは output をそのまま返す
   match cst.rule {
     // header
     Rule::header_import => "@import: ".to_string() + &output + "\n",
