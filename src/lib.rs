@@ -77,7 +77,7 @@ const RESERVED_WORD: ReservedWord = ReservedWord {
     open: "open",
     then: "then",
     when: "when",
-    
+
     with: "with",
     and: "and",
     end: "end",
@@ -155,28 +155,39 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
         | Rule::let_inline_stmt_ctx
         | Rule::let_inline_stmt_noctx
         | Rule::let_math_stmt => {
-            csts.iter().fold(String::new(), |current, now_cst| {
-                match now_cst.rule {
+            csts.iter()
+                .fold(String::new(), |current, now_cst| match now_cst.rule {
                     Rule::var => current + " " + &to_string_cst(text, now_cst, depth),
                     Rule::block_cmd_name => current + " " + &to_string_cst(text, now_cst, depth),
+                    Rule::arg => current + " " + &to_string_cst(text, now_cst, depth),
                     Rule::expr => current + " = " + &to_string_cst(text, now_cst, depth),
                     _ => String::new(),
-                }
-            })
+                })
+                + "\n"
         }
-        Rule::horizontal_single => csts.iter().fold((String::new(), 0), |current, now_cst| {
-            let s = to_string_cst(text, &now_cst, depth);
-            if current.0.is_empty() {
-                (s.clone(), s.chars().count())
-            } else if s.is_empty() {
-                current
-            } else if now_cst.rule != Rule::regular_text && (current.1 > default_option.row_length || current.1 + s.chars().count() > default_option.row_length) {
-                // 一定以上の長さの時は改行を挿入
-                (current.0 + "\n" + &indent_space(depth) + &s, s.chars().count())
-            } else {
-                (current.0.clone() + sep + &s, current.1 + s.chars().count())
-            }
-        }).0,
+        Rule::horizontal_single => {
+            csts.iter()
+                .fold((String::new(), 0), |current, now_cst| {
+                    let s = to_string_cst(text, &now_cst, depth);
+                    if current.0.is_empty() {
+                        (s.clone(), s.chars().count())
+                    } else if s.is_empty() {
+                        current
+                    } else if now_cst.rule != Rule::regular_text
+                        && (current.1 > default_option.row_length
+                            || current.1 + s.chars().count() > default_option.row_length)
+                    {
+                        // 一定以上の長さの時は改行を挿入
+                        (
+                            current.0 + "\n" + &indent_space(depth) + &s,
+                            s.chars().count(),
+                        )
+                    } else {
+                        (current.0.clone() + sep + &s, current.1 + s.chars().count())
+                    }
+                })
+                .0
+        }
         _ => csts.iter().fold(String::new(), |current, now_cst| {
             let s = to_string_cst(text, &now_cst, depth);
             if current.is_empty() {
@@ -316,6 +327,14 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::math_cmd_expr_arg => self_text,
         Rule::math_cmd_expr_option => self_text,
 
+        // pattern
+        Rule::pat_as => output,
+        Rule::pat_cons => output,
+        Rule::pattern => output,
+        Rule::pat_variant => output,
+        Rule::pat_list => output,
+        Rule::pat_tuple => output,
+
         // expr
         Rule::expr => output,
         Rule::match_expr => output,          // TODO
@@ -376,7 +395,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::program_satyh => output,
         Rule::preamble => {
             if output.len() > 0 {
-                format!("{output}\nin\n\n")
+                format!("{output}in\n\n")
             } else {
                 output
             }
