@@ -63,6 +63,7 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
         let flag = check_comment(cst, &comment);
         
         if flag {
+            #[cfg(debug_assertions)]
             println!("insert!\ncst: {:?},comment: {}", cst.rule, comment.text);
             insert_comment.push(Cst {
                 rule: Rule::comments,

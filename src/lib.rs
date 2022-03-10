@@ -149,8 +149,10 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
     let csts = cst.inner.clone();
     let sep = &match cst.rule {
         Rule::block_cmd | Rule::inline_cmd | Rule::horizontal_single => " ".to_string(),
-        Rule::vertical | Rule::horizontal_bullet_list => format!("\n{}", indent_space(depth)),
-        Rule::record => format!(";\n{}", indent_space(depth)),
+        Rule::vertical | Rule::horizontal_bullet_list => {
+            format!("\n{}", indent_space(depth))
+        }
+        Rule::record | Rule::list => format!(";\n{}", indent_space(depth)),
         _ => "".to_string(),
     };
 
@@ -184,16 +186,34 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                             (s.clone(), s.chars().count())
                         }
                     } else if s.trim().is_empty() {
+                        // 空行の処理
+                        // 文字がない場合は何もしない
                         current
                     } else if now_cst.rule == Rule::comments {
                         let indent = indent_space(depth);
                         (format!("{}\n{indent}{s}", current.0.trim_end()), 0)
                     } else if current.1 == 0 {
-                        // 既に改行されている コメントに対応させるための例外処理
+                        // 既に改行されている
+                        // コメントに対応させるための例外処理
                         (current.0 + &s, s.chars().count())
                     } else {
+                        let last_letter = current.0.chars().nth_back(0);
+                        let is_regular_text_start_whitespace = text
+                            [now_cst.span.start..now_cst.span.end]
+                            .starts_with(char::is_whitespace);
+                        let not_space = match last_letter {
+                            Some(c) => match c {
+                                '}' | '>' => true && !is_regular_text_start_whitespace,
+                                _ => false,
+                            },
+                            None => false,
+                        };
+
                         if current.1 == 0 {
+                            // コメントで終了している
                             (current.0 + &s, s.chars().count())
+                        } else if not_space {
+                            (current.0 + &s, current.1 + s.chars().count())
                         } else if current.1 > default_option.row_length {
                             if current.1 + s.chars().count() > default_option.row_length {
                                 // 一定以上の長さの時は改行を挿入
@@ -202,10 +222,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                                     s.chars().count(),
                                 )
                             } else {
-                                (
-                                    current.0 + " " + &indent_space(depth) + &s,
-                                    s.chars().count(),
-                                )
+                                (current.0 + " " + &s, s.chars().count())
                             }
                         } else {
                             (current.0 + " " + &s, current.1 + s.chars().count())
@@ -214,7 +231,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 })
                 .0;
             // コメントが末尾にあるとき余計な改行が残ってしまうので削除
-            output.trim_end().to_string()
+            output.trim().to_string()
         }
         _ => {
             let output = csts
@@ -231,7 +248,16 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     } else {
                         (current.0 + sep + &s, flag)
                     };
-                    output
+
+                    if cst.rule == Rule::program_saty && now_cst.rule == Rule::preamble {
+                        // program saty だった場合、in を入れる
+                        (output.0 + RESERVED_WORD.in_stmt + "\n\n", output.1)
+                    // } else if cst.rule == Rule::list && now_cst.rule == Rule::expr {
+                    //     // list だった場合、expr の後に ; を入れる
+                    //     (output.0 + ";", output.1)
+                    } else {
+                        output
+                    }
                 })
                 .0;
             output
@@ -245,7 +271,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
 fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
     // インデントを制御するための変数
     let new_depth = match cst.rule {
-        Rule::block_text | Rule::cmd_text_arg | Rule::record => depth + 1,
+        Rule::block_text | Rule::cmd_text_arg | Rule::record | Rule::list => depth + 1,
         _ => depth,
     };
     let start_indent = "\n".to_string() + &indent_space(new_depth);
@@ -260,7 +286,13 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::comments => to_comment_string(self_text) + &end_indent,
         // header
         Rule::stage => output,
-        Rule::headers => output + "\n",
+        Rule::headers => {
+            if output.len() > 0 {
+                output + "\n"
+            } else {
+                output
+            }
+        }
         Rule::header_require => "@require: ".to_string() + &output + "\n",
         Rule::header_import => "@import: ".to_string() + &output + "\n",
         Rule::pkgname => self_text,
@@ -280,7 +312,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::type_stmt => format!("{}{}", RESERVED_WORD.type_stmt, output),
         Rule::type_inner => output,
         Rule::type_variant => output,
-        Rule::module_stmt => output,
+        Rule::module_stmt => self_text,
         Rule::open_stmt => output,
         Rule::arg => output,
 
@@ -304,7 +336,18 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         }
         Rule::horizontal_text => self_text,
         Rule::math_text => self_text,
-        Rule::list => self_text,
+        Rule::list => {
+            let output = if output.len() > 0 {
+                format!("[{start_indent}{output}{end_indent}]")
+            } else {
+                format!("[{output}]")
+            };
+            if self_text.chars().nth_back(0) == Some(';') {
+                output + ";"
+            } else {
+                output
+            }
+        }
         Rule::record => {
             // TODO: consider
             if cst.inner.len() > 1 {
@@ -328,7 +371,14 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
 
         // command
         Rule::cmd_name_ptn => self_text,
-        Rule::cmd_expr_arg => self_text,
+        Rule::cmd_expr_arg => {
+            if self_text.starts_with("("){
+                format!("({output})", )
+            }else{
+                output
+            }
+            
+        },
         Rule::cmd_expr_option => self_text,
         Rule::cmd_text_arg => {
             // 括弧の種類を取得
@@ -410,8 +460,6 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
                 .filter(|line| !line.is_empty())
                 .collect::<Vec<String>>()
                 .join(&sep);
-            // remove space of start and end
-            // self_text.trim().to_string()
             output
         }
         Rule::horizontal_escaped_char => self_text, // TODO
@@ -431,15 +479,9 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
 
         // TODO other things
         Rule::misc => " ".to_string(),
-        Rule::program_saty => output,
-        Rule::program_satyh => output,
-        Rule::preamble => {
-            if output.len() > 0 {
-                format!("{output}in\n\n")
-            } else {
-                output
-            }
-        }
+        Rule::program_saty => output.trim_start().to_string(),
+        Rule::program_satyh => output.trim_start().to_string(),
+        Rule::preamble => output,
         // TODO
         // _ => self_text,
         _ => "".to_string(),
