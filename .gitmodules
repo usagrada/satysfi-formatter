@@ -1,0 +1,3 @@
+[submodule "satysfi-parser"]
+	path = satysfi-parser
+	url = https://github.com/usagrada/satysfi-parser.git
