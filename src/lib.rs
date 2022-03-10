@@ -309,7 +309,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::type_stmt => format!("{}{}", RESERVED_WORD.type_stmt, output),
         Rule::type_inner => output,
         Rule::type_variant => output,
-        Rule::module_stmt => self_text,
+        Rule::module_stmt => output,
         Rule::open_stmt => output,
         Rule::arg => output,
 

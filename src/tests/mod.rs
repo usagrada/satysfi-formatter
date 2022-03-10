@@ -1,4 +1,6 @@
 use crate::format;
+mod module;
+
 
 #[test]
 fn test1() {
