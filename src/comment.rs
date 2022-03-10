@@ -8,7 +8,6 @@ pub struct Comment {
 }
 
 pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
-    println!("{:?}", &csttext.lines);
     let mut comments = VecDeque::new();
     // 全ての行を確認する
     for (index, line) in csttext.lines.iter().enumerate() {
@@ -19,7 +18,7 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
         let end = *line;
         let text = csttext.get_text_from_span(Span { start, end });
         if let Some(inner) = text.find('%') {
-            if inner > 0 && text[inner - 1..inner] == *"\\" {
+            if inner > 0 && &text[(inner - 1)..inner] == "\\" {
                 // escaped percent
                 continue;
             }
@@ -47,10 +46,14 @@ pub fn check_comment(cst: &Cst, comment: &Comment) -> bool {
 // csttext にコメントを追加して組み直す関数
 pub fn csttext_insert_comments(csttext: CstText) -> CstText {
     let mut comments = get_comments(&csttext);
-    check_comment(&csttext.cst, &comments[0]);
-    let mut csttext = csttext;
-    cst_insert_comment(&mut csttext.cst, &mut comments);
-    csttext
+    if let Some(comment) = comments.pop_front() {
+        check_comment(&csttext.cst, &comment);
+        let mut csttext = csttext;
+        cst_insert_comment(&mut csttext.cst, &mut comments);
+        csttext
+    } else {
+        csttext
+    }
 }
 
 fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
