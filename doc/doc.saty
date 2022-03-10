@@ -28,12 +28,16 @@ document(|
     show-title = true;
 |)'<
     +newpage;
+    % +section {title}<
+    +p {
+        \SATySFi;を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。\footnote { このドキュメントは format のテストも兼ねて書いています。 }
+    }
+    % >
     +section { formatter の install 方法 } <
         +p {
-            \bold { abc }def と \bold { abc } def
+            \bold { abc }def と\bold { abc }def
             以下のどちらかの方法で、入れることができます。
-            ターミナルに以下のコマンドを打ち込んでください。
-            \footnote {
+            ターミナルに以下のコマンドを打ち込んでください。\footnote {
                 --force は無くても入りますが、既にインストールしている場合、
                 最新のデータにアップデートするために同じコマンドを使用できます。
             }
@@ -45,20 +49,15 @@ cargo install --path .
 `);
     >
     +section { formatter の使い方 } <
-        +p {
-            \SATySFi; を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。 \footnote { このドキュメントは format のテストも兼ねて書いています。 }
-        }
         +cmd (`satysfi-fmt $input -o $output`);
         +p {
-            `output` を指定しなかった場合、コマンドラインの標準出力に結果が表示されます。
+            `output`を指定しなかった場合、コマンドラインの標準出力に結果が表示されます。
         }
     >
     +section { 開発者の方 } <
         +p {
-            release build でない場合、 `src/visualize.rs` にある関数が呼び出されるようになっており、ファイルの構造を確認できるようになってます。
-            \cmd (`cargo run -- $input`); `lib.rs` の `format` を開始地点とし、
-            コードから `satysfi-parser`
-            で CST 化し、文字列に戻して結合しています。
+            release build でない場合、`src/visualize.rs`にある関数が呼び出されるようになっており、ファイルの構造を確認できるようになってます。\cmd (`cargo run -- $input`);`lib.rs`の`format`を開始地点とし、
+            コードから`satysfi-parser`で CST 化し、文字列に戻して結合しています。
             % comment
             現状では、かなり愚直な実装をしている + 一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える、etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
             % comment

@@ -67,7 +67,7 @@ document(|title = {hello}|)'<+p{hello world}+p {\SATYSFI;format}>"#;
 
 document(|title = {hello}|)'<
     +p { hello world }
-    +p { \SATYSFI; format }
+    +p { \SATYSFI;format }
 >
 "#;
     assert_eq!(output, expect);
@@ -85,7 +85,7 @@ document(|title = {hello}|)'<+p{hello world}+p {format\SATYSFI;format}>"#;
 
 document(|title = {hello}|)'<
     +p { hello world }
-    +p { format \SATYSFI; format }
+    +p { format\SATYSFI;format }
 >
 "#;
     assert_eq!(output, expect);
@@ -215,6 +215,28 @@ hello
             world
         }
     >
+>
+"#;
+    assert_eq!(output, expect);
+}
+
+#[test]
+fn test11() {
+    let text = r#"@import: hello
+@require: local
+
+document(|title = {hello}|)'<+p{hello world}+p {format\SATYSFI;
+format}>"#;
+    let output = format(text);
+    let expect = r#"@import: hello
+@require: local
+
+document(|title = {hello}|)'<
+    +p { hello world }
+    +p {
+        format\SATYSFI;
+        format
+    }
 >
 "#;
     assert_eq!(output, expect);
@@ -445,7 +467,7 @@ fn test_space1() {
     let output = format(text);
     let expect = r#"document(|title = {hello}|)'<
     +p % comment
-    { hello \bold { abc }def }
+    { hello\bold { abc }def }
 >
 "#;
     assert_eq!(output, expect);
@@ -461,7 +483,7 @@ fn test_space2() {
     let output = format(text);
     let expect = r#"document(|title = {hello}|)'<
     +p % comment
-    { hello \bold { abc }def }
+    { hello\bold { abc }def }
 >
 "#;
     assert_eq!(output, expect);
@@ -481,7 +503,7 @@ fn test_space3() {
     let output = format(text);
     let expect = r#"document(|title = {hello}|)'<
     +p % comment
-    { hello \bold { abc }def }
+    { hello\bold { abc }def }
     +align [
         [
             ${};

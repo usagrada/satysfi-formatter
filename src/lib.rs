@@ -148,11 +148,12 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
     use satysfi_parser::Rule;
     let csts = cst.inner.clone();
     let sep = &match cst.rule {
-        Rule::block_cmd | Rule::inline_cmd | Rule::horizontal_single => " ".to_string(),
+        Rule::block_cmd | Rule::inline_cmd => " ".to_string(),
         Rule::vertical | Rule::horizontal_bullet_list => {
             format!("\n{}", indent_space(depth))
         }
         Rule::record | Rule::list => format!(";\n{}", indent_space(depth)),
+        Rule::horizontal_single => "".to_string(),
         _ => "".to_string(),
     };
 
@@ -179,6 +180,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 .iter()
                 .fold((String::new(), 0), |current, now_cst| {
                     let s = to_string_cst(text, &now_cst, depth);
+                    let start_newline = text[now_cst.span.start..now_cst.span.end].starts_with("\n");
                     if current.0.is_empty() {
                         if now_cst.rule == Rule::comments {
                             (s, 0)
@@ -192,42 +194,37 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     } else if now_cst.rule == Rule::comments {
                         let indent = indent_space(depth);
                         (format!("{}\n{indent}{s}", current.0.trim_end()), 0)
-                    } else if current.1 == 0 {
-                        // 既に改行されている
-                        // コメントに対応させるための例外処理
-                        (current.0 + &s, s.chars().count())
-                    } else {
-                        let last_letter = current.0.chars().nth_back(0);
-                        let is_regular_text_start_whitespace = text
-                            [now_cst.span.start..now_cst.span.end]
-                            .starts_with(char::is_whitespace);
-                        let not_space = match last_letter {
-                            Some(c) => match c {
-                                '}' | '>' => true && !is_regular_text_start_whitespace,
-                                _ => false,
-                            },
-                            None => false,
-                        };
-
-                        if current.1 == 0 {
-                            // コメントで終了している
-                            (current.0 + &s, s.chars().count())
-                        } else if not_space {
-                            (current.0 + &s, current.1 + s.chars().count())
-                        } else if current.1 > default_option.row_length {
-                            if current.1 + s.chars().count() > default_option.row_length {
-                                // 一定以上の長さの時は改行を挿入
-                                (
-                                    current.0 + "\n" + &indent_space(depth) + &s,
-                                    s.chars().count(),
-                                )
-                            } else {
-                                (current.0 + " " + &s, s.chars().count())
-                            }
-                        } else {
-                            (current.0 + " " + &s, current.1 + s.chars().count())
-                        }
+                    } else if start_newline {
+                        let indent = indent_space(depth);
+                        (format!("{}\n{indent}{s}", current.0.trim_end()), 0)
                     }
+                    else {
+                        (current.0 + &s, current.1 + s.chars().count())
+                    }
+                    // } else if current.1 == 0 {
+                    //     // 既に改行されている
+                    //     // コメントに対応させるための例外処理
+                    //     (current.0 + &s, s.chars().count())
+                    // } else {
+                    // if current.1 == 0 {
+                    //     // コメントで終了している
+                    //     (current.0 + &s, s.chars().count())
+                    // 改行を勝手に入れると出力結果が変わってしまうのでコメントアウト
+                    // } else if current.1 > default_option.row_length {
+                    //     if current.1 + s.chars().count() > default_option.row_length {
+                    //         // 一定以上の長さの時は改行を挿入
+                    //         (
+                    //             current.0 + "\n" + &indent_space(depth) + &s,
+                    //             s.chars().count(),
+                    //         )
+                    //     } else {
+                    //         (current.0 + &s, s.chars().count())
+                    //     }
+                    // } else {
+                    //     (current.0 + &s, current.1 + s.chars().count())
+                    // }
+                    // (current.0 + &s, current.1 + s.chars().count())
+                    // }
                 })
                 .0;
             // コメントが末尾にあるとき余計な改行が残ってしまうので削除
@@ -372,13 +369,12 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         // command
         Rule::cmd_name_ptn => self_text,
         Rule::cmd_expr_arg => {
-            if self_text.starts_with("("){
-                format!("({output})", )
-            }else{
+            if self_text.starts_with("(") {
+                format!("({output})",)
+            } else {
                 output
             }
-            
-        },
+        }
         Rule::cmd_expr_option => self_text,
         Rule::cmd_text_arg => {
             // 括弧の種類を取得

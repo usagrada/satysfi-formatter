@@ -28,6 +28,13 @@ document(|
     show-title = true;
 |)'<
     +newpage;
+    % +section {title}<
+        +p {
+        \SATySFi; を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。
+        \footnote { このドキュメントは format のテストも兼ねて書いています。 }
+    }
+    % >
+
     +section { formatter の install 方法 } <
         +p {
             \bold{abc}def と \bold{abc }
@@ -46,10 +53,6 @@ cargo install --path .
 `);
     >
     +section { formatter の使い方 } <
-        +p {
-            \SATySFi; を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。
-            \footnote { このドキュメントは format のテストも兼ねて書いています。 }
-        }
         +cmd(`satysfi-fmt $input -o $output`);
         +p {
             `output` を指定しなかった場合、コマンドラインの標準出力に結果が表示されます。
