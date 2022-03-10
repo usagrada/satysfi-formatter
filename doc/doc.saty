@@ -35,7 +35,8 @@ document(|
     % >
     +section { formatter の install 方法 } <
         +p {
-            \bold { abc }def と\bold { abc }def
+            \bold { abc }def と\bold { abc }
+            def
             以下のどちらかの方法で、入れることができます。
             ターミナルに以下のコマンドを打ち込んでください。\footnote {
                 --force は無くても入りますが、既にインストールしている場合、
