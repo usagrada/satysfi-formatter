@@ -332,8 +332,9 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
             // 括弧の種類を取得
             let start_arg = self_text.chars().nth(0).unwrap();
             let end_arg = self_text.chars().nth_back(0).unwrap();
-            // 改行を含んでいたら、改行を入れる
-            let include_kaigyou = output.find("\n") != None || start_arg == '<';
+            // コメントで開始 or 改行を含んでいたら、改行を入れる
+            let include_comment = output.chars().nth(0) == Some('%');
+            let include_kaigyou = output.find("\n") != None || start_arg == '<' || include_comment;
             match output.trim().len() {
                 0 => format!("{start_arg}{end_arg}"),
                 num if include_kaigyou || num > default_option.row_length => {

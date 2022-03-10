@@ -305,10 +305,8 @@ document(||)'<
     assert_eq!(output, expect);
 }
 
-
-
 #[test]
-fn test_comment() {
+fn test_comment1() {
     let text1 = r#"@import: hello
   @require: local
   %comment
@@ -319,9 +317,32 @@ document(|title = {hello}|)'<+p{% comment
     let expect = r#"@import: hello
 @require: local
 % comment
-
 document(|title = {hello}|)'<
     +p {
+        % comment
+    }
+>
+"#;
+    assert_eq!(output, expect);
+}
+
+
+
+#[test]
+fn test_comment2() {
+    let text2 = r#"@import: hello
+  @require: local
+  %comment
+  
+document(|title = {hello}|)'<+p{hello% comment
+}>"#;
+    let output = format(text2);
+    let expect = r#"@import: hello
+@require: local
+% comment
+document(|title = {hello}|)'<
+    +p {
+        hello
         % comment
     }
 >

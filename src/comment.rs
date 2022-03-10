@@ -24,10 +24,10 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
             }
             let comment = format!("% {}", &text[inner + 1..].trim_start());
 
-            // println!("comment: {comment}");
             comments.push_back(Comment {
                 text: comment,
-                span: Span { start, end },
+                // 行内部の開始位置を足す
+                span: Span { start: start + inner, end },
             });
         }
     }
@@ -47,6 +47,7 @@ pub fn check_comment(cst: &Cst, comment: &Comment) -> bool {
 pub fn csttext_insert_comments(csttext: CstText) -> CstText {
     let mut comments = get_comments(&csttext);
     if let Some(comment) = comments.pop_front() {
+        comments.push_front(comment.clone());
         check_comment(&csttext.cst, &comment);
         let mut csttext = csttext;
         cst_insert_comment(&mut csttext.cst, &mut comments);
@@ -60,7 +61,9 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
     let mut insert_comment = vec![];
     for comment in comments.iter() {
         let flag = check_comment(cst, &comment);
+        
         if flag {
+            println!("insert!\ncst: {:?},comment: {}", cst.rule, comment.text);
             insert_comment.push(Cst {
                 rule: Rule::comments,
                 inner: vec![],
