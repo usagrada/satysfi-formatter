@@ -30,10 +30,12 @@ document(|
     +section { formatter の install 方法 } <
         +p {
             以下のどちらかの方法で、入れることができます。
-            ターミナルに以下のコマンドを打ち込んでください。
-            _
+            ターミナルに以下のコマンドを打ち込んでください。 \footnote {
+                --force は無くても入りますが、既にインストールしている場合、
+                最新のデータにアップデートするために同じコマンドを使用できます。
+            }
         }
-        +cmd (`cargo install --git https://github.com/usagrada/satysfi-formatter.git`);
+        +cmd (`cargo install --force --git https://github.com/usagrada/satysfi-formatter.git`);
         +cmd (`git clone https://github.com/usagrada/satysfi-formatter.git
 cd satysfi-formatter
 cargo install --path .
