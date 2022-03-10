@@ -4,8 +4,9 @@ use satysfi_parser::{Cst, CstText, Rule};
 /// visualize
 /// * `csttext:` - CstText::parse で取得したものを渡す
 pub fn visualize_csttext_tree(csttext: &CstText) {
+    visualize_cst_tree(&csttext, &csttext.cst, 0);
     for node in csttext.cst.inner.iter() {
-        visualize_cst_tree(&csttext, node, 0);
+        visualize_cst_tree(&csttext, node, 1);
     }
 }
 

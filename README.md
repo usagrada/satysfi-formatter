@@ -7,7 +7,7 @@ Satysfi 用の formatter
 ## install
 
 ```bash
-cargo install --git https://github.com/usagrada/satysfi-formatter.git
+cargo install --force --git https://github.com/usagrada/satysfi-formatter.git
 ```
 
 ## usage

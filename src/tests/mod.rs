@@ -97,8 +97,7 @@ fn test6() {
 
 document(|title = {hello}|)'<+p{hello world}+p {${ax^2 + bx + c = 0}}>"#;
     let output = format(text);
-    let expect = r#"
-document(|title = {hello}|)'<
+    let expect = r#"document(|title = {hello}|)'<
     +p { hello world }
     +p { ${ax^2 + bx + c = 0} }
 >
@@ -111,8 +110,7 @@ fn test7() {
     let text = r#"
 document(|title = {hello}; author = {author};|)'<>"#;
     let output = format(text);
-    let expect = r#"
-document(|
+    let expect = r#"document(|
     title = {hello};
     author = {author};
 |)'<>
@@ -183,8 +181,7 @@ document(||)'<
 }
 >>"#;
     let output = format(text);
-    let expect = r#"
-document(||)'<
+    let expect = r#"document(||)'<
     +section { section } <
         +p {
             \listing {
@@ -211,8 +208,7 @@ hello
 }
 >>"#;
     let output = format(text);
-    let expect = r#"
-document(||)'<
+    let expect = r#"document(||)'<
     +section { section } <
         +p {
             hello
@@ -233,8 +229,7 @@ document(||)'<
 +p {日本語}
 >>"#;
     let output = format(text);
-    let expect = r#"
-document(||)'<
+    let expect = r#"document(||)'<
     +section { section } <
         +p { 日本語 }
     >
@@ -317,6 +312,7 @@ document(|title = {hello}|)'<+p{% comment
     let expect = r#"@import: hello
 @require: local
 % comment
+
 document(|title = {hello}|)'<
     +p {
         % comment
@@ -338,6 +334,7 @@ document(|title = {hello}|)'<+p{hello% comment
     let expect = r#"@import: hello
 @require: local
 % comment
+
 document(|title = {hello}|)'<
     +p {
         hello
@@ -367,6 +364,7 @@ document(|title = {hello}|)'<+p{hello% comment
     let expect = r#"@import: hello
 @require: local
 % comment
+
 document(|title = {hello}|)'<
     +p {
         hello
@@ -399,6 +397,7 @@ document(|title = {hello}|)'<+p{% comment
     let expect = r#"@import: hello
 @require: local
 % comment
+
 document(|title = {hello}|)'<
     +p {
         % comment
@@ -408,6 +407,91 @@ document(|title = {hello}|)'<
             * item3
         }
     }
+>
+"#;
+    assert_eq!(output, expect);
+}
+
+#[test]
+fn test_comment5() {
+    let text3 = r#"@import: hello
+  @require: local
+  %comment
+  
+document(|title = {hello}|)'<+p% comment
+{
+    hello
+}>"#;
+    let output = format(text3);
+    let expect = r#"@import: hello
+@require: local
+% comment
+
+document(|title = {hello}|)'<
+    +p % comment
+    { hello }
+>
+"#;
+    assert_eq!(output, expect);
+}
+
+
+#[test]
+fn test_space1() {
+    let text = r#"document(|title = {hello}|)'<+p% comment
+{
+    hello\bold{abc}def
+}>"#;
+    let output = format(text);
+    let expect = r#"document(|title = {hello}|)'<
+    +p % comment
+    { hello \bold { abc }def }
+>
+"#;
+    assert_eq!(output, expect);
+}
+
+
+#[test]
+fn test_space2() {
+    let text = r#"document(|title = {hello}|)'<+p% comment
+{
+    hello\bold{abc}def 
+}>"#;
+    let output = format(text);
+    let expect = r#"document(|title = {hello}|)'<
+    +p % comment
+    { hello \bold { abc }def }
+>
+"#;
+    assert_eq!(output, expect);
+}
+
+#[test]
+fn test_space3() {
+    let text = r#"document(|title = {hello}|)'<+p% comment
+{
+    hello\bold{abc}def 
+}
++align [
+  [${}; ${\( 1 + a \)   \( 1 + a^2 \)   \( 1 + a^{2^2} \)}];
+  [${}; ${\paren{1 + a} \paren{1 + a^2} \paren{1 + a^{2^2}}}];
+];
+>"#;
+    let output = format(text);
+    let expect = r#"document(|title = {hello}|)'<
+    +p % comment
+    { hello \bold { abc }def }
+    +align [
+        [
+            ${};
+            ${\( 1 + a \)   \( 1 + a^2 \)   \( 1 + a^{2^2} \)}
+        ];
+        [
+            ${};
+            ${\paren{1 + a} \paren{1 + a^2} \paren{1 + a^{2^2}}}
+        ]
+    ];
 >
 "#;
     assert_eq!(output, expect);
