@@ -129,7 +129,7 @@ pub fn format(input: &str) -> String {
     let mut output = to_string_cst_inner(input, &csttext.cst, depth);
 
     // 末尾に改行がない場合、改行を挿入して終了
-    if output.chars().nth_back(0) != Some('\n') {
+    if !output.ends_with("\n") {
         output += "\n";
     }
 
@@ -180,7 +180,8 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 .iter()
                 .fold((String::new(), 0), |current, now_cst| {
                     let s = to_string_cst(text, &now_cst, depth);
-                    let start_newline = text[now_cst.span.start..now_cst.span.end].starts_with("\n");
+                    let start_newline =
+                        text[now_cst.span.start..now_cst.span.end].starts_with("\n");
                     if current.0.is_empty() {
                         if now_cst.rule == Rule::comments {
                             (s, 0)
@@ -197,8 +198,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     } else if start_newline {
                         let indent = indent_space(depth);
                         (format!("{}\n{indent}{s}", current.0.trim_end()), 0)
-                    }
-                    else {
+                    } else {
                         (current.0 + &s, current.1 + s.chars().count())
                     }
                     // } else if current.1 == 0 {
@@ -309,7 +309,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::type_stmt => format!("{}{}", RESERVED_WORD.type_stmt, output),
         Rule::type_inner => output,
         Rule::type_variant => output,
-        Rule::module_stmt => self_text,
+        Rule::module_stmt => self_text, // TODO
         Rule::open_stmt => output,
         Rule::arg => output,
 
@@ -317,7 +317,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::unary => output,
         Rule::unary_prefix => output,
         Rule::block_text => {
-            if self_text.chars().nth(0) == Some('\'') {
+            if self_text.starts_with("'") {
                 if output.len() > 0 {
                     format!("'<{start_indent}{output}{end_indent}>")
                 } else {
@@ -339,7 +339,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
             } else {
                 format!("[{output}]")
             };
-            if self_text.chars().nth_back(0) == Some(';') {
+            if self_text.ends_with(";") {
                 output + ";"
             } else {
                 output
@@ -381,7 +381,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
             let start_arg = self_text.chars().nth(0).unwrap();
             let end_arg = self_text.chars().nth_back(0).unwrap();
             // コメントで開始 or 改行を含んでいたら、改行を入れる
-            let include_comment = output.chars().nth(0) == Some('%');
+            let include_comment = output.starts_with("%");
             let include_kaigyou = output.find("\n") != None || start_arg == '<' || include_comment;
             match output.trim().len() {
                 0 => format!("{start_arg}{end_arg}"),
@@ -392,7 +392,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
             }
         }
         Rule::inline_cmd => {
-            if self_text.chars().nth_back(0) == Some(';') {
+            if self_text.ends_with(";") {
                 output + ";"
             } else {
                 output
@@ -400,7 +400,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         }
         Rule::inline_cmd_name => self_text,
         Rule::block_cmd => {
-            if self_text.chars().nth_back(0) == Some(';') {
+            if self_text.ends_with(";") {
                 output + ";"
             } else {
                 output
