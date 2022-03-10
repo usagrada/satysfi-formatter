@@ -167,7 +167,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     Rule::block_cmd_name => current + " " + &text,
                     // Rule::arg => current + " " +text,
                     Rule::expr => current + " = " + &text,
-                    Rule::comments => (current + &text + "\n" + &indent_space(depth)),
+                    Rule::comments => (current + &text),
                     _ => current + " " + &text,
                 }
             }) + "\n"
@@ -179,8 +179,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     let s = to_string_cst(text, &now_cst, depth);
                     if current.0.is_empty() {
                         if now_cst.rule == Rule::comments {
-                            let indent = indent_space(depth);
-                            (format!("{s}\n{indent}"), 0)
+                            (s, 0)
                         } else {
                             (s.clone(), s.chars().count())
                         }
@@ -188,16 +187,14 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                         current
                     } else if now_cst.rule == Rule::comments {
                         let indent = indent_space(depth);
-                        (
-                            format!("{}\n{indent}{s}\n{indent}", current.0.trim_end()),
-                            0,
-                        )
+                        (format!("{}\n{indent}{s}", current.0.trim_end()), 0)
                     } else if current.1 == 0 {
                         // 既に改行されている コメントに対応させるための例外処理
                         (current.0 + &s, s.chars().count())
-                    // } else if now_cst.rule != Rule::regular_text {
                     } else {
-                        if current.1 > default_option.row_length {
+                        if current.1 == 0 {
+                            (current.0 + &s, s.chars().count())
+                        } else if current.1 > default_option.row_length {
                             if current.1 + s.chars().count() > default_option.row_length {
                                 // 一定以上の長さの時は改行を挿入
                                 (
@@ -214,28 +211,29 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                             (current.0 + " " + &s, current.1 + s.chars().count())
                         }
                     }
-                    // else {
-                    //     (current.0.clone() + sep + &s, current.1 + s.chars().count())
-                    // }
                 })
                 .0;
             // コメントが末尾にあるとき余計な改行が残ってしまうので削除
             output.trim_end().to_string()
         }
         _ => {
-            let output = csts.iter().fold(String::new(), |current, now_cst| {
-                let s = to_string_cst(text, &now_cst, depth);
-                let output = if current.is_empty() {
-                    s
-                } else if s.is_empty() {
-                    current
-                } else {
-                    current + sep + &s
-                };
-                output
-            });
-            // もし中身で見つかっていない場合は末尾に追加
-
+            let output = csts
+                .iter()
+                .fold((String::new(), false), |current, now_cst| {
+                    let s = to_string_cst(text, &now_cst, depth);
+                    let flag = now_cst.rule == Rule::comments;
+                    let output = if current.1 {
+                        (current.0.clone() + &s, flag)
+                    } else if current.0.is_empty() {
+                        (s, flag)
+                    } else if s.is_empty() {
+                        current
+                    } else {
+                        (current.0 + sep + &s, flag)
+                    };
+                    output
+                })
+                .0;
             output
         }
     };
@@ -259,7 +257,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
     use satysfi_parser::Rule;
     // 中身をそのまま返すものは output をそのまま返す
     match cst.rule {
-        Rule::comments => to_comment_string(self_text),
+        Rule::comments => to_comment_string(self_text) + &end_indent,
         // header
         Rule::stage => output,
         Rule::headers => output + "\n",
