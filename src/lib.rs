@@ -2,14 +2,10 @@ mod comment;
 #[cfg(test)]
 mod tests;
 mod visualize;
-use std::collections::VecDeque;
 
-use comment::csttext_insert_comments;
-pub use comment::Comment;
 use satysfi_parser::{grammar, Cst, CstText};
+use comment::*;
 pub use visualize::*;
-
-use crate::comment::{check_comment, to_comment_string};
 
 type ReservedText = &'static str;
 
@@ -213,7 +209,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                         } else {
                             (current.0 + " " + &s, current.1 + s.chars().count())
                         }
-                    } 
+                    }
                     // else {
                     //     (current.0.clone() + sep + &s, current.1 + s.chars().count())
                     // }

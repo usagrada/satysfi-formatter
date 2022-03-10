@@ -57,7 +57,6 @@ cargo install --path .
             % comment
             現状では、かなり愚直な実装をしている + 一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える、etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
             % comment
-            
         }
     >
 >
