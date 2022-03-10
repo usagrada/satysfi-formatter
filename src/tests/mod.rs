@@ -326,8 +326,6 @@ document(|title = {hello}|)'<
     assert_eq!(output, expect);
 }
 
-
-
 #[test]
 fn test_comment2() {
     let text2 = r#"@import: hello
@@ -344,6 +342,71 @@ document(|title = {hello}|)'<
     +p {
         hello
         % comment
+    }
+>
+"#;
+    assert_eq!(output, expect);
+}
+
+
+
+#[test]
+fn test_comment3() {
+    let text3 = r#"@import: hello
+  @require: local
+  %comment
+  
+document(|title = {hello}|)'<+p{hello% comment
+    \listing {
+        * item1
+        * item2
+        * item3
+    }
+}>"#;
+    let output = format(text3);
+    let expect = r#"@import: hello
+@require: local
+% comment
+document(|title = {hello}|)'<
+    +p {
+        hello
+        % comment
+        \listing {
+            * item1
+            * item2
+            * item3
+        }
+    }
+>
+"#;
+    assert_eq!(output, expect);
+}
+
+#[test]
+fn test_comment4() {
+    let text3 = r#"@import: hello
+  @require: local
+  %comment
+  
+document(|title = {hello}|)'<+p{% comment
+    \listing {
+        * item1
+        * item2
+        * item3
+    }
+}>"#;
+    let output = format(text3);
+    let expect = r#"@import: hello
+@require: local
+% comment
+document(|title = {hello}|)'<
+    +p {
+        % comment
+        \listing {
+            * item1
+            * item2
+            * item3
+        }
     }
 >
 "#;

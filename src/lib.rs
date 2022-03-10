@@ -3,8 +3,8 @@ mod comment;
 mod tests;
 mod visualize;
 
-use satysfi_parser::{grammar, Cst, CstText};
 use comment::*;
+use satysfi_parser::{grammar, Cst, CstText};
 pub use visualize::*;
 
 type ReservedText = &'static str;
@@ -177,10 +177,14 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 .iter()
                 .fold((String::new(), 0), |current, now_cst| {
                     let s = to_string_cst(text, &now_cst, depth);
-
                     if current.0.is_empty() {
-                        (s.clone(), s.chars().count())
-                    } else if s.is_empty() {
+                        if now_cst.rule == Rule::comments {
+                            let indent = indent_space(depth);
+                            (format!("{s}\n{indent}"), 0)
+                        } else {
+                            (s.clone(), s.chars().count())
+                        }
+                    } else if s.trim().is_empty() {
                         current
                     } else if now_cst.rule == Rule::comments {
                         let indent = indent_space(depth);
