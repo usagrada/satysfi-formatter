@@ -5,6 +5,19 @@
 @require: code-printer/code-design
 
 let-block ctx +newpage = clear-page
+let-block +cmd arg = '<+code-printer ?:(
+  CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
+  |> CodePrinter.set-basic-font-size 9pt
+  |> CodePrinter.set-number-fun CodeDesign.number-fun-null
+) (arg);
+>
+let-inline \cmd arg = {\code-printer ?:(
+  CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
+  |> CodePrinter.set-basic-font-size 9pt
+  |> CodePrinter.set-number-fun CodeDesign.number-fun-null
+) (arg);
+}
+
 in
 
 document(|
@@ -14,38 +27,37 @@ document(|
     show-title = true;
 |)'<
     +newpage;
-    +section{formatter の install 方法}<
+    +section { formatter の install 方法 } <
         +p {
             以下のどちらかの方法で、入れることができます。
             ターミナルに以下のコマンドを打ち込んでください。
+            _
         }
-        +code-printer ?:(
-  CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
-  |> CodePrinter.set-basic-font-size 9pt
-  |> CodePrinter.set-number-fun CodeDesign.number-fun-null
-)(`cargo install --git https://github.com/usagrada/satysfi-formatter.git`);
-        +code-printer ?:(
-  CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
-  |> CodePrinter.set-basic-font-size 9pt
-  |> CodePrinter.set-number-fun CodeDesign.number-fun-null
-)(`git clone https://github.com/usagrada/satysfi-formatter.git
+        +cmd (`cargo install --git https://github.com/usagrada/satysfi-formatter.git`);
+        +cmd (`git clone https://github.com/usagrada/satysfi-formatter.git
 cd satysfi-formatter
 cargo install --path .
 `);
     >
-    +section{formatter の使い方}<
+    +section { formatter の使い方 } <
         +p {
             \SATySFi; を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。
-            \footnote{このドキュメントは format のテストも兼ねて書いています。}
-            
+            \footnote { このドキュメントは format のテストも兼ねて書いています。 }
         }
-        +code-printer ?:(
-  CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
-  |> CodePrinter.set-basic-font-size 9pt
-  |> CodePrinter.set-number-fun CodeDesign.number-fun-null)
-  (`satysfi-fmt $input -o $output`);
+        +cmd(`satysfi-fmt $input -o $output`);
         +p {
             `output` を指定しなかった場合、コマンドラインの標準出力に結果が表示されます。
+        }
+    >
+    +section { 開発者の方 } <
+        +p {
+            release build でない場合、 `src/visualize.rs` にある関数が呼び出されるようになっており、ファイルの構造を確認できるようになってます。
+  \cmd (`cargo run -- $input`);
+            `lib.rs` の `format` を開始地点とし、
+            コードから `satysfi-parser` で CST 化し、文字列に戻して結合しています。
+            %comment
+            現状では、かなり愚直な実装をしている + 一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える、etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
+            %comment
         }
     >
 >

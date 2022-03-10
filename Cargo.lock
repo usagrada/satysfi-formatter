@@ -268,8 +268,7 @@ dependencies = [
 [[package]]
 name = "satysfi-parser"
 version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4004555c78d851615a816b8912038f1dd4dbb1b7a464b8f49f58beb028f206f1"
+source = "git+https://github.com/usagrada/satysfi-parser.git#2c17dde21d05b8aa633131dc4a7635dbc5f4173a"
 dependencies = [
  "anyhow",
  "glob",

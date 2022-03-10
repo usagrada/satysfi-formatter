@@ -1,4 +1,4 @@
-use satysfi_parser::{Cst, CstText};
+use satysfi_parser::{Cst, CstText, Rule};
 
 // for debug
 /// visualize
@@ -22,7 +22,11 @@ fn visualize_cst_tree(csttext: &CstText, cst: &Cst, depth: usize) {
     let self_text = if cst.span.end - cst.span.start <= max_len {
         self_text
     } else {
-        format!("{}...", self_text)
+        if cst.rule == Rule::regular_text {
+            csttext.get_text_from_span(cst.span).to_string()
+        } else {
+            format!("{}...", self_text)
+        }
     };
     println!("{}* {:?}: {}", " ".repeat(depth * 2), cst.rule, self_text);
     // println!("{}└─ {:?}", cst.rule);

@@ -1,9 +1,11 @@
+mod comment;
 #[cfg(test)]
 mod tests;
 mod visualize;
-pub use visualize::*;
 
 use satysfi_parser::{grammar, Cst, CstText};
+use comment::*;
+pub use visualize::*;
 
 type ReservedText = &'static str;
 
@@ -19,6 +21,35 @@ struct ReservedWord {
     block_command: ReservedText,
     math_command: ReservedText,
     let_rec: ReservedText,
+    controls: ReservedText,
+    command: ReservedText,
+    before: ReservedText,
+    module: ReservedText,
+    direct: ReservedText,
+    struct_stmt: ReservedText,
+    cycle: ReservedText,
+    match_stmt: ReservedText,
+    while_stmt: ReservedText,
+    if_stmt: ReservedText,
+    else_stmt: ReservedText,
+    true_stmt: ReservedText,
+    false_stmt: ReservedText,
+    open: ReservedText,
+    then: ReservedText,
+    when: ReservedText,
+    with: ReservedText,
+    and: ReservedText,
+    end: ReservedText,
+    fun: ReservedText,
+    let_stmt: ReservedText,
+    mod_stmt: ReservedText,
+    not: ReservedText,
+    sig: ReservedText,
+    val: ReservedText,
+    as_stmt: ReservedText,
+    do_stmt: ReservedText,
+    in_stmt: ReservedText,
+    of: ReservedText,
 }
 
 const RESERVED_WORD: ReservedWord = ReservedWord {
@@ -31,11 +62,36 @@ const RESERVED_WORD: ReservedWord = ReservedWord {
     let_block: "let-block",
     let_math: "let-math",
     type_stmt: "type",
-    let_rec: "let-rec", // / "controls" / "command" / "before" / "module" / "direct" / "struct"
-                        // / "cycle" / "match" / "while" / "false"
-                        // / "else" / "open" / "then" / "true" / "type" / "when" / "with"
-                        // / "and" / "end" / "fun" / "let" / "mod" / "not" / "sig" / "val"
-                        // / "as" / "do" / "if" / "in" / "of")
+    let_rec: "let-rec",
+    controls: "controls",
+    command: "command",
+    before: "before",
+    module: "module",
+    direct: "direct",
+    struct_stmt: "struct",
+    cycle: "cycle",
+    match_stmt: "match",
+    while_stmt: "while",
+    if_stmt: "if",
+    else_stmt: "else",
+    true_stmt: "true",
+    false_stmt: "false",
+    open: "open",
+    then: "then",
+    when: "when",
+    with: "with",
+    and: "and",
+    end: "end",
+    fun: "fun",
+    let_stmt: "let",
+    mod_stmt: "mod",
+    not: "not",
+    sig: "sig",
+    val: "val",
+    as_stmt: "as",
+    do_stmt: "do",
+    in_stmt: "in",
+    of: "of",
 };
 
 pub struct OptionData {
@@ -46,7 +102,7 @@ pub struct OptionData {
 #[allow(non_upper_case_globals)]
 // format 設定のオプション
 static default_option: OptionData = OptionData {
-    row_length: 40,
+    row_length: 80,
     indent_space: 4,
 };
 
@@ -56,15 +112,18 @@ static default_option: OptionData = OptionData {
 pub fn format(input: &str) -> String {
     /*
     CstText {
-      text: string,
-      lines: Vec<usize>, // start
-      cst: Cst,
+        text: string,
+        lines: Vec<usize>, // start
+        cst: Cst,
     }
     */
     let csttext = CstText::parse(input, grammar::program).expect("parse error");
+    let csttext = csttext_insert_comments(csttext);
 
     #[cfg(debug_assertions)]
     visualize_csttext_tree(&csttext);
+    // #[cfg(debug_assertions)]
+    // dbg!(&csttext);
 
     let depth = 0;
     let mut output = to_string_cst_inner(input, &csttext.cst, depth);
@@ -81,14 +140,15 @@ pub fn format(input: &str) -> String {
 fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
     /*
     Cst {
-      rule: Rule,
-      span: Span { start: number, end: number },
-      inner: [Cst] }
+        rule: Rule,
+        span: Span { start: number, end: number },
+        inner: [Cst]
+    }
     */
     use satysfi_parser::Rule;
     let csts = cst.inner.clone();
     let sep = &match cst.rule {
-        Rule::block_cmd | Rule::horizontal_single => " ".to_string(),
+        Rule::block_cmd | Rule::inline_cmd | Rule::horizontal_single => " ".to_string(),
         Rule::vertical | Rule::horizontal_bullet_list => format!("\n{}", indent_space(depth)),
         Rule::record => format!(";\n{}", indent_space(depth)),
         _ => "".to_string(),
@@ -99,28 +159,81 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
         | Rule::let_block_stmt_noctx
         | Rule::let_inline_stmt_ctx
         | Rule::let_inline_stmt_noctx
-        | Rule::let_math_stmt
-        => {
+        | Rule::let_math_stmt => {
             csts.iter().fold(String::new(), |current, now_cst| {
+                let text = to_string_cst(text, now_cst, depth);
                 match now_cst.rule {
-                    Rule::var => current + " " + &to_string_cst(text, now_cst, depth),
-                    Rule::block_cmd_name => current + " " + &to_string_cst(text, now_cst, depth),
-                    Rule::expr => current + " = " + &to_string_cst(text, now_cst, depth),
-                    _ => String::new(),
+                    Rule::var => current + " " + &text,
+                    Rule::block_cmd_name => current + " " + &text,
+                    // Rule::arg => current + " " +text,
+                    Rule::expr => current + " = " + &text,
+                    Rule::comments => (current + &text + "\n" + &indent_space(depth)),
+                    _ => current + " " + &text,
                 }
-                // current + &to_string_cst_inner(text, cst, depth)
-            })
+            }) + "\n"
         }
-        _ => csts.iter().fold(String::new(), |current, now_cst| {
-            let s = to_string_cst(text, &now_cst, depth);
-            if current.is_empty() {
-                s
-            } else if s.is_empty() {
-                current
-            } else {
-                current + sep + &s
-            }
-        }),
+        Rule::horizontal_single => {
+            let output = csts
+                .iter()
+                .fold((String::new(), 0), |current, now_cst| {
+                    let s = to_string_cst(text, &now_cst, depth);
+
+                    if current.0.is_empty() {
+                        (s.clone(), s.chars().count())
+                    } else if s.is_empty() {
+                        current
+                    } else if now_cst.rule == Rule::comments {
+                        let indent = indent_space(depth);
+                        (
+                            format!("{}\n{indent}{s}\n{indent}", current.0.trim_end()),
+                            0,
+                        )
+                    } else if current.1 == 0 {
+                        // 既に改行されている コメントに対応させるための例外処理
+                        (current.0 + &s, s.chars().count())
+                    // } else if now_cst.rule != Rule::regular_text {
+                    } else {
+                        if current.1 > default_option.row_length {
+                            if current.1 + s.chars().count() > default_option.row_length {
+                                // 一定以上の長さの時は改行を挿入
+                                (
+                                    current.0 + "\n" + &indent_space(depth) + &s,
+                                    s.chars().count(),
+                                )
+                            } else {
+                                (
+                                    current.0 + " " + &indent_space(depth) + &s,
+                                    s.chars().count(),
+                                )
+                            }
+                        } else {
+                            (current.0 + " " + &s, current.1 + s.chars().count())
+                        }
+                    }
+                    // else {
+                    //     (current.0.clone() + sep + &s, current.1 + s.chars().count())
+                    // }
+                })
+                .0;
+            // コメントが末尾にあるとき余計な改行が残ってしまうので削除
+            output.trim_end().to_string()
+        }
+        _ => {
+            let output = csts.iter().fold(String::new(), |current, now_cst| {
+                let s = to_string_cst(text, &now_cst, depth);
+                let output = if current.is_empty() {
+                    s
+                } else if s.is_empty() {
+                    current
+                } else {
+                    current + sep + &s
+                };
+                output
+            });
+            // もし中身で見つかっていない場合は末尾に追加
+
+            output
+        }
     };
 
     output
@@ -142,6 +255,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
     use satysfi_parser::Rule;
     // 中身をそのまま返すものは output をそのまま返す
     match cst.rule {
+        Rule::comments => to_comment_string(self_text),
         // header
         Rule::stage => output,
         Rule::headers => output + "\n",
@@ -218,8 +332,9 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
             // 括弧の種類を取得
             let start_arg = self_text.chars().nth(0).unwrap();
             let end_arg = self_text.chars().nth_back(0).unwrap();
-            // 改行を含んでいたら、改行を入れる
-            let include_kaigyou = output.find("\n") != None || start_arg == '<';
+            // コメントで開始 or 改行を含んでいたら、改行を入れる
+            let include_comment = output.chars().nth(0) == Some('%');
+            let include_kaigyou = output.find("\n") != None || start_arg == '<' || include_comment;
             match output.trim().len() {
                 0 => format!("{start_arg}{end_arg}"),
                 num if include_kaigyou || num > default_option.row_length => {
@@ -230,7 +345,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         }
         Rule::inline_cmd => {
             if self_text.chars().nth_back(0) == Some(';') {
-                format!("{output};")
+                output + ";"
             } else {
                 output
             }
@@ -238,7 +353,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::inline_cmd_name => self_text,
         Rule::block_cmd => {
             if self_text.chars().nth_back(0) == Some(';') {
-                format!("{output};")
+                output + ";"
             } else {
                 output
             }
@@ -249,6 +364,14 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::math_cmd_name => self_text,
         Rule::math_cmd_expr_arg => self_text,
         Rule::math_cmd_expr_option => self_text,
+
+        // pattern
+        Rule::pat_as => output,
+        Rule::pat_cons => output,
+        Rule::pattern => output,
+        Rule::pat_variant => output,
+        Rule::pat_list => output,
+        Rule::pat_tuple => output,
 
         // expr
         Rule::expr => output,
@@ -289,8 +412,8 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
             // self_text.trim().to_string()
             output
         }
-        Rule::horizontal_escaped_char => output, // TODO
-        Rule::inline_text_embedding => output,   // TODO
+        Rule::horizontal_escaped_char => self_text, // TODO
+        Rule::inline_text_embedding => output,      // TODO
 
         // vertical
         Rule::vertical => output,             // TODO
@@ -310,7 +433,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::program_satyh => output,
         Rule::preamble => {
             if output.len() > 0 {
-                format!("{output}\nin\n\n")
+                format!("{output}in\n\n")
             } else {
                 output
             }
