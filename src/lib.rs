@@ -299,72 +299,72 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
             output
         }
         Rule::horizontal_single => {
-            let output = csts
-                .iter()
-                .enumerate()
-                .fold((String::new(), 0), |current, (index, now_cst)| {
-                    let s = to_string_cst(text, &now_cst, depth);
-                    let start_newline =
-                        text[now_cst.span.start..now_cst.span.end].starts_with("\n");
-                    if current.0.is_empty() {
-                        if now_cst.rule == Rule::comments {
-                            (s, 0)
+            let output =
+                csts.iter()
+                    .enumerate()
+                    .fold(String::new(), |current, (index, now_cst)| {
+                        let s = to_string_cst(text, &now_cst, depth);
+                        let start_newline =
+                            text[now_cst.span.start..now_cst.span.end].starts_with("\n");
+                        if current.is_empty() {
+                            s
+                        } else if index > 0
+                            && (csts[index - 1].rule == Rule::regular_text
+                                || csts[index - 1].rule == Rule::inline_cmd)
+                            && now_cst.rule == Rule::inline_cmd
+                        {
+                            // regular_text と inline_cmd の間にスペースがある場合、フォーマットの例外
+                            let last_span = csts[index - 1].span;
+                            let end_space =
+                                text[last_span.start..last_span.end].ends_with(char::is_whitespace);
+                            // 改行している
+                            let end_newline = text[last_span.start..last_span.end]
+                                .lines()
+                                .last()
+                                .unwrap_or("")
+                                .trim()
+                                .is_empty();
+
+                            if end_space {
+                                if end_newline || s.len() > default_option.row_length {
+                                    format!("{}{newline}{s}", current.trim_end())
+                                } else {
+                                    current + " " + &s
+                                }
+                            } else {
+                                current + &s
+                            }
+                        } else if index + 1 < csts.len()
+                            && (now_cst.rule == Rule::regular_text
+                                || now_cst.rule == Rule::inline_cmd)
+                            && (csts[index + 1].rule != Rule::regular_text
+                                && csts[index + 1].rule != Rule::inline_cmd)
+                            && s.trim().is_empty()
+                        {
+                            // 空文字の処理例外
+                            // ex: `const-str` `const-str` のような場合
+                            // 改行が含まれる場合改行
+                            let include_kaigyo =
+                                text[now_cst.span.start..now_cst.span.end].contains("\n");
+                            if include_kaigyo {
+                                format!("{}{newline}{s}", current.trim_end())
+                            } else {
+                                // 改行がない場合スペースを1つ
+                                format!("{} {s}", current)
+                            }
+                        } else if s.trim().is_empty() {
+                            // 空行の処理
+                            // 文字がない場合は何もしない
+                            current
+                        } else if now_cst.rule == Rule::comments {
+                            format!("{}{newline}{s}", current.trim_end())
+                        } else if start_newline {
+                            format!("{}{newline}{s}", current.trim_end())
                         } else {
-                            (s.clone(), s.chars().count())
+                            current + &s
                         }
-                    } else if index + 1 < csts.len()
-                        && (now_cst.rule == Rule::regular_text || now_cst.rule == Rule::inline_cmd)
-                        && (csts[index + 1].rule != Rule::regular_text
-                            && csts[index + 1].rule != Rule::inline_cmd)
-                        && s.trim().is_empty()
-                    {
-                        // 空文字の処理例外
-                        // 改行が含まれる場合改行
-                        let include_kaigyo =
-                            text[now_cst.span.start..now_cst.span.end].contains("\n");
-                        if include_kaigyo {
-                            (format!("{}{newline}{s}", current.0.trim_end()), 0)
-                        } else {
-                            // 改行がない場合スペースを1つ
-                            (format!("{} {s}", current.0), 0)
-                        }
-                    } else if s.trim().is_empty() {
-                        // 空行の処理
-                        // 文字がない場合は何もしない
-                        current
-                    } else if now_cst.rule == Rule::comments {
-                        (format!("{}{newline}{s}", current.0.trim_end()), 0)
-                    } else if start_newline {
-                        (format!("{}{newline}{s}", current.0.trim_end()), 0)
-                    } else {
-                        (current.0 + &s, current.1 + s.chars().count())
-                    }
-                    // } else if current.1 == 0 {
-                    //     // 既に改行されている
-                    //     // コメントに対応させるための例外処理
-                    //     (current.0 + &s, s.chars().count())
-                    // } else {
-                    // if current.1 == 0 {
-                    //     // コメントで終了している
-                    //     (current.0 + &s, s.chars().count())
-                    // 改行を勝手に入れると出力結果が変わってしまうのでコメントアウト
-                    // } else if current.1 > default_option.row_length {
-                    //     if current.1 + s.chars().count() > default_option.row_length {
-                    //         // 一定以上の長さの時は改行を挿入
-                    //         (
-                    //             current.0 + "\n" + &indent_space(depth) + &s,
-                    //             s.chars().count(),
-                    //         )
-                    //     } else {
-                    //         (current.0 + &s, s.chars().count())
-                    //     }
-                    // } else {
-                    //     (current.0 + &s, current.1 + s.chars().count())
-                    // }
-                    // (current.0 + &s, current.1 + s.chars().count())
-                    // }
-                })
-                .0;
+                    });
+
             // コメントが末尾にあるとき余計な改行が残ってしまうので削除
             output.trim().to_string()
         }
