@@ -5,19 +5,37 @@
 @require: code-printer/code-theme
 @require: code-printer/code-design
 
+% 改ページ
 let-block ctx +newpage = clear-page
+% シェルコマンド
 let-block +cmd arg = '<+code-printer ?:(
   CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
   |> CodePrinter.set-basic-font-size 9pt
   |> CodePrinter.set-number-fun CodeDesign.number-fun-null
 ) (arg);
 >
+% インラインシェルコマンド
 let-inline \cmd arg = {\code-printer ?:(
   CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
   |> CodePrinter.set-basic-font-size 9pt
   |> CodePrinter.set-number-fun CodeDesign.number-fun-null
 ) (arg);
 }
+% インラインRustコマンド
+let-inline \cmd-rust arg = {\code-printer ?:(
+  CodePrinter.make-config CodeSyntax.rust CodeTheme.basic-dark
+  |> CodePrinter.set-basic-font-size 9pt
+  |> CodePrinter.set-number-fun CodeDesign.number-fun-null
+) (arg);
+}
+% インラインシェルコマンド
+let-inline \cmd-saty arg = {\code-printer ?:(
+  CodePrinter.make-config CodeSyntax.satysfi CodeTheme.basic-dark
+  |> CodePrinter.set-basic-font-size 9pt
+  |> CodePrinter.set-number-fun CodeDesign.number-fun-null
+) (arg);
+}
+
 
 in
 
@@ -28,17 +46,16 @@ document(|
     show-title = true;
 |)'<
     +newpage;
-    % +section {title}<
-        +p {
+
+    +p {
         \SATySFi; を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。
         \footnote { このドキュメントは format のテストも兼ねて書いています。 }
+        \footnote{ \SATySFi;の文法に習熟している訳ではないため、parserを元に復元するという手法によりフォーマットを実現おり、容易にビルドが失敗するようになります。(22/3/11 現在) }
     }
-    % >
+    
 
     +section { formatter の install 方法 } <
         +p {
-            \bold{abc}def と \bold{abc }
-            def
             以下のどちらかの方法で、入れることができます。
             ターミナルに以下のコマンドを打ち込んでください。
             \footnote{
@@ -67,6 +84,50 @@ cargo install --path .
             %comment
             現状では、かなり愚直な実装をしている + 一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える、etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
             %comment
+            issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。
+            その際、実際にそれがコンパイル可能である必要はありません。
+        }
+        +subsection{Pull Request}<
+            +p {
+                実装した部分のテストケースを書いていただいてから、プルリクエストをいただけると幸いです。
+                その際、`src/tests` 以下でしたら何処に書いていただいても構いません。（現状テストコード用のファイルをテキトウに書いてしまっているため、整備できていません。）
+            }
+        >
+        +subsection {issue} <
+            +p {
+                % これ落ちる…… const string が複数つながるとダメ……(バッククオートが繋がってはいけない……)
+            以下にサンプル（`src/tests/common.rs` `test1` と同じ）を載せておきます。
+            `r#""` の内部に書かれたテキストはスペースや改行を含め全てそのまま出力されるため、
+            スペース数改行数等の違いにより、テストが容易に落ちます。
+
+            \cmd-rust (`#[test]
+fn test1() {
+    // format 前のテキスト
+    let text = r#"@import: hello
+  @require: local
+  
+document(|title = {hello}|)'<+p{hello world}>"#;
+
+    // 期待されるテキスト
+    let expect = r#"@import: hello
+@require: local
+
+document(|title = {hello}|)'<
+    +p { hello world }
+>
+"#;
+    test_tmpl(text, expect);
+}
+
+            `);
+        }
+    >
+    >
+
+    +section{format}<
+        +p{
+            indent は 4 です。(そのうち引数で管理ができるようにします)
+            ブロックコマンド同士は改行により結合されます。
         }
     >
 >
