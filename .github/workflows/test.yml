@@ -21,7 +21,16 @@ jobs:
           ~/.cargo/registry
           ~/.cargo/git
           target
+          ~/satysfi
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - uses: actions/checkout@v2
+    - name: clone satysfi-package
+      run: |
+        if [ ! -d ~/satysfi ]; then
+          git clone https://github.com/gfngfn/SATySFi.git ~/satysfi
+        fi
+    - name: copy satysfi-package
+      run: mkdir -p ~/.satysfi/dist/packages/ && cp ~/satysfi/lib-satysfi/dist/packages/* ~/.satysfi/dist/packages/
     - name: Run tests
       run: cargo test --verbose
+
