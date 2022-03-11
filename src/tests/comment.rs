@@ -11,8 +11,8 @@ document(|title = {hello}|)'<+p{% comment
 
     let expect = r#"@import: hello
 @require: local
-% comment
 
+% comment
 document(|title = {hello}|)'<
     +p {
         % comment
@@ -33,8 +33,8 @@ document(|title = {hello}|)'<+p{hello% comment
 
     let expect = r#"@import: hello
 @require: local
-% comment
 
+% comment
 document(|title = {hello}|)'<
     +p {
         hello
@@ -61,8 +61,8 @@ document(|title = {hello}|)'<+p{hello% comment
 
     let expect = r#"@import: hello
 @require: local
-% comment
 
+% comment
 document(|title = {hello}|)'<
     +p {
         hello
@@ -93,8 +93,8 @@ document(|title = {hello}|)'<+p{% comment
 }>"#;
     let expect = r#"@import: hello
 @require: local
-% comment
 
+% comment
 document(|title = {hello}|)'<
     +p {
         % comment
@@ -112,8 +112,7 @@ document(|title = {hello}|)'<
 #[test]
 fn test_comment5() {
     let text = r#"@import: hello
-  @require: local
-  %comment
+  @require: local %comment
   
 document(|title = {hello}|)'<+p% comment
 {
@@ -121,8 +120,7 @@ document(|title = {hello}|)'<+p% comment
 }>"#;
 
     let expect = r#"@import: hello
-@require: local
-% comment
+@require: local %comment
 
 document(|title = {hello}|)'<
     +p % comment

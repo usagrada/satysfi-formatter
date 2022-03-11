@@ -17,6 +17,10 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
         let start = csttext.lines[index - 1];
         let end = *line;
         let text = csttext.get_text_from_span(Span { start, end });
+        if text.trim_start().starts_with("@require") || text.trim_start().starts_with("@import") {
+            // @require, @import の行ではコメントではない
+            continue;
+        };
         if let Some(inner) = text.find('%') {
             if inner > 0 && &text[(inner - 1)..inner] == "\\" {
                 // escaped percent

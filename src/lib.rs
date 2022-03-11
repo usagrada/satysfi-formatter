@@ -152,8 +152,10 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
     let newline = format!("\n{indent}");
     let sep = &match cst.rule {
         Rule::block_cmd | Rule::inline_cmd => " ".to_string(),
+        Rule::type_prod | Rule::type_application => " ".to_string(),
         Rule::vertical | Rule::horizontal_bullet_list => newline.clone(),
-        Rule::record | Rule::list => format!(";{newline}"),
+        Rule::record | Rule::type_record | Rule::list => format!(";{newline}"),
+        Rule::type_block_cmd | Rule::type_inline_cmd | Rule::type_math_cmd => format!(";{newline}"),
         Rule::horizontal_single => "".to_string(),
         _ => "".to_string(),
     };
@@ -188,6 +190,22 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 _ => current + " " + &s,
             }
         }),
+        Rule::type_application => {
+            let mut output = String::new();
+            for cst in &csts {
+                let s = to_string_cst(text, cst, depth);
+                if !output.is_empty() {
+                    output += &sep;
+                }
+                if cst.rule == Rule::type_expr {
+                    output += &format!("({s})");
+                } else {
+                    output += &s;
+                }
+            }
+            // println!("match type_application {output}");
+            output
+        }
         Rule::application => {
             if csts.is_empty() {
                 "".to_string()
@@ -359,7 +377,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 current
             } else {
                 current + "\n" + &s
-            } 
+            }
         }),
         _ => {
             let output = csts
@@ -397,7 +415,10 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
 fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
     // インデントを制御するための変数
     let new_depth = match cst.rule {
-        Rule::block_text | Rule::cmd_text_arg | Rule::record | Rule::list => depth + 1,
+        Rule::block_text | Rule::cmd_text_arg | Rule::record | Rule::type_record | Rule::list => {
+            depth + 1
+        }
+        Rule::type_block_cmd | Rule::type_inline_cmd | Rule::math_cmd => depth + 1,
         Rule::sig_stmt | Rule::struct_stmt => depth + 1,
         _ => depth,
     };
@@ -412,7 +433,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
     match cst.rule {
         Rule::comments => to_comment_string(self_text) + &end_indent,
         // header
-        Rule::stage => output,
+        Rule::stage => "@stage: ".to_string() + self_text.trim() + "\n\n",
         Rule::headers => {
             if output.len() > 0 {
                 output + "\n"
@@ -422,7 +443,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         }
         Rule::header_require => "@require: ".to_string() + &output + "\n",
         Rule::header_import => "@import: ".to_string() + &output + "\n",
-        Rule::pkgname => self_text,
+        Rule::pkgname => self_text.trim().to_string(), // 末尾のスペースなどは削除 (スペースで終わるpkgnameが導入されるとバグるけれど無いでしょう……)
 
         // statement
         Rule::let_stmt => format!("{start_indent}{}{}", RESERVED_WORD.let_stmt, output),
@@ -466,16 +487,45 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::type_expr => output,
         Rule::type_optional => output,
         Rule::type_prod => output,
-        Rule::type_inline_cmd => output,
-        Rule::type_block_cmd => output,
-        Rule::type_math_cmd => output,
+        Rule::type_inline_cmd => {
+            if output.contains("\n") {
+                format!(
+                    "[{start_indent}{output}{end_indent}] {}",
+                    RESERVED_WORD.inline_command
+                )
+            } else {
+                format!("[{output}] {}", RESERVED_WORD.inline_command)
+            }
+        }
+        Rule::type_block_cmd => {
+            if output.contains("\n") {
+                format!(
+                    "[{start_indent}{output}{end_indent}] {}",
+                    RESERVED_WORD.block_command
+                )
+            } else {
+                format!("[{output}] {}", RESERVED_WORD.block_command)
+            }
+        }
+        Rule::type_math_cmd => {
+            if output.contains("\n") {
+                format!(
+                    "[{start_indent}{output}{end_indent}] {}",
+                    RESERVED_WORD.math_command
+                )
+            } else {
+                format!("[{output}] {}", RESERVED_WORD.math_command)
+            }
+        }
         Rule::type_list_unit_optional => output,
         Rule::type_application => output,
-        Rule::type_name => output,
-        Rule::type_record => output,
-        Rule::type_record_unit => output,
+        Rule::type_name => self_text,
+        // Rule::type_record => output,
+        // Rule::type_record_unit => output,
         Rule::type_param => output,
-        Rule::constraint => output,
+        Rule::constraint => {
+            format!("{}{}", RESERVED_WORD.constraint, output)
+        }
 
         // unary
         Rule::unary => output,
@@ -518,7 +568,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
                 output
             }
         }
-        Rule::record => {
+        Rule::record | Rule::type_record => {
             // TODO: consider
             if cst.inner.len() > 1 {
                 // 2 つ以上のときは改行
@@ -528,7 +578,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
                 format!("(|{output}|)")
             }
         }
-        Rule::record_unit => self_text, // TODO
+        Rule::record_unit | Rule::type_record_unit => self_text, // TODO
         Rule::tuple => self_text,
         Rule::bin_operator => self_text,
         Rule::expr_with_mod => self_text,

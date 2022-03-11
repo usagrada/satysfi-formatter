@@ -83,20 +83,17 @@ fn test_option() {
         dirs::home_dir().unwrap().to_str().unwrap(),
         "/.satysfi/dist/packages"
     );
-    let text = fs::read(format!("{satypkg}/table.satyh")).unwrap();
+    let text = fs::read(format!("{satypkg}/option.satyg")).unwrap();
     let input = String::from_utf8(text).unwrap();
     let output = format(&input);
     let expect = r#"@stage: persistent
 
 module Option: sig
-
     val map : ('a -> 'b) -> 'a option -> 'b option
     val from : 'a -> 'a option -> 'a
     val bind : 'a option -> ('a -> 'b option) -> 'b option
     val is-none : 'a option -> bool
-
 end = struct
-
     let-rec map
         | f (None)    = None
         | f (Some(v)) = Some(f v)
@@ -113,7 +110,6 @@ end = struct
         match opt with
         | None    -> true
         | Some(_) -> false
-
 end
 "#;
     assert_eq!(output, expect);
