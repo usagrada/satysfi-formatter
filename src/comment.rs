@@ -17,6 +17,10 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
         let start = csttext.lines[index - 1];
         let end = *line;
         let text = csttext.get_text_from_span(Span { start, end });
+        if text.trim_start().starts_with("@require") || text.trim_start().starts_with("@import") {
+            // @require, @import の行ではコメントではない
+            continue;
+        };
         if let Some(inner) = text.find('%') {
             if inner > 0 && &text[(inner - 1)..inner] == "\\" {
                 // escaped percent
@@ -27,7 +31,10 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
             comments.push_back(Comment {
                 text: comment,
                 // 行内部の開始位置を足す
-                span: Span { start: start + inner, end },
+                span: Span {
+                    start: start + inner,
+                    end,
+                },
             });
         }
     }
@@ -36,7 +43,8 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
 
 pub fn check_comment(cst: &Cst, comment: &Comment) -> bool {
     let inner_contain_comment = cst.inner.iter().fold(false, |current, inner_cst| {
-        current || inner_cst.span.contains(&comment.span)
+        // headers のみ例外
+        current || (inner_cst.rule != Rule::headers &&  inner_cst.span.contains(&comment.span))
     });
     let contain_comment = cst.span.contains(&comment.span);
     // コメントを含みかつコメントが内部の要素に含まれていない場合出力する
@@ -61,7 +69,7 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
     let mut insert_comment = vec![];
     for comment in comments.iter() {
         let flag = check_comment(cst, &comment);
-        
+
         if flag {
             #[cfg(debug_assertions)]
             println!("insert!\ncst: {:?},comment: {}", cst.rule, comment.text);

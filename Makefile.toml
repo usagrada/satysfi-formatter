@@ -4,5 +4,26 @@ script = [
 #!/usr/bin/env bash
 cargo run --release -- doc/draft.saty -o doc/doc.saty
 satysfi doc/doc.saty
+cargo run --release -- doc/draft.saty -o doc/draft.saty
+'''
+]
+
+[tasks.tmp]
+# document の parse 結果を見たいとき
+script = [
+'''
+#!/usr/bin/env bash
+cargo run -- doc/draft.saty -o dist/tmp.saty
+rm dist/tmp.saty
+'''
+]
+
+# 既存パッケージのフォーマットのテスト用
+[tasks.test-pkg]
+script = [
+'''
+#!/usr/bin/env bash
+SATYDIR=$HOME/.satysfi/dist/packages
+cargo run -- $SATYDIR/$1 -o dist/$1
 '''
 ]

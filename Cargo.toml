@@ -11,6 +11,7 @@ repository = "https://github.com/usagrada/"
 [dependencies]
 satysfi-parser = { git = "https://github.com/usagrada/satysfi-parser.git" }
 clap = { version = "3", features = ["derive"] }
+dirs = "*"
 
 [[bin]]
 name = "satysfi-fmt"

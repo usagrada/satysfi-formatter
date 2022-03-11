@@ -1,0 +1,16 @@
+@require: stdjabook
+@import: table
+
+% @import: hello
+% hello
+let-block ctx +cmd-name args = clear-page
+in
+
+document(|
+    title = {\SATySFi;-formatter};
+    author = {usagrada};
+    show-toc = true;
+    show-title = true;
+|)'<
+    +p { world hello \SATySFi; }
+>
