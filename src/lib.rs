@@ -350,6 +350,17 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
             // コメントが末尾にあるとき余計な改行が残ってしまうので削除
             output.trim().to_string()
         }
+        Rule::preamble => csts.iter().fold(String::new(), |current, now_cst| {
+            // 例外処理
+            let s = to_string_cst(text, &now_cst, depth).trim().to_string();
+            if current.is_empty() {
+                s
+            } else if s.is_empty() {
+                current
+            } else {
+                current + "\n" + &s
+            } 
+        }),
         _ => {
             let output = csts
                 .iter()

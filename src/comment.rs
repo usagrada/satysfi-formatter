@@ -39,7 +39,8 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
 
 pub fn check_comment(cst: &Cst, comment: &Comment) -> bool {
     let inner_contain_comment = cst.inner.iter().fold(false, |current, inner_cst| {
-        current || inner_cst.span.contains(&comment.span)
+        // headers のみ例外
+        current || (inner_cst.rule != Rule::headers &&  inner_cst.span.contains(&comment.span))
     });
     let contain_comment = cst.span.contains(&comment.span);
     // コメントを含みかつコメントが内部の要素に含まれていない場合出力する
