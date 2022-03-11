@@ -118,8 +118,7 @@ document(|title = {hello}|)'<
 "#;
     test_tmpl(text, expect);
 }
-
-            `);
+`);
         }
     >
     >

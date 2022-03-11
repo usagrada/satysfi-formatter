@@ -6,30 +6,30 @@
 @require: code-printer/code-design
 % 改ページ
 
-let-block ctx +newpage = clear-page
-% シェルコマンド
+let-block ctx +newpage = clear-page% シェルコマンド
+
 let-block +cmd arg = '<
     +code-printer ?:(
   CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
   |> CodePrinter.set-basic-font-size 9pt
   |> CodePrinter.set-number-fun CodeDesign.number-fun-null
 ) (arg);
->
-% インラインシェルコマンド
+>% インラインシェルコマンド
+
 let-inline \cmd arg = {\code-printer ?:(
   CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
   |> CodePrinter.set-basic-font-size 9pt
   |> CodePrinter.set-number-fun CodeDesign.number-fun-null
 ) (arg);
-}
-% インラインRustコマンド
+}% インラインRustコマンド
+
 let-inline \cmd-rust arg = {\code-printer ?:(
   CodePrinter.make-config CodeSyntax.rust CodeTheme.basic-dark
   |> CodePrinter.set-basic-font-size 9pt
   |> CodePrinter.set-number-fun CodeDesign.number-fun-null
 ) (arg);
-}
-% インラインシェルコマンド
+}% インラインシェルコマンド
+
 let-inline \cmd-saty arg = {\code-printer ?:(
   CodePrinter.make-config CodeSyntax.satysfi CodeTheme.basic-dark
   |> CodePrinter.set-basic-font-size 9pt
@@ -109,8 +109,7 @@ document(|title = {hello}|)'<
 "#;
     test_tmpl(text, expect);
 }
-
-            `);
+`);
             }
         >
     >

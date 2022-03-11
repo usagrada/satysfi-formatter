@@ -147,12 +147,13 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
     */
     use satysfi_parser::Rule;
     let csts = cst.inner.clone();
+    // 関数ないで改行するときはこれを使用する
+    let indent = indent_space(depth);
+    let newline = format!("\n{indent}");
     let sep = &match cst.rule {
         Rule::block_cmd | Rule::inline_cmd => " ".to_string(),
-        Rule::vertical | Rule::horizontal_bullet_list => {
-            format!("\n{}", indent_space(depth))
-        }
-        Rule::record | Rule::list => format!(";\n{}", indent_space(depth)),
+        Rule::vertical | Rule::horizontal_bullet_list => newline.clone(),
+        Rule::record | Rule::list => format!(";{newline}"),
         Rule::horizontal_single => "".to_string(),
         _ => "".to_string(),
     };
@@ -162,18 +163,103 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
         | Rule::let_block_stmt_noctx
         | Rule::let_inline_stmt_ctx
         | Rule::let_inline_stmt_noctx
-        | Rule::let_math_stmt => {
-            csts.iter().fold(String::new(), |current, now_cst| {
-                let text = to_string_cst(text, now_cst, depth);
-                match now_cst.rule {
-                    Rule::var => current + " " + &text,
-                    Rule::block_cmd_name => current + " " + &text,
-                    // Rule::arg => current + " " +text,
-                    Rule::expr => current + " = " + &text,
-                    Rule::comments => (current + &text),
-                    _ => current + " " + &text,
+        | Rule::let_stmt
+        | Rule::let_rec_stmt
+        | Rule::sig_val_stmt
+        | Rule::sig_direct_stmt
+        | Rule::type_stmt
+        | Rule::let_math_stmt => csts.iter().fold(String::new(), |current, now_cst| {
+            let s = to_string_cst(text, now_cst, depth);
+            match now_cst.rule {
+                Rule::var => current + " " + &s,
+                Rule::block_cmd_name => current + " " + &s,
+                Rule::type_expr => current + ": " + &s,
+                Rule::expr => current + " = " + &s,
+                Rule::comments => current + &s,
+                _ => current + " " + &s,
+            }
+        }),
+        Rule::application => {
+            if csts.is_empty() {
+                "".to_string()
+            } else {
+                let mut output = String::new();
+                let insert_space = to_string_cst(text, &csts[0], depth) != "document";
+                for cst in csts.iter() {
+                    let s = to_string_cst(text, cst, depth);
+                    if insert_space {
+                        output += " ";
+                    }
+                    output += &s;
                 }
-            }) + "\n"
+
+                output
+            }
+        }
+        Rule::bind_stmt => {
+            // let* ~ in のとき用
+            let output = csts.iter().fold(String::new(), |current, now_cst| {
+                let s = to_string_cst(text, now_cst, depth);
+                match now_cst.rule {
+                    Rule::expr => current.trim_end().to_string() + " in" + &newline + &s,
+                    Rule::comments => current + &s,
+                    _ => current + &s,
+                }
+            });
+            output
+        }
+        Rule::type_expr => csts.iter().fold(String::new(), |current, now_cst| {
+            // 型定義
+            let s = to_string_cst(text, now_cst, depth);
+            if current.is_empty() {
+                s
+            } else {
+                match now_cst.rule {
+                    Rule::type_optional => current + " ?-> " + &s,
+                    Rule::type_prod => current + " -> " + &s,
+                    Rule::comments => current + &s,
+                    _ => current + " " + &s,
+                }
+            }
+        }),
+        Rule::module_stmt => {
+            let output = csts.iter().fold(String::new(), |current, now_cst| {
+                let s = to_string_cst(text, now_cst, depth);
+                match now_cst.rule {
+                    Rule::module_name => current + " " + &s,
+                    Rule::sig_stmt => current + ": " + &s,
+                    Rule::struct_stmt => current + " = " + &s,
+                    Rule::comments => (current + &s),
+                    _ => current + &s,
+                }
+            });
+            RESERVED_WORD.module.to_string() + " " + output.trim()
+        }
+        Rule::struct_stmt => {
+            let inner_indent = indent_space(depth + 1);
+            let inner_newline = format!("\n{inner_indent}");
+            let output = csts.iter().fold(String::new(), |current, now_cst| {
+                let s = to_string_cst(text, now_cst, depth);
+                match now_cst.rule {
+                    Rule::comments => current + &s,
+                    _ => current + &s,
+                }
+            });
+            output
+        }
+        Rule::sig_stmt => {
+            let inner_indent = indent_space(depth + 1);
+            let inner_newline = format!("\n{inner_indent}");
+            let output = csts.iter().fold(String::new(), |current, now_cst| {
+                let s = to_string_cst(text, now_cst, depth);
+                match now_cst.rule {
+                    Rule::module_name => current + " " + &s,
+                    Rule::struct_stmt => current + "= " + RESERVED_WORD.struct_stmt + &s,
+                    Rule::comments => current + &s,
+                    _ => current + &s,
+                }
+            });
+            output
         }
         Rule::horizontal_single => {
             let output = csts
@@ -191,7 +277,8 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                         }
                     } else if index + 1 < csts.len()
                         && (now_cst.rule == Rule::regular_text || now_cst.rule == Rule::inline_cmd)
-                        && (csts[index + 1].rule != Rule::regular_text && csts[index + 1].rule != Rule::inline_cmd)
+                        && (csts[index + 1].rule != Rule::regular_text
+                            && csts[index + 1].rule != Rule::inline_cmd)
                         && s.trim().is_empty()
                     {
                         // 空文字の処理例外
@@ -199,8 +286,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                         let include_kaigyo =
                             text[now_cst.span.start..now_cst.span.end].contains("\n");
                         if include_kaigyo {
-                            let indent = indent_space(depth);
-                            (format!("{}\n{indent}{s}", current.0.trim_end()), 0)
+                            (format!("{}{newline}{s}", current.0.trim_end()), 0)
                         } else {
                             // 改行がない場合スペースを1つ
                             (format!("{} {s}", current.0), 0)
@@ -210,11 +296,9 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                         // 文字がない場合は何もしない
                         current
                     } else if now_cst.rule == Rule::comments {
-                        let indent = indent_space(depth);
-                        (format!("{}\n{indent}{s}", current.0.trim_end()), 0)
+                        (format!("{}{newline}{s}", current.0.trim_end()), 0)
                     } else if start_newline {
-                        let indent = indent_space(depth);
-                        (format!("{}\n{indent}{s}", current.0.trim_end()), 0)
+                        (format!("{}{newline}{s}", current.0.trim_end()), 0)
                     } else {
                         (current.0 + &s, current.1 + s.chars().count())
                     }
@@ -265,7 +349,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
 
                     if cst.rule == Rule::program_saty && now_cst.rule == Rule::preamble {
                         // program saty だった場合、in を入れる
-                        (output.0 + RESERVED_WORD.in_stmt + "\n\n", output.1)
+                        (output.0 + "\n" + RESERVED_WORD.in_stmt + "\n\n", output.1)
                     // } else if cst.rule == Rule::list && now_cst.rule == Rule::expr {
                     //     // list だった場合、expr の後に ; を入れる
                     //     (output.0 + ";", output.1)
@@ -286,6 +370,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
     // インデントを制御するための変数
     let new_depth = match cst.rule {
         Rule::block_text | Rule::cmd_text_arg | Rule::record | Rule::list => depth + 1,
+        Rule::sig_stmt | Rule::struct_stmt => depth + 1,
         _ => depth,
     };
     let start_indent = "\n".to_string() + &indent_space(new_depth);
@@ -312,29 +397,57 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::pkgname => self_text,
 
         // statement
-        Rule::let_stmt => output,
-        Rule::let_rec_stmt => format!("{}{}", RESERVED_WORD.let_rec, output),
+        Rule::let_stmt => format!("{start_indent}{}{}", RESERVED_WORD.let_stmt, output),
+        Rule::let_rec_stmt => format!("{start_indent}{}{}", RESERVED_WORD.let_rec, output),
         Rule::let_rec_inner => output,
         Rule::let_rec_matcharm => output,
-        Rule::let_inline_stmt_ctx => format!("{}{}", RESERVED_WORD.let_inline, output),
-        Rule::let_inline_stmt_noctx => format!("{}{}", RESERVED_WORD.let_inline, output),
-        Rule::let_block_stmt_ctx => format!("{}{}", RESERVED_WORD.let_block, output),
+        Rule::let_inline_stmt_ctx => {
+            format!("{start_indent}{}{}", RESERVED_WORD.let_inline, output)
+        }
+        Rule::let_inline_stmt_noctx => {
+            format!("{start_indent}{}{}", RESERVED_WORD.let_inline, output)
+        }
+        Rule::let_block_stmt_ctx => format!("{start_indent}{}{}", RESERVED_WORD.let_block, output),
 
-        Rule::let_block_stmt_noctx => format!("{}{}", RESERVED_WORD.let_block, output),
-        Rule::let_math_stmt => format!("{}{}", RESERVED_WORD.let_math, output),
-        Rule::let_mutable_stmt => format!("{}{}", RESERVED_WORD.let_mutable, output),
-        Rule::type_stmt => format!("{}{}", RESERVED_WORD.type_stmt, output),
+        Rule::let_block_stmt_noctx => {
+            format!("{start_indent}{}{}", RESERVED_WORD.let_block, output)
+        }
+        Rule::let_math_stmt => format!("{start_indent}{}{}", RESERVED_WORD.let_math, output),
+        Rule::let_mutable_stmt => format!("{start_indent}{}{}", RESERVED_WORD.let_mutable, output),
+        Rule::type_stmt => format!("{start_indent}{}{}", RESERVED_WORD.type_stmt, output),
         Rule::type_inner => output,
         Rule::type_variant => output,
-<<<<<<< HEAD
         Rule::module_stmt => output,
-||||||| 3784de6
-        Rule::module_stmt => self_text,
-=======
-        Rule::module_stmt => self_text, // TODO
->>>>>>> main
         Rule::open_stmt => output,
         Rule::arg => output,
+
+        // struct
+        Rule::sig_stmt => format!(
+            "{}{start_indent}{}{end_indent}{}",
+            RESERVED_WORD.sig, output, RESERVED_WORD.end
+        ), // TODO
+        Rule::struct_stmt => format!(
+            "{}{start_indent}{}{end_indent}{}",
+            RESERVED_WORD.struct_stmt, output, RESERVED_WORD.end
+        ), // TODO
+        Rule::sig_type_stmt => format!("{start_indent}{}{}", RESERVED_WORD.type_stmt, output),
+        Rule::sig_val_stmt => format!("{start_indent}{}{}", RESERVED_WORD.val, output),
+        Rule::sig_direct_stmt => format!("{start_indent}{}{}", RESERVED_WORD.direct, output),
+
+        // types
+        Rule::type_expr => output,
+        Rule::type_optional => output,
+        Rule::type_prod => output,
+        Rule::type_inline_cmd => output,
+        Rule::type_block_cmd => output,
+        Rule::type_math_cmd => output,
+        Rule::type_list_unit_optional => output,
+        Rule::type_application => output,
+        Rule::type_name => output,
+        Rule::type_record => output,
+        Rule::type_record_unit => output,
+        Rule::type_param => output,
+        Rule::constraint => output,
 
         // unary
         Rule::unary => output,
@@ -439,7 +552,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         // pattern
         Rule::pat_as => output,
         Rule::pat_cons => output,
-        Rule::pattern => output,
+        Rule::pattern => self_text, // TODO どのパターンでも中身をそのまま出力
         Rule::pat_variant => output,
         Rule::pat_list => output,
         Rule::pat_tuple => output,
@@ -500,7 +613,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::misc => " ".to_string(),
         Rule::program_saty => output.trim_start().to_string(),
         Rule::program_satyh => output.trim_start().to_string(),
-        Rule::preamble => output,
+        Rule::preamble => output.trim_start().to_string(),
         // TODO
         // _ => self_text,
         _ => "".to_string(),
