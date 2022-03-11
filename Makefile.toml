@@ -4,6 +4,7 @@ script = [
 #!/usr/bin/env bash
 cargo run --release -- doc/draft.saty -o doc/doc.saty
 satysfi doc/doc.saty
+cargo run --release -- doc/draft.saty -o doc/draft.saty
 '''
 ]
 
