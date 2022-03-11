@@ -9,7 +9,8 @@ repository = "https://github.com/usagrada/"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-satysfi-parser = { git = "https://github.com/usagrada/satysfi-parser.git" }
+# satysfi-parser = { git = "https://github.com/usagrada/satysfi-parser.git" }
+satysfi-parser = { path = "../satysfi-parser" }
 clap = { version = "3", features = ["derive"] }
 dirs = "*"
 

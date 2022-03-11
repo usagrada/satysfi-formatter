@@ -153,6 +153,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
     let sep = &match cst.rule {
         Rule::block_cmd | Rule::inline_cmd => " ".to_string(),
         Rule::type_prod | Rule::type_application => " ".to_string(),
+        Rule::dyadic_expr | Rule::match_expr | Rule::unary_operator_expr => " ".to_string(),
         Rule::vertical | Rule::horizontal_bullet_list => newline.clone(),
         Rule::record | Rule::type_record | Rule::list => format!(";{newline}"),
         Rule::type_block_cmd | Rule::type_inline_cmd | Rule::type_math_cmd => format!(";{newline}"),
@@ -188,6 +189,53 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 }
                 Rule::comments => current + &s,
                 _ => current + " " + &s,
+            }
+        }),
+        Rule::unary => csts.iter().fold(String::new(), |current, now_cst| {
+            let s = to_string_cst(text, now_cst, depth);
+            match now_cst.rule {
+                Rule::unary_operator | Rule::expr => current + &format!("({s})", s = s),
+                _ => current + &s,
+            }
+        }),
+        Rule::lambda => csts
+            .iter()
+            .fold(RESERVED_WORD.fun.to_string(), |current, now_cst| {
+                let s = to_string_cst(text, now_cst, depth);
+                if current.is_empty() {
+                    s
+                } else {
+                    match now_cst.rule {
+                        Rule::pattern => current + " " + &s,
+                        Rule::comments => current + &s,
+                        _ => current + " -> " + &s,
+                    }
+                }
+            }),
+        Rule::record_unit => csts.iter().fold(String::new(), |current, now_cst| {
+            let s = to_string_cst(text, now_cst, depth);
+            if current.is_empty() {
+                s
+            } else {
+                match now_cst.rule {
+                    Rule::var_ptn => current + " " + &s,
+                    Rule::expr => current + " = " + &s,
+                    Rule::comments => current + &s,
+                    _ => unreachable!(),
+                }
+            }
+        }),
+        Rule::type_record_unit => csts.iter().fold(String::new(), |current, now_cst| {
+            let s = to_string_cst(text, now_cst, depth);
+            if current.is_empty() {
+                s
+            } else {
+                match now_cst.rule {
+                    Rule::var => current + " " + &s,
+                    Rule::type_expr => current + ": " + &s,
+                    Rule::comments => current + &s,
+                    _ => unreachable!(),
+                }
             }
         }),
         Rule::type_application => {
@@ -228,16 +276,20 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
             // let* ~ in のとき用
             let output = csts.iter().fold(String::new(), |current, now_cst| {
                 let s = to_string_cst(text, now_cst, depth);
-                match now_cst.rule {
-                    Rule::expr => {
-                        if s.contains("\n") {
-                            current.trim_end().to_string() + " in" + &newline + &s
-                        } else {
-                            current + " in " + &s
+                if current.is_empty() {
+                    s
+                } else {
+                    match now_cst.rule {
+                        Rule::expr => {
+                            if s.contains("\n") {
+                                current.trim_end().to_string() + " in" + &newline + s.trim_start()
+                            } else {
+                                current + " in " + &s
+                            }
                         }
+                        Rule::comments => current + &s,
+                        _ => current + &s,
                     }
-                    Rule::comments => current + &s,
-                    _ => current + &s,
                 }
             });
             output
@@ -490,7 +542,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::type_inline_cmd => {
             if output.contains("\n") {
                 format!(
-                    "[{start_indent}{output}{end_indent}] {}",
+                    "[{start_indent}{output};{end_indent}] {}",
                     RESERVED_WORD.inline_command
                 )
             } else {
@@ -500,7 +552,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::type_block_cmd => {
             if output.contains("\n") {
                 format!(
-                    "[{start_indent}{output}{end_indent}] {}",
+                    "[{start_indent}{output};{end_indent}] {}",
                     RESERVED_WORD.block_command
                 )
             } else {
@@ -510,7 +562,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::type_math_cmd => {
             if output.contains("\n") {
                 format!(
-                    "[{start_indent}{output}{end_indent}] {}",
+                    "[{start_indent}{output};{end_indent}] {}",
                     RESERVED_WORD.math_command
                 )
             } else {
@@ -521,7 +573,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::type_application => output,
         Rule::type_name => self_text,
         // Rule::type_record => output,
-        // Rule::type_record_unit => output,
+        Rule::type_record_unit => output,
         Rule::type_param => output,
         Rule::constraint => {
             format!("{}{}", RESERVED_WORD.constraint, output)
@@ -578,7 +630,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
                 format!("(|{output}|)")
             }
         }
-        Rule::record_unit | Rule::type_record_unit => self_text, // TODO
+        Rule::record_unit => output,
         Rule::tuple => self_text,
         Rule::bin_operator => self_text,
         Rule::expr_with_mod => self_text,
@@ -645,7 +697,13 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::pat_tuple => output,
 
         // expr
-        Rule::expr => output,
+        Rule::expr => {
+            if self_text.ends_with(";") {
+                output + ";"
+            } else {
+                output
+            }
+        }
         Rule::match_expr => self_text,       // TODO
         Rule::match_arm => output,           // TODO
         Rule::match_guard => output,         // TODO

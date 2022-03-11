@@ -10,21 +10,21 @@ pub fn visualize_csttext_tree(csttext: &CstText) {
 
 // for debug
 fn visualize_cst_tree(csttext: &CstText, cst: &Cst, depth: usize) {
-    let max_len = std::cmp::min(cst.span.end - cst.span.start, 10);
+    let max_len = std::cmp::min(cst.span.end - cst.span.start, 15);
     let self_text = csttext
         .get_text_from_span(cst.span)
-        .chars()
-        .take(max_len)
-        .collect::<String>()
-        .replace("\n", ""); // 改行を削除
-                            // overlide for 省略の表示
+        .chars();
     let self_text = if cst.span.end - cst.span.start <= max_len {
-        self_text
+        self_text.take(max_len).collect::<String>().replace("\n", "") // 改行を削除
     } else {
         if cst.rule == Rule::regular_text {
-            csttext.get_text_from_span(cst.span).to_string()
+            // 例外的に全部表示
+            self_text.collect::<String>()
         } else {
-            format!("{}...", self_text)
+            let start_text = self_text.clone().take(10).collect::<String>().replace("\n", ""); // 改行を削除
+            let end_index = std::cmp::max(max_len, cst.span.end - cst.span.start - 5);
+            let end_text = self_text.skip(end_index).take(cst.span.end - end_index).collect::<String>();
+            format!("{}...{}", start_text, end_text)
         }
     };
     println!("{}* {:?}: {}", " ".repeat(depth * 2), cst.rule, self_text);
