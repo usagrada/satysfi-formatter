@@ -191,10 +191,62 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 _ => current + " " + &s,
             }
         }),
+        Rule::let_rec_inner => csts.iter().fold(String::new(), |current, now_cst| {
+            let s = to_string_cst(text, now_cst, depth);
+            if current.is_empty() {
+                return s;
+            }
+            match now_cst.rule {
+                Rule::pattern => current + &s,
+                Rule::let_rec_matcharm => current + &newline + "| " + s.trim(),
+                _ => current + &s,
+            }
+        }),
+        Rule::let_rec_matcharm => csts.iter().fold(String::new(), |current, now_cst| {
+            let s = to_string_cst(text, now_cst, depth);
+            if current.is_empty() {
+                return s;
+            }
+            match now_cst.rule {
+                Rule::arg => current + " " + &s,
+                Rule::expr => current + " = " + &s,
+                _ => unreachable!(),
+            }
+        }),
+        Rule::match_arm => csts.iter().fold(String::new(), |current, now_cst| {
+            let s = to_string_cst(text, now_cst, depth);
+            if current.is_empty() {
+                return s;
+            }
+            // ptn:pat_as() _ guard:match_guard()? _ "->" _ expr:(!match_expr() e:expr() {e})
+            match now_cst.rule {
+                Rule::pat_as => current + " " + &s,
+                Rule::expr => current + " -> " + &s,
+                _ => current + &s,
+            }
+        }),
+        Rule::match_expr => {
+            csts.iter().fold(String::new(), |current, now_cst| {
+                let s = to_string_cst(text, now_cst, depth);
+                if current.is_empty() {
+                    if now_cst.rule == Rule::expr {
+                        return format!("{} {s} {}", RESERVED_WORD.match_stmt, RESERVED_WORD.with);
+                    }
+                    return s;
+                }
+                match now_cst.rule {
+                    Rule::expr => {
+                        current + " " + &format!("{} {s} {}", RESERVED_WORD.match_stmt, RESERVED_WORD.with)
+                    }
+                    Rule::match_arm => current + &newline + "| " + &s,
+                    _ => current + &s,
+                }
+            })
+        }
         Rule::unary => csts.iter().fold(String::new(), |current, now_cst| {
             let s = to_string_cst(text, now_cst, depth);
             match now_cst.rule {
-                Rule::unary_operator | Rule::expr => current + &format!("({s})", s = s),
+                Rule::unary_operator | Rule::expr => current + &format!("({s})"),
                 _ => current + &s,
             }
         }),
@@ -471,6 +523,8 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
             depth + 1
         }
         Rule::type_block_cmd | Rule::type_inline_cmd | Rule::math_cmd => depth + 1,
+        Rule::match_expr | Rule::let_rec_matcharm => depth + 1,
+        Rule::let_rec_inner => depth + 1,
         Rule::sig_stmt | Rule::struct_stmt => depth + 1,
         _ => depth,
     };
@@ -574,7 +628,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::type_name => self_text,
         // Rule::type_record => output,
         Rule::type_record_unit => output,
-        Rule::type_param => output,
+        Rule::type_param => format!("'{output}"),
         Rule::constraint => {
             format!("{}{}", RESERVED_WORD.constraint, output)
         }
@@ -704,7 +758,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
                 output
             }
         }
-        Rule::match_expr => self_text,       // TODO
+        Rule::match_expr => output,          // TODO
         Rule::match_arm => output,           // TODO
         Rule::match_guard => output,         // TODO
         Rule::bind_stmt => output,           // TODO

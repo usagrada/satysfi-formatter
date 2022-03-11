@@ -84,27 +84,27 @@ fn test_option() {
     let expect = r#"@stage: persistent
 
 module Option: sig
-    val map : ('a -> 'b) -> 'a option -> 'b option
-    val from : 'a -> 'a option -> 'a
-    val bind : 'a option -> ('a -> 'b option) -> 'b option
-    val is-none : 'a option -> bool
+    val map: ('a -> 'b) -> 'a option -> 'b option
+    val from: 'a -> 'a option -> 'a
+    val bind: 'a option -> ('a -> 'b option) -> 'b option
+    val is-none: 'a option -> bool
 end = struct
     let-rec map
-        | f (None)    = None
+        | f (None) = None
         | f (Some(v)) = Some(f v)
 
     let-rec from
-        | a (None)    = a
+        | a (None) = a
         | _ (Some(a)) = a
 
     let-rec bind
-        | (None)    f = None
+        | (None) f = None
         | (Some(v)) f = f v
 
     let is-none opt =
         match opt with
-        | None    -> true
-        | Some(_) -> false
+            | None -> true
+            | Some(_) -> false
 end
 "#;
     assert_eq!(output, expect);
