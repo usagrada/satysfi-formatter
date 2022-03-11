@@ -1,6 +1,5 @@
 use super::test_tmpl;
 
-
 #[test]
 fn test_const_string_sequently1() {
     let text = r#"document(||)'<
@@ -15,7 +14,6 @@ fn test_const_string_sequently1() {
 "#;
     test_tmpl(text, expect)
 }
-
 
 #[test]
 fn test_const_string_sequently2() {

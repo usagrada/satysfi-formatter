@@ -27,7 +27,10 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
             comments.push_back(Comment {
                 text: comment,
                 // 行内部の開始位置を足す
-                span: Span { start: start + inner, end },
+                span: Span {
+                    start: start + inner,
+                    end,
+                },
             });
         }
     }
@@ -61,7 +64,7 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
     let mut insert_comment = vec![];
     for comment in comments.iter() {
         let flag = check_comment(cst, &comment);
-        
+
         if flag {
             #[cfg(debug_assertions)]
             println!("insert!\ncst: {:?},comment: {}", cst.rule, comment.text);

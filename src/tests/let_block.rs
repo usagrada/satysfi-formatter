@@ -1,6 +1,5 @@
 use super::test_tmpl;
 
-
 #[test]
 fn test_let_block1() {
     let text = r#"

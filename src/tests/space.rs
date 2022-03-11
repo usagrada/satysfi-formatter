@@ -26,7 +26,7 @@ fn test_space2() {
     { hello\bold { abc }def }
 >
 "#;
-test_tmpl(text, expect);
+    test_tmpl(text, expect);
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn test_space3() {
         [
             ${};
             ${\paren{1 + a} \paren{1 + a^2} \paren{1 + a^{2^2}}}
-        ]
+        ];
     ];
 >
 "#;

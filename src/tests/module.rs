@@ -1,45 +1,46 @@
+use super::test_tmpl;
+use crate::format;
 use dirs;
 use std::fs;
 
-use crate::format;
-
 #[test]
 fn module_deco() {
-    let satypkg = format!("{}{}", dirs::home_dir().unwrap().to_str().unwrap(), "/.satysfi/dist/packages");
+    let satypkg = format!(
+        "{}{}",
+        dirs::home_dir().unwrap().to_str().unwrap(),
+        "/.satysfi/dist/packages"
+    );
     let text = fs::read(format!("{satypkg}/deco.satyh")).unwrap();
     let input = String::from_utf8(text).unwrap();
-    let output = format(&input);
     let expect = r#"@require: gr
 
-module Deco : sig
-
-    val empty : deco
-    val simple-frame : length -> color -> color -> deco
-
+module Deco: sig
+    val empty: deco
+    val simple-frame: length -> color -> color -> deco
 end = struct
-
     let empty _ _ _ _ = []
 
     let simple-frame t scolor fcolor (x, y) w h d =
-    let path = Gr.rectangle (x, y -' d) (x +' w, y +' h) in
+        let path = Gr.rectangle (x, y -' d) (x +' w, y +' h) in
         [
             fill fcolor path;
             stroke t scolor path;
         ]
-
 end
 "#;
-    assert_eq!(output, expect);
+    test_tmpl(&input, expect)
 }
 
 #[test]
 fn module_table() {
-    let satypkg = format!("{}{}", dirs::home_dir().unwrap().to_str().unwrap(), "/.satysfi/dist/packages");
+    let satypkg = format!(
+        "{}{}",
+        dirs::home_dir().unwrap().to_str().unwrap(),
+        "/.satysfi/dist/packages"
+    );
     let text = fs::read(format!("{satypkg}/table.satyh")).unwrap();
     let input = String::from_utf8(text).unwrap();
-    let output = format(&input);
     let expect = r#"module Table : sig
-
     direct \tabular :  [
         (|
             l : inline-text -> cell;
@@ -50,41 +51,38 @@ fn module_table() {
         |) -> (cell list) list;
         length list -> length list -> graphics list;
     ] inline-cmd
-
 end = struct
-
     let table-scheme ctx pads cellssf decof =
-    let nc ib = NormalCell(pads, ib) in
-    let mc i j ib = MultiCell(i, j, pads, ib) in
-    let cellss =
-        cellssf (|
-        l = (fun it ->
-                nc (read-inline ctx it ++ inline-fil));
-        r = (fun it ->
-                nc (inline-fil ++ read-inline ctx it));
-        c = (fun it ->
-                nc (inline-fil ++ read-inline ctx it ++ inline-fil));
-        m = (fun i j it ->
-                mc i j (inline-fil ++ read-inline ctx it ++ inline-fil));
-        e = EmptyCell;
-        |)
-    in
-        tabular cellss decof
-
+        let nc ib = NormalCell(pads, ib) in
+        let mc i j ib = MultiCell(i, j, pads, ib) in
+        let cellss =
+            cellssf (|
+            l = (fun it ->
+                    nc (read-inline ctx it ++ inline-fil));
+            r = (fun it ->
+                    nc (inline-fil ++ read-inline ctx it));
+            c = (fun it ->
+                    nc (inline-fil ++ read-inline ctx it ++ inline-fil));
+            m = (fun i j it ->
+                    mc i j (inline-fil ++ read-inline ctx it ++ inline-fil));
+            e = EmptyCell;
+            |)
+        in tabular cellss decof
 
     let-inline ctx \tabular =
-    let pads = (2pt, 2pt, 2pt, 2pt) in
-        table-scheme ctx pads
-
+        let pads = (2pt, 2pt, 2pt, 2pt) in table-scheme ctx pads
 end
 "#;
-    assert_eq!(output, expect);
+    test_tmpl(&input, expect)
 }
 
-
 #[test]
-fn test_option(){
-    let satypkg = format!("{}{}", dirs::home_dir().unwrap().to_str().unwrap(), "/.satysfi/dist/packages");
+fn test_option() {
+    let satypkg = format!(
+        "{}{}",
+        dirs::home_dir().unwrap().to_str().unwrap(),
+        "/.satysfi/dist/packages"
+    );
     let text = fs::read(format!("{satypkg}/table.satyh")).unwrap();
     let input = String::from_utf8(text).unwrap();
     let output = format(&input);
@@ -118,5 +116,5 @@ end = struct
 
 end
 "#;
-assert_eq!(output, expect);
+    assert_eq!(output, expect);
 }

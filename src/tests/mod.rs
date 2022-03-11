@@ -1,11 +1,11 @@
 use crate::format;
 
-mod module;
 mod comment;
 mod common;
-mod let_block;
-mod space;
 mod horizontal_single;
+mod let_block;
+mod module;
+mod space;
 
 fn test_tmpl(input: &str, expect: &str) {
     let output = format(input);
