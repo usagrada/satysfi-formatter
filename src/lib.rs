@@ -224,6 +224,21 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 _ => current + " " + &s,
             }
         }),
+        Rule::math_cmd_expr_arg | Rule::math_cmd_expr_option => {
+            csts.iter().fold(String::new(), |current, now_cst| {
+                let s = to_string_cst(text, now_cst, depth);
+                match now_cst.rule {
+                    Rule::math_list | Rule::math_single => format!("{{ {s} }}"),
+                    Rule::horizontal_list
+                    | Rule::horizontal_bullet_list
+                    | Rule::horizontal_single => format!("!{{ {s} }}"),
+                    Rule::vertical => format!("!{s}"),
+                    Rule::expr => format!("!({s})"),
+                    Rule::record | Rule::list => format!("!{s}"),
+                    _ => unreachable!(),
+                }
+            })
+        }
         Rule::cmd_expr_option => csts.iter().fold(String::new(), |current, now_cst| {
             let s = to_string_cst(text, now_cst, depth);
             let s = if now_cst.rule == Rule::expr {
@@ -796,8 +811,8 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::block_cmd_name => self_text,
         Rule::math_cmd => self_text,
         Rule::math_cmd_name => self_text,
-        Rule::math_cmd_expr_arg => self_text,
-        Rule::math_cmd_expr_option => self_text,
+        Rule::math_cmd_expr_arg => output,
+        Rule::math_cmd_expr_option => format!(":?{output}"),
 
         // pattern
         Rule::pat_as => output,

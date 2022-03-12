@@ -22,8 +22,24 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
             continue;
         };
         if let Some(inner) = text.find('%') {
-            if text[..inner].ends_with("\\%") && !text[..inner].ends_with("\\\\%") {
-                // escaped percent
+            // check whether percent is escaped
+            println!("inner: {}, text: {}", inner, &text[..inner]);
+            let mut index = inner;
+            let mut is_escaped = false;
+            while index > 1 {
+                if text[..index].ends_with("\\") {
+                    // 再帰的に確認
+                    if text[..index].ends_with("\\\\") {
+                        // escaped percent
+                        index -= 2;
+                        continue;
+                    }
+                    is_escaped = true;
+                    break;
+                }
+                break;
+            }
+            if is_escaped {
                 continue;
             }
             let comment = format!("% {}", &text[inner + 1..].trim_start());
@@ -44,7 +60,7 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
 pub fn check_comment(cst: &Cst, comment: &Comment) -> bool {
     let inner_contain_comment = cst.inner.iter().fold(false, |current, inner_cst| {
         // headers のみ例外
-        current || (inner_cst.rule != Rule::headers &&  inner_cst.span.contains(&comment.span))
+        current || (inner_cst.rule != Rule::headers && inner_cst.span.contains(&comment.span))
     });
     let contain_comment = cst.span.contains(&comment.span);
     // コメントを含みかつコメントが内部の要素に含まれていない場合出力する
@@ -71,8 +87,11 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
         let flag = check_comment(cst, &comment);
 
         if flag {
-            #[cfg(debug_assertions)]
-            println!("insert!\ncst: {:?},comment: {}", cst.rule, comment.text);
+            // #[cfg(debug_assertions)]
+            println!(
+                "insert!\ncst: {:?},comment: {}, span:[{}, {}]",
+                cst.rule, comment.text, comment.span.start, comment.span.end
+            );
             insert_comment.push(Cst {
                 rule: Rule::comments,
                 inner: vec![],

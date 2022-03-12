@@ -28,7 +28,7 @@ fn visualize_cst_tree(csttext: &CstText, cst: &Cst, depth: usize) {
             format!("{}...{}", start_text, end_text)
         }
     };
-    println!("{}* {:?}: {}", " ".repeat(depth * 2), cst.rule, self_text);
+    println!("{}* {:?}: start: {}, {}", " ".repeat(depth * 2), cst.rule, cst.span.start, self_text);
     // println!("{}└─ {:?}", cst.rule);
     for node in cst.inner.iter() {
         visualize_cst_tree(csttext, node, depth + 1);
