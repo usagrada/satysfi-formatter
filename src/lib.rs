@@ -278,6 +278,20 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 _ => current + &sep + &s,
             }
         }),
+        Rule::pat_cons => {
+            csts.iter().fold(String::new(), |current, now_cst| {
+                let s = to_string_cst(text, now_cst, depth);
+                if current.is_empty() {
+                    return s;
+                }
+                match now_cst.rule {
+                    Rule::pattern => current + " " + &s,
+                    Rule::pat_variant => current + " " + &s,
+                    Rule::pat_as => current + " :: " + &s,
+                    _ => unreachable!(),
+                }
+            })
+        }
         Rule::constraint => csts.iter().fold(String::new(), |current, now_cst| {
             let s = to_string_cst(text, now_cst, depth);
             if current.is_empty() {
@@ -953,8 +967,8 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
 
         // pattern
         Rule::pat_as => output,
-        Rule::pat_cons => self_text, // TODO
-        Rule::pattern => self_text,  // TODO どのパターンでも中身をそのまま出力
+        Rule::pat_cons => output,
+        Rule::pattern => self_text, // TODO どのパターンでも中身をそのまま出力
         Rule::pat_variant => output,
         Rule::pat_list => output,
         Rule::pat_tuple => output,
