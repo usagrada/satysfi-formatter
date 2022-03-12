@@ -23,7 +23,6 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
         };
         if let Some(inner) = text.find('%') {
             // check whether percent is escaped
-            println!("inner: {}, text: {}", inner, &text[..inner]);
             let mut index = inner;
             let mut is_escaped = false;
             while index > 1 {
@@ -87,11 +86,8 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
         let flag = check_comment(cst, &comment);
 
         if flag {
-            // #[cfg(debug_assertions)]
-            println!(
-                "insert!\ncst: {:?},comment: {}, span:[{}, {}]",
-                cst.rule, comment.text, comment.span.start, comment.span.end
-            );
+            #[cfg(debug_assertions)]
+            println!("cst: {:?}, insert-comment: {}", cst.rule, comment.text);
             insert_comment.push(Cst {
                 rule: Rule::comments,
                 inner: vec![],

@@ -24,7 +24,7 @@ def format_files():
     for file in package_files:
         print(file)
         subprocess.run(
-            ["satysfi-fmt",
+            ["cargo", "run", "--release",
                 "{}/{}".format(pkgdir, file), "-o", "tests/{}".format(file)]
         )
 

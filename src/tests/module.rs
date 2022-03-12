@@ -22,10 +22,10 @@ end = struct
 
     let simple-frame t scolor fcolor (x, y) w h d =
         let path = Gr.rectangle (x, y -' d) (x +' w, y +' h) in
-        [
-            fill fcolor path;
-            stroke t scolor path;
-        ]
+            [
+                fill fcolor path;
+                stroke t scolor path;
+            ]
 end
 "#;
     test_tmpl(&input, expect)

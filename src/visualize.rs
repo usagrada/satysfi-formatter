@@ -24,11 +24,12 @@ fn visualize_cst_tree(csttext: &CstText, cst: &Cst, depth: usize) {
         } else {
             let start_text = self_text.clone().take(10).collect::<String>().replace("\n", ""); // 改行を削除
             let end_index = std::cmp::max(max_len, cst.span.end - cst.span.start - 5);
-            let end_text = self_text.skip(end_index).take(cst.span.end - end_index).collect::<String>();
+            let end_text = self_text.skip(end_index).take(cst.span.end - end_index).collect::<String>().replace("\n", ""); // 改行を削除
             format!("{}...{}", start_text, end_text)
         }
     };
-    println!("{}* {:?}: start: {}, {}", " ".repeat(depth * 2), cst.rule, cst.span.start, self_text);
+    println!("{}* {:?}: {}", " ".repeat(depth * 2), cst.rule, self_text.trim());
+    // println!("{}* {:?}: [{}, {}]", " ".repeat(depth * 2), cst.rule, cst.span.start, cst.span.end);
     // println!("{}└─ {:?}", cst.rule);
     for node in cst.inner.iter() {
         visualize_cst_tree(csttext, node, depth + 1);
