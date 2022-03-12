@@ -13,7 +13,7 @@ document(|title = {hello}|)'<+p{% comment
 @require: local
 
 % comment
-document(|title = {hello}|)'<
+document(|title = { hello }|)'<
     +p {
         % comment
     }
@@ -35,7 +35,7 @@ document(|title = {hello}|)'<+p{hello% comment
 @require: local
 
 % comment
-document(|title = {hello}|)'<
+document(|title = { hello }|)'<
     +p {
         hello
         % comment
@@ -63,7 +63,7 @@ document(|title = {hello}|)'<+p{hello% comment
 @require: local
 
 % comment
-document(|title = {hello}|)'<
+document(|title = { hello }|)'<
     +p {
         hello
         % comment
@@ -84,7 +84,7 @@ fn test_comment4() {
   @require: local
   %comment
   
-document(|title = {hello}|)'<+p{% comment
+document(|title = { hello }|)'<+p{% comment
     \listing {
         * item1
         * item2
@@ -95,7 +95,7 @@ document(|title = {hello}|)'<+p{% comment
 @require: local
 
 % comment
-document(|title = {hello}|)'<
+document(|title = { hello }|)'<
     +p {
         % comment
         \listing {
@@ -122,7 +122,7 @@ document(|title = {hello}|)'<+p% comment
     let expect = r#"@import: hello
 @require: local %comment
 
-document(|title = {hello}|)'<
+document(|title = { hello }|)'<
     +p % comment
     { hello }
 >
