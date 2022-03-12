@@ -302,14 +302,47 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 _ => current + &s,
             }
         }),
+        Rule::type_variant => {
+            let output = csts.iter().fold(String::new(), |current, now_cst| {
+                let s = to_string_cst(text, now_cst, depth);
+                if current.is_empty() {
+                    return s;
+                }
+                match now_cst.rule {
+                    Rule::variant_name => current + &s,
+                    Rule::type_expr => current + " of " + &s,
+                    Rule::comments => current + &s,
+                    _ => unreachable!(),
+                }
+            });
+            output
+
+        }
         Rule::let_rec_inner => csts.iter().fold(String::new(), |current, now_cst| {
             let s = to_string_cst(text, now_cst, depth);
             if current.is_empty() {
                 return s;
             }
+
+            // for rule let_rec_stmt_argument()
+            let mut type_expr = false;            
             match now_cst.rule {
                 Rule::pattern => current + &s,
                 Rule::let_rec_matcharm => current + &newline + "| " + s.trim(),
+                Rule::type_expr => {
+                    type_expr = true;
+                    current + ": " + &s
+                },
+                Rule::arg => {
+                    if type_expr {
+                        // 一度だけマッチ
+                        type_expr = false;
+                        current + " | " + &s
+                    } else {
+                        current + " " + &s
+                    }
+                }
+                Rule::expr => current + " = " + &s,
                 _ => current + &s,
             }
         }),
