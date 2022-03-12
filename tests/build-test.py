@@ -17,7 +17,7 @@ pkgdir = "{}/.satysfi/dist/packages".format(os.environ["HOME"])
 package_files = [file for file in os.listdir(
     path=pkgdir) if os.path.isfile(os.path.join(pkgdir, file))]
 import_list = ["@import: {}".format(file.split(".")[0])
-               for file in package_files]
+               for file in package_files if file.split(".")[-1] == "satyg" or file.split(".")[-1] == "satyh"]
 
 
 def format_files():

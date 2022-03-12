@@ -1,1 +1,2 @@
-*.saty*
+*
+!build-test.py

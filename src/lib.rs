@@ -202,6 +202,12 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 .enumerate()
                 .fold(String::new(), |current, (index, now_cst)| {
                     let s = to_string_cst(text, now_cst, depth);
+                    let s = if cst.rule == Rule::sig_val_stmt && now_cst.rule == Rule::bin_operator
+                    {
+                        format!("({s})")
+                    } else {
+                        s
+                    };
                     if current.is_empty() {
                         return s;
                     }
@@ -316,36 +322,37 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 }
             });
             output
-
         }
-        Rule::let_rec_inner => csts.iter().fold(String::new(), |current, now_cst| {
-            let s = to_string_cst(text, now_cst, depth);
-            if current.is_empty() {
-                return s;
-            }
-
+        Rule::let_rec_inner => {
             // for rule let_rec_stmt_argument()
-            let mut type_expr = false;            
-            match now_cst.rule {
-                Rule::pattern => current + &s,
-                Rule::let_rec_matcharm => current + &newline + "| " + s.trim(),
-                Rule::type_expr => {
-                    type_expr = true;
-                    current + ": " + &s
-                },
-                Rule::arg => {
-                    if type_expr {
-                        // 一度だけマッチ
-                        type_expr = false;
-                        current + " | " + &s
-                    } else {
-                        current + " " + &s
-                    }
+            let mut type_expr = false;
+            csts.iter().fold(String::new(), |current, now_cst| {
+                let s = to_string_cst(text, now_cst, depth);
+                if current.is_empty() {
+                    return s;
                 }
-                Rule::expr => current + " = " + &s,
-                _ => current + &s,
-            }
-        }),
+
+                match now_cst.rule {
+                    Rule::pattern => current + &s,
+                    Rule::let_rec_matcharm => current + &newline + "| " + s.trim(),
+                    Rule::type_expr => {
+                        type_expr = true;
+                        current + ": " + &s
+                    }
+                    Rule::arg => {
+                        if type_expr {
+                            // 一度だけマッチ
+                            type_expr = false;
+                            current + " | " + &s
+                        } else {
+                            current + " " + &s
+                        }
+                    }
+                    Rule::expr => current + " = " + &s,
+                    _ => current + &s,
+                }
+            })
+        }
         Rule::let_rec_matcharm => csts.iter().fold(String::new(), |current, now_cst| {
             let s = to_string_cst(text, now_cst, depth);
             if current.is_empty() {
@@ -569,18 +576,22 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::type_expr => csts.iter().fold(String::new(), |current, now_cst| {
             // 型定義
             let s = to_string_cst(text, now_cst, depth);
+            let s = if now_cst.rule == Rule::type_optional {
+                format!("{s} ?")
+            } else {
+                s
+            };
             if current.is_empty() {
                 return s;
             }
             match now_cst.rule {
-                Rule::type_prod => {
+                Rule::type_prod | Rule::type_optional => {
                     if current.ends_with("?") {
                         current + "-> " + &s
                     } else {
                         current + " -> " + &s
                     }
                 }
-                Rule::type_optional => current + " -> " + &s + " ?",
                 Rule::comments => current + &s,
                 _ => current + " " + &s,
             }
@@ -942,8 +953,8 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
 
         // pattern
         Rule::pat_as => output,
-        Rule::pat_cons => output,
-        Rule::pattern => self_text, // TODO どのパターンでも中身をそのまま出力
+        Rule::pat_cons => self_text, // TODO
+        Rule::pattern => self_text,  // TODO どのパターンでも中身をそのまま出力
         Rule::pat_variant => output,
         Rule::pat_list => output,
         Rule::pat_tuple => output,
