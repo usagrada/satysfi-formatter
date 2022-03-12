@@ -148,7 +148,8 @@ document(|title = {hello}|)'<+p% comment
 document(|title = { hello }|)'<
     +p % comment
     {
-        hello \\
+        hello
+        \\
         % comment
     }
 >
