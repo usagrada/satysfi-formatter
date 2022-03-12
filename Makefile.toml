@@ -4,7 +4,7 @@ script = [
 #!/usr/bin/env bash
 cargo run --release -- doc/draft.saty -o doc/doc.saty
 satysfi doc/doc.saty
-cargo run --release -- doc/draft.saty -o doc/draft.saty
+# cargo run --release -- doc/draft.saty -o doc/draft.saty
 '''
 ]
 
@@ -14,7 +14,7 @@ script = [
 '''
 #!/usr/bin/env bash
 cargo run -- doc/draft.saty -o dist/tmp.saty
-rm dist/tmp.saty
+# rm dist/tmp.saty
 '''
 ]
 
@@ -25,5 +25,15 @@ script = [
 #!/usr/bin/env bash
 SATYDIR=$HOME/.satysfi/dist/packages
 cargo run -- $SATYDIR/$1 -o dist/$1
+'''
+]
+
+[tasks.build-test]
+script = [
+'''
+#!/usr/bin/env bash
+SATYDIR=$HOME/.satysfi/dist/packages
+python tests/build-test.py
+satysfi tests/tmp.saty
 '''
 ]

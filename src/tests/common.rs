@@ -9,7 +9,7 @@ document(|title = {hello}|)'<+p{hello world}>"#;
     let expect = r#"@import: hello
 @require: local
 
-document(|title = {hello}|)'<
+document(|title = { hello }|)'<
     +p { hello world }
 >
 "#;
@@ -27,7 +27,7 @@ document(|title = {hello}|)'<+p{hello world}+p { hello world }>"#;
     let expect = r#"@import: hello
 @require: local
 
-document(|title = {hello}|)'<
+document(|title = { hello }|)'<
     +p { hello world }
     +p { hello world }
 >
@@ -45,7 +45,7 @@ document(|title = {hello}|)'<+p{hello world}+p { \SATYSFI; }>"#;
     let expect = r#"@import: hello
 @require: local
 
-document(|title = {hello}|)'<
+document(|title = { hello }|)'<
     +p { hello world }
     +p { \SATYSFI; }
 >
@@ -63,7 +63,7 @@ document(|title = {hello}|)'<+p{hello world}+p {\SATYSFI;format}>"#;
     let expect = r#"@import: hello
 @require: local
 
-document(|title = {hello}|)'<
+document(|title = { hello }|)'<
     +p { hello world }
     +p { \SATYSFI;format }
 >
@@ -80,7 +80,7 @@ document(|title = {hello}|)'<+p{hello world}+p {format\SATYSFI;format}>"#;
     let expect = r#"@import: hello
 @require: local
 
-document(|title = {hello}|)'<
+document(|title = { hello }|)'<
     +p { hello world }
     +p { format\SATYSFI;format }
 >
@@ -93,7 +93,7 @@ fn test6() {
     let text = r#"
 
 document(|title = {hello}|)'<+p{hello world}+p {${ax^2 + bx + c = 0}}>"#;
-    let expect = r#"document(|title = {hello}|)'<
+    let expect = r#"document(|title = { hello }|)'<
     +p { hello world }
     +p { ${ax^2 + bx + c = 0} }
 >
@@ -106,8 +106,8 @@ fn test7() {
     let text = r#"
 document(|title = {hello}; author = {author};|)'<>"#;
     let expect = r#"document(|
-    title = {hello};
-    author = {author};
+    title = { hello };
+    author = { author };
 |)'<>
 "#;
     test_tmpl(text, expect);
@@ -120,10 +120,10 @@ fn test8() {
 
 
 document(|
-    author = {author};
+    author = { author };
     show-title = false;
     show-toc = true;
-    title = {title};
+    title = { title };
 |)'<
     +section {section} <
         +p {
@@ -141,10 +141,10 @@ document(|
 @require: itemize
 
 document(|
-    author = {author};
+    author = { author };
     show-title = false;
     show-toc = true;
-    title = {title};
+    title = { title };
 |)'<
     +section { section } <
         +p {
@@ -224,12 +224,32 @@ format}>"#;
     let expect = r#"@import: hello
 @require: local
 
-document(|title = {hello}|)'<
+document(|title = { hello }|)'<
     +p { hello world }
     +p {
         format\SATYSFI;
         format
     }
+>
+"#;
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn test12() {
+    // 改行が含まれていてもその前の末尾にスペースがある場合はスペースを優先
+    let text = r#"@import: hello
+@require: local
+
+document(|title = {hello}|)'<+p{hello world}+p {format\SATYSFI; 
+    format}>"#;
+
+    let expect = r#"@import: hello
+@require: local
+
+document(|title = { hello }|)'<
+    +p { hello world }
+    +p { format\SATYSFI; format }
 >
 "#;
     test_tmpl(text, expect);

@@ -15,7 +15,8 @@ fn visualize_cst_tree(csttext: &CstText, cst: &Cst, depth: usize) {
         .get_text_from_span(cst.span)
         .chars();
     let self_text = if cst.span.end - cst.span.start <= max_len {
-        self_text.take(max_len).collect::<String>().replace("\n", "") // 改行を削除
+        self_text.take(max_len).collect::<String>()
+        // .replace("\n", "") // 改行を削除
     } else {
         if cst.rule == Rule::regular_text {
             // 例外的に全部表示

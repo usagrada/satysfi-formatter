@@ -9,41 +9,33 @@
 let-block ctx +newpage = clear-page
 % シェルコマンド
 let-block +cmd arg = '<
-    +code-printer ?:(
-  CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
-  |> CodePrinter.set-basic-font-size 9pt
-  |> CodePrinter.set-number-fun CodeDesign.number-fun-null
-) (arg);
+    +code-printer ?:(CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark 
+        |> CodePrinter.set-basic-font-size 9pt 
+        |> CodePrinter.set-number-fun CodeDesign.number-fun-null) (arg);
 >
 % インラインシェルコマンド
-let-inline \cmd arg =
-    {\code-printer ?:(
-  CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
-  |> CodePrinter.set-basic-font-size 9pt
-  |> CodePrinter.set-number-fun CodeDesign.number-fun-null
-) (arg);
+let-inline \cmd arg = {
+\code-printer ?:(CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark 
+    |> CodePrinter.set-basic-font-size 9pt 
+    |> CodePrinter.set-number-fun CodeDesign.number-fun-null) (arg);
 }
 % インラインRustコマンド
-let-inline \cmd-rust arg =
-    {\code-printer ?:(
-  CodePrinter.make-config CodeSyntax.rust CodeTheme.basic-dark
-  |> CodePrinter.set-basic-font-size 9pt
-  |> CodePrinter.set-number-fun CodeDesign.number-fun-null
-) (arg);
+let-inline \cmd-rust arg = {
+\code-printer ?:(CodePrinter.make-config CodeSyntax.rust CodeTheme.basic-dark 
+    |> CodePrinter.set-basic-font-size 9pt 
+    |> CodePrinter.set-number-fun CodeDesign.number-fun-null) (arg);
 }
 % インラインシェルコマンド
-let-inline \cmd-saty arg =
-    {\code-printer ?:(
-  CodePrinter.make-config CodeSyntax.satysfi CodeTheme.basic-dark
-  |> CodePrinter.set-basic-font-size 9pt
-  |> CodePrinter.set-number-fun CodeDesign.number-fun-null
-) (arg);
+let-inline \cmd-saty arg = {
+\code-printer ?:(CodePrinter.make-config CodeSyntax.satysfi CodeTheme.basic-dark 
+    |> CodePrinter.set-basic-font-size 9pt 
+    |> CodePrinter.set-number-fun CodeDesign.number-fun-null) (arg);
 }
 in
 
 document(|
-    title = {\SATySFi;-formatter};
-    author = {usagrada};
+    title = { \SATySFi;-formatter };
+    author = { usagrada };
     show-toc = true;
     show-title = true;
 |)'<
@@ -78,27 +70,32 @@ cargo install --path .
     >
     +section { 開発者の方 } <
         +p {
-            `release build`でない場合、`src/visualize.rs`にある関数が呼び出されるようになっており、ファイルの構造を確認できるようになってます。 \cmd (`cargo run -- $input`);
-            `lib.rs`の`format`を開始地点とし、
-            コードから`satysfi-parser`
+            `release build`でない場合、
+            `src/visualize.rs`にある関数が呼び出されるようになっており、ファイルの構造を確認できるようになってます。
+            \cmd (`cargo run -- $input`);
+            `lib.rs`の
+            `format`を開始地点とし、
+            コードから
+            `satysfi-parser`
             で CST 化し、文字列に戻して結合しています。
             % comment
-            現状では、かなり愚直な実装をしている`+`
-            一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
+            現状では、かなり愚直な実装をしている \+ 一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
             % comment
-            Issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。
-            その際、実際にそれがコンパイル可能である必要はありません。
+            Issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。 その際、実際にそれがコンパイル可能である必要はありません。
         }
         +subsection { Pull Request } <
             +p {
                 実装した部分のテストケースを書いていただいてから、プルリクエストをいただけると幸いです。
-                その際、`src/tests`以下でしたら何処に書いていただいても構いません。
+                その際、
+                `src/tests`以下でしたら何処に書いていただいても構いません。
                 \footnote { そもそもまだ全部のテストケースが通らない…… }
             }
         >
         +subsection { issue } <
             +p {
-                以下にサンプル（`src/tests/common.rs` `test1`と同じ）を載せておきます。`r#""`の内部に書かれたテキストはスペースや改行を含め全てそのまま出力されるため、
+                以下にサンプル（
+                `src/tests/common.rs` `test1`と同じ）を載せておきます。
+                `r#""`の内部に書かれたテキストはスペースや改行を含め全てそのまま出力されるため、
                 スペース数改行数等の違いにより、テストが容易に落ちます。
                 \cmd-rust (`#[test]
 fn test1() {
@@ -124,7 +121,11 @@ document(|title = {hello}|)'<
     >
     +section { document の更新 } <
         +p {
-            `draft.saty`を更新して、以下のコマンドを叩くと`doc.pdf`を更新します。\cmd (`cargo make build-doc`);その際、`cargo-make`というパッケージが必要なので、インストールしていない方は以下のコマンドでインストールしてください。\cmd (`cargo install --force cargo-make`);
+            `draft.saty`を更新して、以下のコマンドを叩くと
+            `doc.pdf`を更新します。 \cmd (`cargo make build-doc`);
+            その際、
+            `cargo-make`というパッケージが必要なので、インストールしていない方は以下のコマンドでインストールしてください。
+            \cmd (`cargo install --force cargo-make`);
         }
     >
     +section { format } <
