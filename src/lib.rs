@@ -158,6 +158,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::vertical | Rule::horizontal_bullet_list => newline.clone(),
         Rule::horizontal_list => format!("|{newline}"),
         Rule::unary => "#".to_string(),
+        Rule::type_optional => " ?-> ".to_string(),
         Rule::record | Rule::type_record | Rule::list => format!(";{newline}"),
         Rule::type_block_cmd | Rule::type_inline_cmd | Rule::type_math_cmd => format!(";{newline}"),
         Rule::horizontal_single => "".to_string(),
@@ -353,6 +354,31 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 _ => current + &s,
             }
         }),
+        Rule::ctrl_if => {
+            // s:p() kwd("if") _ cond:expr() _ kwd("then") _ et:expr() _ kwd("else") _ ee:expr() e:p()
+            if csts.len() < 3 {
+                panic!("ctrl_if: csts.len() < 3");
+            }
+            let mut cnt = 0;
+            let output = csts.iter().fold(String::new(), |current, now_cst| {
+                let s = to_string_cst(text, now_cst, depth);
+                match now_cst.rule {
+                    Rule::expr => {
+                        cnt += 1;
+                        match cnt {
+                            1 => current + "if " + &s,
+                            2 => current + " then " + &s,
+                            3 => current + " else " + &s,
+                            _ => unreachable!(),
+                        }
+                    }
+                    Rule::comments => current + &s,
+                    _ => unreachable!(),
+                }
+            });
+
+            output
+        }
         Rule::unary => csts.iter().fold(String::new(), |current, now_cst| {
             let s = to_string_cst(text, now_cst, depth);
             let s = if now_cst.rule == Rule::bin_operator || now_cst.rule == Rule::expr {
@@ -514,8 +540,14 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 return s;
             }
             match now_cst.rule {
-                Rule::type_optional => current + " ?-> " + &s,
-                Rule::type_prod => current + " -> " + &s,
+                Rule::type_prod => {
+                    if current.ends_with("?") {
+                        current + "-> " + &s
+                    } else {
+                        current + " -> " + &s
+                    }
+                }
+                Rule::type_optional => current + " -> " + &s + " ?",
                 Rule::comments => current + &s,
                 _ => current + " " + &s,
             }
@@ -537,7 +569,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
             let output = csts.iter().fold(String::new(), |current, now_cst| {
                 let s = to_string_cst(text, now_cst, depth);
                 match now_cst.rule {
-                    Rule::comments => current + &newline + &s,
+                    Rule::comments => current + &s,
                     _ => {
                         if current.is_empty() || s.ends_with(RESERVED_WORD.in_stmt) {
                             current + &s
@@ -548,7 +580,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     }
                 }
             });
-            output.trim_end().to_string()
+            output.trim().to_string()
         }
         Rule::sig_stmt => {
             let output = csts.iter().fold(String::new(), |current, now_cst| {
@@ -696,7 +728,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::type_variant => output,
         Rule::module_stmt => output,
         Rule::open_stmt => output,
-        Rule::arg => output,
+        Rule::arg => self_text,
 
         // struct
         Rule::sig_stmt => format!(
@@ -704,7 +736,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
             RESERVED_WORD.sig, RESERVED_WORD.end
         ), // TODO
         Rule::struct_stmt => format!(
-            "{}{output}{end_indent}{}",
+            "{}{start_indent}{output}{end_indent}{}",
             RESERVED_WORD.struct_stmt, RESERVED_WORD.end
         ), // TODO
         Rule::sig_type_stmt => format!("{start_indent}{} {output}", RESERVED_WORD.type_stmt),
@@ -745,7 +777,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
                 format!("[{output}] {}", RESERVED_WORD.math_command)
             }
         }
-        Rule::type_list_unit_optional => output,
+        Rule::type_list_unit_optional => output + "?",
         Rule::type_application => output,
         Rule::type_name => self_text,
         // Rule::type_record => output,
