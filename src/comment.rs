@@ -22,7 +22,7 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
             continue;
         };
         if let Some(inner) = text.find('%') {
-            if inner > 0 && &text[(inner - 1)..inner] == "\\" {
+            if text[..inner].ends_with("\\%") && !text[..inner].ends_with("\\\\%") {
                 // escaped percent
                 continue;
             }

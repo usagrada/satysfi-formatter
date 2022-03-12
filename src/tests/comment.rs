@@ -129,3 +129,29 @@ document(|title = { hello }|)'<
 "#;
     test_tmpl(text, expect)
 }
+
+
+#[test]
+fn test_comment6() {
+    let text = r#"@import: hello
+  @require: local %comment
+  
+document(|title = {hello}|)'<+p% comment
+{
+    hello
+    \\%comment
+}>"#;
+
+    let expect = r#"@import: hello
+@require: local %comment
+
+document(|title = { hello }|)'<
+    +p % comment
+    {
+        hello \\
+        % comment
+    }
+>
+"#;
+    test_tmpl(text, expect)
+}

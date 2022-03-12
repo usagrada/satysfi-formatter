@@ -153,7 +153,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
     let sep = &match cst.rule {
         Rule::block_cmd | Rule::inline_cmd => " ".to_string(),
         Rule::type_application => " ".to_string(),
-        Rule::type_prod  => " * ".to_string(),
+        Rule::type_prod => " * ".to_string(),
         Rule::dyadic_expr | Rule::match_expr | Rule::unary_operator_expr => " ".to_string(),
         Rule::vertical | Rule::horizontal_bullet_list => newline.clone(),
         Rule::horizontal_list => format!("|{newline}"),
@@ -291,7 +291,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
             let s = to_string_cst(text, now_cst, depth);
             let s = if now_cst.rule == Rule::bin_operator || now_cst.rule == Rule::expr {
                 format!("({s})")
-            }else {
+            } else {
                 s
             };
             if current.is_empty() {
@@ -474,61 +474,24 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     .enumerate()
                     .fold(String::new(), |current, (index, now_cst)| {
                         let s = to_string_cst(text, &now_cst, depth);
-                        let start_newline =
-                            text[now_cst.span.start..now_cst.span.end].starts_with("\n");
                         if current.is_empty() {
                             s
-                        } else if index > 0
-                            && (csts[index - 1].rule == Rule::regular_text
-                                || csts[index - 1].rule == Rule::inline_cmd)
-                            && now_cst.rule == Rule::inline_cmd
-                        {
-                            // regular_text と inline_cmd の間にスペースがある場合、フォーマットの例外
-                            let last_span = csts[index - 1].span;
-                            let end_space =
-                                text[last_span.start..last_span.end].ends_with(char::is_whitespace);
-                            // 改行している
-                            let end_newline = text[last_span.start..last_span.end]
-                                .lines()
-                                .last()
-                                .unwrap_or("something")
-                                .trim()
-                                .is_empty();
-
-                            if end_space {
-                                if end_newline || s.len() > default_option.row_length {
-                                    format!("{}{newline}{s}", current.trim_end())
-                                } else {
-                                    current + " " + &s
-                                }
+                        } else if now_cst.rule == Rule::regular_text && s.trim().is_empty() {
+                            // 空行・スペースの処理
+                            if current.ends_with(char::is_whitespace) {
+                                // 既に空白がある場合には何もしない
+                                current
                             } else {
                                 current + &s
                             }
-                        } else if index + 1 < csts.len()
-                            && (now_cst.rule == Rule::regular_text
-                                || now_cst.rule == Rule::inline_cmd)
-                            && (csts[index + 1].rule != Rule::regular_text
-                                && csts[index + 1].rule != Rule::inline_cmd)
-                            && s.trim().is_empty()
-                        {
-                            // 空文字の処理例外
-                            // ex: `const-str` `const-str` のような場合
-                            // 改行が含まれる場合改行
-                            let include_kaigyo =
-                                text[now_cst.span.start..now_cst.span.end].contains("\n");
-                            if include_kaigyo {
-                                format!("{}{newline}{s}", current.trim_end())
+                        } else if now_cst.rule == Rule::regular_text {
+                            if current.ends_with(char::is_whitespace) {
+                                // 既に空白がある場合には何もしない
+                                current.trim_end().to_string() + &s
                             } else {
-                                // 改行がない場合スペースを1つ
-                                format!("{} {s}", current)
+                                current + &s
                             }
-                        } else if s.trim().is_empty() {
-                            // 空行の処理
-                            // 文字がない場合は何もしない
-                            current
                         } else if now_cst.rule == Rule::comments {
-                            format!("{}{newline}{s}", current.trim_end())
-                        } else if start_newline {
                             format!("{}{newline}{s}", current.trim_end())
                         } else {
                             current + &s
@@ -545,13 +508,11 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 s
             } else if s.is_empty() {
                 current
-            } 
-            else {
+            } else {
                 match now_cst.rule {
                     Rule::module_stmt => current + "\n\n" + &s,
-                    _ => current + "\n" + &s
+                    _ => current + "\n" + &s,
                 }
-                
             }
         }),
         _ => {
@@ -862,7 +823,30 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
                 .filter(|line| !line.is_empty())
                 .collect::<Vec<String>>()
                 .join(&sep);
-            output
+            let start_space = if self_text.starts_with(char::is_whitespace) {
+                " "
+            } else {
+                ""
+            };
+            let end_space = if self_text.ends_with(char::is_whitespace) {
+                " "
+            } else {
+                ""
+            };
+            if output.trim().is_empty() {
+                if self_text.starts_with("\n") {
+                    start_indent
+                } else {
+                    start_space.to_string()
+                }
+            } else {
+                match (self_text.starts_with("\n"), self_text.ends_with("\n")) {
+                    (true, true) => format!("{start_indent}{output}{end_indent}"),
+                    (true, false) => format!("{start_indent}{output}{end_space}"),
+                    (false, true) => format!("{start_space}{output}{end_indent}"),
+                    (false, false) => format!("{start_space}{output}{end_space}"),
+                }
+            }
         }
         Rule::horizontal_escaped_char => self_text, // TODO
         Rule::inline_text_embedding => format!("#{output};"), // TODO

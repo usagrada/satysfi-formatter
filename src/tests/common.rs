@@ -234,3 +234,23 @@ document(|title = { hello }|)'<
 "#;
     test_tmpl(text, expect);
 }
+
+#[test]
+fn test12() {
+    // 改行が含まれていてもその前の末尾にスペースがある場合はスペースを優先
+    let text = r#"@import: hello
+@require: local
+
+document(|title = {hello}|)'<+p{hello world}+p {format\SATYSFI; 
+    format}>"#;
+
+    let expect = r#"@import: hello
+@require: local
+
+document(|title = { hello }|)'<
+    +p { hello world }
+    +p { format\SATYSFI; format }
+>
+"#;
+    test_tmpl(text, expect);
+}
