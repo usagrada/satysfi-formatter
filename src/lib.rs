@@ -545,8 +545,13 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 s
             } else if s.is_empty() {
                 current
-            } else {
-                current + "\n" + &s
+            } 
+            else {
+                match now_cst.rule {
+                    Rule::module_stmt => current + "\n\n" + &s,
+                    _ => current + "\n" + &s
+                }
+                
             }
         }),
         _ => {

@@ -14,7 +14,7 @@ script = [
 '''
 #!/usr/bin/env bash
 cargo run -- doc/draft.saty -o dist/tmp.saty
-rm dist/tmp.saty
+# rm dist/tmp.saty
 '''
 ]
 

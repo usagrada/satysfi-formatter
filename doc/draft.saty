@@ -17,33 +17,36 @@ let-block +cmd arg = '<
 >
 % インラインシェルコマンド
 let-inline \cmd arg =
-    {\code-printer ?:(
+    {
+    \code-printer ?:(
   CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark
   |> CodePrinter.set-basic-font-size 9pt
   |> CodePrinter.set-number-fun CodeDesign.number-fun-null
 ) (arg);
-}
+    }
 % インラインRustコマンド
 let-inline \cmd-rust arg =
-    {\code-printer ?:(
+    {
+    \code-printer ?:(
   CodePrinter.make-config CodeSyntax.rust CodeTheme.basic-dark
   |> CodePrinter.set-basic-font-size 9pt
   |> CodePrinter.set-number-fun CodeDesign.number-fun-null
 ) (arg);
-}
+    }
 % インラインシェルコマンド
 let-inline \cmd-saty arg =
-    {\code-printer ?:(
+    {
+    \code-printer ?:(
   CodePrinter.make-config CodeSyntax.satysfi CodeTheme.basic-dark
   |> CodePrinter.set-basic-font-size 9pt
   |> CodePrinter.set-number-fun CodeDesign.number-fun-null
 ) (arg);
-}
+    }
 in
 
 document(|
-    title = {\SATySFi;-formatter};
-    author = {usagrada};
+    title = { \SATySFi;-formatter };
+    author = { usagrada };
     show-toc = true;
     show-title = true;
 |)'<
@@ -83,7 +86,7 @@ cargo install --path .
             コードから`satysfi-parser`
             で CST 化し、文字列に戻して結合しています。
             % comment
-            現状では、かなり愚直な実装をしている`+`
+            現状では、かなり愚直な実装をしている\+
             一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
             % comment
             Issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。
