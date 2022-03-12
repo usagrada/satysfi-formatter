@@ -27,3 +27,13 @@ SATYDIR=$HOME/.satysfi/dist/packages
 cargo run -- $SATYDIR/$1 -o dist/$1
 '''
 ]
+
+[tasks.build-test]
+script = [
+'''
+#!/usr/bin/env bash
+SATYDIR=$HOME/.satysfi/dist/packages
+python tests/build-test.py
+satysfi tests/tmp.saty
+'''
+]
