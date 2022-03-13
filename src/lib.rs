@@ -572,37 +572,42 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     .enumerate()
                     .fold(String::new(), |current, (index, now_cst)| {
                         let s = to_string_cst(text, now_cst, depth);
-                        if current.is_empty() {
-                            return s;
-                        }
                         match now_cst.rule {
+                            Rule::let_stmt
+                            | Rule::let_rec_stmt
+                            | Rule::let_math_stmt
+                            | Rule::let_mutable_stmt
+                            | Rule::open_stmt => {
+                                if index == 0 {
+                                    current + &s + " " + RESERVED_WORD.in_stmt
+                                } else {
+                                    current + &newline + &s + " " + RESERVED_WORD.in_stmt
+                                }
+                            }
                             Rule::expr => {
-                                if index > 0 && csts[index - 1].rule == Rule::comments {
-                                    current + &s
-                                } else if s.starts_with("let") {
+                                let current = if index > 0 && csts[index - 1].rule == Rule::comments
+                                {
                                     current
-                                        + " "
-                                        + RESERVED_WORD.in_stmt
-                                        + &newline
-                                        + s.trim_start()
+                                } else if s.starts_with("let") || s.contains("\n"){
+                                    current + &newline
+                                } else{
+                                    current + " "
+                                };
+                                if s.starts_with("let") {
+                                    current + s.trim_start()
                                 } else {
                                     if s.contains("\n") {
                                         let s = to_string_cst(text, now_cst, depth + 1);
                                         // 1つ深くする
-                                        current
-                                            + " "
-                                            + RESERVED_WORD.in_stmt
-                                            + &newline
-                                            + &indent_space(1)
-                                            + s.trim_start()
+                                        current + &indent_space(1) + s.trim_start()
                                     } else {
-                                        current + " " + RESERVED_WORD.in_stmt + " " + s.trim_start()
+                                        current  + s.trim_start()
                                     }
                                 }
                             }
                             Rule::comments => {
-                                if index + 1 < csts.len() && csts[index + 1].rule == Rule::expr {
-                                    current + " " + RESERVED_WORD.in_stmt + &newline + &s
+                                if current.ends_with(RESERVED_WORD.in_stmt) {
+                                    current + &newline + &s
                                 } else {
                                     current + &s
                                 }
