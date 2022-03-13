@@ -1,35 +1,37 @@
 @require: stdjabook
 @require: mdja
+@require: itemize
 @require: code-printer/code-printer
 @require: code-printer/code-syntax
 @require: code-printer/code-theme
 @require: code-printer/code-design
 
+open CodePrinter
 % 改ページ
 let-block ctx +newpage = clear-page
 % シェルコマンド
 let-block +cmd arg = '<
-    +code-printer ?:(CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark 
-        |> CodePrinter.set-basic-font-size 9pt 
-        |> CodePrinter.set-number-fun CodeDesign.number-fun-null) (arg);
+    +code-printer ?:(make-config CodeSyntax.shell CodeTheme.basic-dark 
+        |> set-basic-font-size 9pt 
+        |> set-number-fun CodeDesign.number-fun-null) (arg);
 >
 % インラインシェルコマンド
 let-inline \cmd arg = {
-\code-printer ?:(CodePrinter.make-config CodeSyntax.shell CodeTheme.basic-dark 
-    |> CodePrinter.set-basic-font-size 9pt 
-    |> CodePrinter.set-number-fun CodeDesign.number-fun-null) (arg);
+\code-printer ?:(make-config CodeSyntax.shell CodeTheme.basic-dark 
+    |> set-basic-font-size 9pt 
+    |> set-number-fun CodeDesign.number-fun-null) (arg);
 }
 % インラインRustコマンド
 let-inline \cmd-rust arg = {
-\code-printer ?:(CodePrinter.make-config CodeSyntax.rust CodeTheme.basic-dark 
-    |> CodePrinter.set-basic-font-size 9pt 
-    |> CodePrinter.set-number-fun CodeDesign.number-fun-null) (arg);
+\code-printer ?:(make-config CodeSyntax.rust CodeTheme.basic-dark 
+    |> set-basic-font-size 9pt 
+    |> set-number-fun CodeDesign.number-fun-null) (arg);
 }
 % インラインシェルコマンド
 let-inline \cmd-saty arg = {
-\code-printer ?:(CodePrinter.make-config CodeSyntax.satysfi CodeTheme.basic-dark 
-    |> CodePrinter.set-basic-font-size 9pt 
-    |> CodePrinter.set-number-fun CodeDesign.number-fun-null) (arg);
+\code-printer ?:(make-config CodeSyntax.satysfi CodeTheme.basic-dark 
+    |> set-basic-font-size 9pt 
+    |> set-number-fun CodeDesign.number-fun-null) (arg);
 }
 in
 
@@ -116,6 +118,66 @@ document(|title = {hello}|)'<
     test_tmpl(text, expect);
 }
 `);
+            }
+        >
+    >
+    +section { \SATySFi;-formatter の実装 } <
+        +subsection { indent の管理 } <
+            +p {
+                \SATySFi;-formatter では以下の場所でインデントの管理を行っています。
+            }
+            +p { インデントが以下の場所では深くなります。 }
+            +p {
+                % \listing {
+                \* block_text
+                \* cmd_text_arg
+                \* record
+                \* type_record
+                \* horizontal_list
+                \* list
+                \* type_block_cmd
+                \* type_inline_cmd
+                \* math_cmd
+                \* match_expr
+                \* let_rec_matcharm
+                \* let_rec_inner
+                \* sig_stmt
+                \* struct_stmt
+                % }
+            }
+            +p {
+                let-\* 文については 次の行が let-\* 文以外のとき、インデントが1つ深くなります。
+            }
+        >
+        +subsection { そのまま出力する場所 } <
+            +p {
+                \listing {
+                    * 変数名
+                      ** pkgname
+                      ** arg
+                      ** typename
+                      ** var
+                      ** var_ptn
+                      ** modvar
+                      ** mod_cmd_name
+                      ** module_name
+                      ** variant_name
+                      ** cmd_name_ptn
+                      ** block_cmd_name
+                      ** math_cmd_name
+                      ** math_cmd_expr_arg
+                      ** pattern
+                    * これ以上分解できないもの
+                      ** horizontal_escaped_char
+                      ** const_string
+                    * prefix
+                      ** unary_prefix
+                    * TODO(今後実装予定)
+                      ** expr_with_mod
+                      ** tuple
+                      ** math_cmd
+                      ** math_text
+                }
             }
         >
     >
