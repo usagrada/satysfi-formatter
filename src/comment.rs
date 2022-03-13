@@ -87,6 +87,8 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
         let flag = check_comment(cst, &comment);
 
         if flag {
+            #[cfg(debug_assertions)]
+            println!("cst: {:?}, insert-comment: {:?}", cst.rule, comment.text);
             insert_comment.push(Cst {
                 rule: Rule::comments,
                 inner: vec![],
@@ -102,8 +104,6 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
 
     if insert_comment.len() > 0 {
         insert_comment.iter().for_each(|comment| {
-            #[cfg(debug_assertions)]
-            println!("cst: {:?}, insert-comment: {:?}", cst.rule, comment);
             cst.inner.push(Cst {
                 rule: Rule::comments,
                 inner: vec![],

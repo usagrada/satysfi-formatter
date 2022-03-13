@@ -147,7 +147,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
     */
     use satysfi_parser::Rule;
     let csts = cst.inner.clone();
-    // 関数ないで改行するときはこれを使用する
+    // 関数内で改行するときはこれを使用する
     let indent = indent_space(depth);
     let newline = format!("\n{indent}");
     let sep = &match cst.rule {
@@ -223,6 +223,8 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                         Rule::expr => {
                             // 直前がコメント
                             if index > 0 && csts[index - 1].rule == Rule::comments {
+                                // 1つインデントを深くする
+                                let s = to_string_cst(text, now_cst, depth + 1);
                                 current + &s
                             }
                             // ブロック定義は例外
@@ -238,7 +240,9 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                         }
                         Rule::comments => {
                             if index + 1 < csts.len() && csts[index + 1].rule == Rule::expr {
-                                current + " = " + &s
+                                // 1つインデントを深くする
+                                let s = to_string_cst(text, now_cst, depth + 1);
+                                current + " =" + &newline + &indent_space(1) + &s
                             } else {
                                 current + &s
                             }
@@ -575,24 +579,22 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                             Rule::expr => {
                                 if index > 0 && csts[index - 1].rule == Rule::comments {
                                     current + &s
+                                } else if s.starts_with("let") {
+                                    current
+                                        + " "
+                                        + RESERVED_WORD.in_stmt
+                                        + &newline
+                                        + s.trim_start()
                                 } else {
                                     if s.contains("\n") {
-                                        if s.trim_start().starts_with("let") {
-                                            current
-                                                + " "
-                                                + RESERVED_WORD.in_stmt
-                                                + &newline
-                                                + s.trim_start()
-                                        } else {
-                                            let s = to_string_cst(text, now_cst, depth + 1);
-                                            // 1つ深くする
-                                            current
-                                                + " "
-                                                + RESERVED_WORD.in_stmt
-                                                + &newline
-                                                + &indent_space(1)
-                                                + s.trim_start()
-                                        }
+                                        let s = to_string_cst(text, now_cst, depth + 1);
+                                        // 1つ深くする
+                                        current
+                                            + " "
+                                            + RESERVED_WORD.in_stmt
+                                            + &newline
+                                            + &indent_space(1)
+                                            + s.trim_start()
                                     } else {
                                         current + " " + RESERVED_WORD.in_stmt + " " + s.trim_start()
                                     }
@@ -600,7 +602,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                             }
                             Rule::comments => {
                                 if index + 1 < csts.len() && csts[index + 1].rule == Rule::expr {
-                                    current + " " + RESERVED_WORD.in_stmt + &s
+                                    current + " " + RESERVED_WORD.in_stmt + &newline + &s
                                 } else {
                                     current + &s
                                 }
@@ -659,23 +661,44 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
             output
         }
         Rule::struct_stmt => {
-            let output = csts.iter().fold(String::new(), |current, now_cst| {
-                let s = to_string_cst(text, now_cst, depth);
-                if current.is_empty() {
-                    return s;
-                }
-                match now_cst.rule {
-                    Rule::comments => current + &s,
-                    _ => {
-                        if now_cst.rule == Rule::bind_stmt {
-                            current + &newline + &s
+            let check = &format!("\n{newline}");
+            let output =
+                csts.iter()
+                    .enumerate()
+                    .fold(String::new(), |current, (index, now_cst)| {
+                        let s = to_string_cst(text, now_cst, depth);
+
+                        // 改行の制御
+                        let current = if current.is_empty() || current.ends_with(check) {
+                            current
+                        } else if index > 0 && csts[index - 1].rule == Rule::comments {
+                            current
+                        } else if index > 0 && csts[index - 1].rule != now_cst.rule {
+                            // ルールの切り替わり位置
+                            current + "\n" + &newline
+                        } else if !s.contains("\n") {
+                            current + &newline
+                        } else if csts[index - 1].rule == Rule::let_stmt
+                            || csts[index - 1].rule == Rule::let_rec_stmt
+                        {
+                            current + "\n" + &newline
                         } else {
-                            // 基本的に改行する
-                            current + "\n" + &newline + &s
+                            match now_cst.rule {
+                                Rule::let_stmt | Rule::let_rec_stmt => current + "\n" + &newline,
+                                Rule::comments => current,
+                                _ => {
+                                    // 基本的に改行する
+                                    current + &newline
+                                }
+                            }
+                        };
+                        match now_cst.rule {
+                            Rule::let_stmt | Rule::let_rec_stmt => current + &s,
+                            Rule::comments => current + &s,
+                            Rule::bind_stmt => current + &s,
+                            _ => current + &s,
                         }
-                    }
-                }
-            });
+                    });
             output
         }
         Rule::sig_stmt => {
