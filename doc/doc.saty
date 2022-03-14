@@ -58,8 +58,8 @@ document(|
                 最新のデータにアップデートするために同じコマンドを使用できます。
             }
         }
-        +cmd (`cargo install --force --git https://github.com/usagrada/satysfi-formatter.git`);
-        +cmd (`git clone https://github.com/usagrada/satysfi-formatter.git
+        +cmd (`cargo install --force --git https://github.com/usagrada/satysfi-formatter.git --branch main`);
+        +cmd (`git clone -b main https://github.com/usagrada/satysfi-formatter.git
 cd satysfi-formatter
 cargo install --path .
 `);
