@@ -66,7 +66,7 @@ fn check_comment(cst: &Cst, comment: &Comment) -> bool {
     contain_comment && !inner_contain_comment && cst.rule != Rule::headers
 }
 
-// csttext にコメントを追加して組み直す関数
+/// csttext にコメントを追加して組み直す関数
 pub fn csttext_insert_comments(csttext: CstText) -> CstText {
     let mut comments = get_comments(&csttext);
     if let Some(comment) = comments.pop_front() {
@@ -118,6 +118,7 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
 
 }
 
+/// コメントを文字列化する関数
 pub fn to_comment_string(text: String) -> String {
     let index = text.find("%").unwrap();
     let comment = text[index + 1..].trim_end();

@@ -1,98 +1,13 @@
 mod comment;
+mod reserved_words;
 #[cfg(test)]
 mod tests;
 mod visualize;
 
 use comment::*;
+use reserved_words::*;
 use satysfi_parser::{grammar, Cst, CstText};
 pub use visualize::*;
-
-type ReservedText = &'static str;
-
-#[allow(dead_code)]
-struct ReservedWord {
-    let_block: ReservedText,
-    let_math: ReservedText,
-    let_mutable: ReservedText,
-    type_stmt: ReservedText,
-    let_inline: ReservedText,
-    constraint: ReservedText,
-    inline_command: ReservedText,
-    block_command: ReservedText,
-    math_command: ReservedText,
-    let_rec: ReservedText,
-    controls: ReservedText,
-    command: ReservedText,
-    before: ReservedText,
-    module: ReservedText,
-    direct: ReservedText,
-    struct_stmt: ReservedText,
-    cycle: ReservedText,
-    match_stmt: ReservedText,
-    while_stmt: ReservedText,
-    if_stmt: ReservedText,
-    else_stmt: ReservedText,
-    true_stmt: ReservedText,
-    false_stmt: ReservedText,
-    open: ReservedText,
-    then: ReservedText,
-    when: ReservedText,
-    with: ReservedText,
-    and: ReservedText,
-    end: ReservedText,
-    fun: ReservedText,
-    let_stmt: ReservedText,
-    mod_stmt: ReservedText,
-    not: ReservedText,
-    sig: ReservedText,
-    val: ReservedText,
-    as_stmt: ReservedText,
-    do_stmt: ReservedText,
-    in_stmt: ReservedText,
-    of: ReservedText,
-}
-
-const RESERVED_WORD: ReservedWord = ReservedWord {
-    constraint: "constraint",
-    inline_command: "inline-cmd",
-    block_command: "block-cmd",
-    math_command: "math-cmd",
-    let_mutable: "let-mutable",
-    let_inline: "let-inline",
-    let_block: "let-block",
-    let_math: "let-math",
-    type_stmt: "type",
-    let_rec: "let-rec",
-    controls: "controls",
-    command: "command",
-    before: "before",
-    module: "module",
-    direct: "direct",
-    struct_stmt: "struct",
-    cycle: "cycle",
-    match_stmt: "match",
-    while_stmt: "while",
-    if_stmt: "if",
-    else_stmt: "else",
-    true_stmt: "true",
-    false_stmt: "false",
-    open: "open",
-    then: "then",
-    when: "when",
-    with: "with",
-    and: "and",
-    end: "end",
-    fun: "fun",
-    let_stmt: "let",
-    mod_stmt: "mod",
-    not: "not",
-    sig: "sig",
-    val: "val",
-    as_stmt: "as",
-    do_stmt: "do",
-    in_stmt: "in",
-    of: "of",
-};
 
 pub struct OptionData {
     row_length: usize,
