@@ -162,10 +162,25 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::record | Rule::type_record | Rule::list => format!(";{newline}"),
         Rule::type_block_cmd | Rule::type_inline_cmd | Rule::type_math_cmd => format!(";{newline}"),
         Rule::horizontal_single => "".to_string(),
+        Rule::variant_constructor => " ".to_string(),
         _ => "".to_string(),
     };
 
     let output = match cst.rule {
+        Rule::variant_constructor => {
+            let mut output = String::new();
+            for cst in csts {
+                let s = to_string_cst(text, &cst, depth);
+                if output.is_empty() {
+                    output = s;
+                } else if !(cst.rule == Rule::unary && s.starts_with("(")) {
+                    output += &sep;
+                } else {
+                    output += &s;
+                }
+            }
+            output
+        }
         Rule::let_mutable_stmt => {
             csts.iter().fold(String::new(), |current, now_cst| {
                 let s = to_string_cst(text, now_cst, depth);
@@ -320,7 +335,8 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     Rule::unary => {
                         output += &s;
                         continue;
-                    } Rule::record_unit => {
+                    }
+                    Rule::record_unit => {
                         output += &s;
                     }
                     _ => unreachable!(),
@@ -591,9 +607,9 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                                 let current = if index > 0 && csts[index - 1].rule == Rule::comments
                                 {
                                     current
-                                } else if s.starts_with("let") || s.contains("\n"){
+                                } else if s.starts_with("let") || s.contains("\n") {
                                     current + &newline
-                                } else{
+                                } else {
                                     current + " "
                                 };
                                 if s.starts_with("let") {
@@ -604,7 +620,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                                         // 1つ深くする
                                         current + &indent_space(1) + s.trim_start()
                                     } else {
-                                        current  + s.trim_start()
+                                        current + s.trim_start()
                                     }
                                 }
                             }
@@ -765,6 +781,25 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 }
             }
         }),
+        Rule::list => csts
+            .iter()
+            .fold(String::new(), |current, now_cst| {
+                let s = to_string_cst(text, &now_cst, depth);
+                let flag = now_cst.rule == Rule::comments;
+                if flag {
+                    current + &s
+                } else if current.is_empty() {
+                    s + &sep
+                } else if s.is_empty() {
+                    current
+                } else if now_cst.rule == Rule::comments {
+                    current + &s
+                } else {
+                    current + &s + sep
+                }
+            })
+            .trim_end()
+            .to_string(),
         _ => {
             csts.iter().fold(String::new(), |current, now_cst| {
                 let s = to_string_cst(text, &now_cst, depth);
@@ -933,24 +968,10 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         // Rule::horizontal_text => output,
         Rule::math_text => self_text,
         Rule::list => {
-            let output = if output.len() > 0 {
-                // TODO かなり無理な方法で末尾のセミコロンをつけているので、どうにかする
-                // match self_text.split(";").last() {
-                //     Some(text) if text.trim() == "];" || text.trim() == "]" => format!("[{start_indent}{output};{end_indent}]"),
-                //     _ => format!("[{start_indent}{output}{end_indent}]"),
-                // }
-                if output.ends_with("}") {
-                    format!("[{start_indent}{output}{end_indent}]")
-                } else {
-                    format!("[{start_indent}{output};{end_indent}]")
-                }
+            if output.len() > 0 {
+                format!("[{start_indent}{output}{end_indent}]")
             } else {
                 format!("[]")
-            };
-            if self_text.ends_with(";") {
-                output + ";"
-            } else {
-                output
             }
         }
         Rule::record | Rule::type_record => {
@@ -1049,17 +1070,17 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
                 output
             }
         }
-        Rule::match_expr => output,          // TODO
-        Rule::match_arm => output,           // TODO
-        Rule::match_guard => format!("{} {output}", RESERVED_WORD.when),         // TODO
-        Rule::bind_stmt => output,           // TODO
-        Rule::ctrl_while => output,          // TODO
-        Rule::ctrl_if => output,             // TODO
-        Rule::lambda => output,              // TODO
-        Rule::assignment => output,          // TODO
-        Rule::dyadic_expr => output,         // TODO
+        Rule::match_expr => output, // TODO
+        Rule::match_arm => output,  // TODO
+        Rule::match_guard => format!("{} {output}", RESERVED_WORD.when), // TODO
+        Rule::bind_stmt => output,  // TODO
+        Rule::ctrl_while => output, // TODO
+        Rule::ctrl_if => output,    // TODO
+        Rule::lambda => output,     // TODO
+        Rule::assignment => output, // TODO
+        Rule::dyadic_expr => output, // TODO
         Rule::unary_operator_expr => output, // TODO
-        Rule::unary_operator => output,      // TODO
+        Rule::unary_operator => output, // TODO
         // application
         Rule::application => output,
         Rule::application_args_normal => output,
