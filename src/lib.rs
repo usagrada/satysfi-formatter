@@ -317,7 +317,10 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     s
                 };
                 match now_cst.rule {
-                    Rule::unary | Rule::record_unit => {
+                    Rule::unary => {
+                        output += &s;
+                        continue;
+                    } Rule::record_unit => {
                         output += &s;
                     }
                     _ => unreachable!(),
@@ -1048,7 +1051,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         }
         Rule::match_expr => output,          // TODO
         Rule::match_arm => output,           // TODO
-        Rule::match_guard => output,         // TODO
+        Rule::match_guard => format!("{} {output}", RESERVED_WORD.when),         // TODO
         Rule::bind_stmt => output,           // TODO
         Rule::ctrl_while => output,          // TODO
         Rule::ctrl_if => output,             // TODO
