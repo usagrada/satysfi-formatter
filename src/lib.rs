@@ -67,19 +67,19 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
     let newline = format!("\n{indent}");
     let sep = &match cst.rule {
         Rule::block_cmd | Rule::inline_cmd => " ".to_string(),
-        Rule::type_application => " ".to_string(),
+        // Rule::type_application => " ".to_string(),
         Rule::type_prod => " * ".to_string(),
         Rule::dyadic_expr | Rule::match_expr | Rule::unary_operator_expr => " ".to_string(),
         Rule::vertical | Rule::horizontal_bullet_list => newline.clone(),
-        Rule::horizontal_list => format!("|{newline}"),
+        Rule::horizontal_list => format!("{newline}|"),
         Rule::unary => "#".to_string(),
         Rule::type_optional => " ?-> ".to_string(),
         Rule::list => format!(";{newline}"),
         Rule::record | Rule::type_record => newline.clone(),
         Rule::type_block_cmd | Rule::type_inline_cmd | Rule::type_math_cmd => format!(";{newline}"),
         Rule::horizontal_single => "".to_string(),
-        Rule::variant_constructor => " ".to_string(),
-        _ => "".to_string(),
+        // Rule::variant_constructor => " ".to_string(),
+        _ => " ".to_string(),
     };
 
     let output = match cst.rule {
@@ -221,9 +221,33 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 return s;
             }
             match now_cst.rule {
-                Rule::pattern => current + " " + &s,
+                Rule::pattern => {
+                    if s.starts_with("(") {
+                        current + &s
+                    } else {
+                        current + " " + &s
+                    }
+                }
                 Rule::pat_variant => current + " " + &s,
                 Rule::pat_as => current + " :: " + &s,
+                Rule::comments => current + &newline + &s,
+                _ => unreachable!(),
+            }
+        }),
+        Rule::pat_variant => csts.iter().fold(String::new(), |current, now_cst| {
+            let s = to_string_cst(text, now_cst, depth);
+            if current.is_empty() {
+                return s;
+            }
+            match now_cst.rule {
+                Rule::pattern => {
+                    if s.starts_with("(") {
+                        current + &s
+                    } else {
+                        current + " " + &s
+                    }
+                }
+                Rule::variant_name => current + " " + &s,
                 Rule::comments => current + &newline + &s,
                 _ => unreachable!(),
             }
@@ -725,6 +749,20 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 }
             }
         }),
+        Rule::horizontal_list => csts.iter().fold(format!("|"), |current, now_cst| {
+            // 実装しているが使わない
+            let s = to_string_cst(text, &now_cst, depth);
+            let flag = now_cst.rule == Rule::comments;
+            if flag {
+                current + &s
+            } else if s.is_empty() {
+                current
+            } else if now_cst.rule == Rule::comments {
+                current + &s
+            } else {
+                current + " " + &s + sep
+            }
+        }),
         Rule::list => csts
             .iter()
             .fold(String::new(), |current, now_cst| {
@@ -1032,10 +1070,26 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
 
         // horizontal
         Rule::horizontal_single => output,
-        Rule::horizontal_list => output,        // TODO
+        Rule::horizontal_list => {
+            let sep = format!("\n{}", indent_space(new_depth));
+            let output = self_text
+                .split("\n")
+                .into_iter()
+                .map(|line| {
+                    line.split(char::is_whitespace)
+                        .filter(|line| !line.is_empty())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                })
+                .filter(|line| !line.is_empty())
+                .collect::<Vec<String>>()
+                .join(&sep);
+            // output
+            format!("{}{output}", indent_space(new_depth))
+        }
         Rule::horizontal_bullet_list => output, // TODO
         Rule::horizontal_bullet => output,      // TODO
-        Rule::horizontal_bullet_star => "  ".repeat(self_text.len() - 1) + &self_text + " ",
+        Rule::horizontal_bullet_star => "  ".repeat(self_text.len() - 1) + &self_text,
         Rule::regular_text => {
             let sep = format!("\n{}", indent_space(depth));
             let output = self_text
