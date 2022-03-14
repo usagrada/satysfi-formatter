@@ -1,6 +1,6 @@
 # satysfi-formatter
 
-Satysfi 用の formatter
+SATySFi 用の formatter
 
 [document](./doc/doc.pdf)
 

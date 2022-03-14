@@ -159,7 +159,8 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::horizontal_list => format!("|{newline}"),
         Rule::unary => "#".to_string(),
         Rule::type_optional => " ?-> ".to_string(),
-        Rule::record | Rule::type_record | Rule::list => format!(";{newline}"),
+        Rule::list => format!(";{newline}"),
+        Rule::record | Rule::type_record => newline.clone(),
         Rule::type_block_cmd | Rule::type_inline_cmd | Rule::type_math_cmd => format!(";{newline}"),
         Rule::horizontal_single => "".to_string(),
         Rule::variant_constructor => " ".to_string(),
@@ -269,16 +270,17 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
         }
         Rule::math_cmd_expr_arg | Rule::math_cmd_expr_option => {
             // 高々1つの要素
-            csts.iter().fold(String::new(), |_, now_cst| {
+            csts.iter().fold(String::new(), |current, now_cst| {
                 let s = to_string_cst(text, now_cst, depth);
                 match now_cst.rule {
-                    Rule::math_list | Rule::math_single => format!("{{ {s} }}"),
+                    Rule::math_list | Rule::math_single => current + &format!("{{ {s} }}"),
                     Rule::horizontal_list
                     | Rule::horizontal_bullet_list
-                    | Rule::horizontal_single => format!("!{{ {s} }}"),
-                    Rule::vertical => format!("!{s}"),
-                    Rule::expr => format!("!({s})"),
-                    Rule::record | Rule::list => format!("!{s}"),
+                    | Rule::horizontal_single => current + &format!("!{{ {s} }}"),
+                    Rule::vertical => current + &format!("!{s}"),
+                    Rule::expr => current + &format!("!({s})"),
+                    Rule::record | Rule::list => current + &format!("!{s}"),
+                    Rule::comments => current + &s,
                     _ => unreachable!(),
                 }
             })
@@ -307,6 +309,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 Rule::pattern => current + " " + &s,
                 Rule::pat_variant => current + " " + &s,
                 Rule::pat_as => current + " :: " + &s,
+                Rule::comments => current + &newline + &s,
                 _ => unreachable!(),
             }
         }),
@@ -318,10 +321,14 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
             match now_cst.rule {
                 Rule::type_param => current + " " + &s,
                 Rule::type_record => current + " :: " + &s,
+                Rule::comments => current + &newline + &s,
                 _ => unreachable!(),
             }
         }),
-        Rule::record => {
+        Rule::record | Rule::type_record => {
+            if csts.len() == 1 {
+                return to_string_cst(text, &csts[0], depth);
+            }
             let mut iter = csts.into_iter().peekable();
             let mut output = String::new();
             while iter.peek() != None {
@@ -329,6 +336,10 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                 let s = to_string_cst(text, now_cst, depth);
                 let s = if now_cst.rule == Rule::unary {
                     format!("{s} {} ", RESERVED_WORD.with)
+                } else if now_cst.rule == Rule::record_unit
+                    || now_cst.rule == Rule::type_record_unit
+                {
+                    s + ";"
                 } else {
                     s
                 };
@@ -340,12 +351,28 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     Rule::record_unit => {
                         output += &s;
                     }
+                    Rule::type_record_unit => {
+                        output += &s;
+                    }
+                    Rule::comments => {
+                        output += &s;
+                    }
                     _ => unreachable!(),
                 };
                 // 次の要素が存在すれば結合
                 let next = iter.peek();
-                if next != None && next.unwrap().rule == Rule::record_unit {
+                if next != None
+                    && now_cst.rule != Rule::comments
+                    && next.unwrap().rule == Rule::comments
+                {
                     output += &sep;
+                } else if next != None
+                    && (next.unwrap().rule == Rule::record_unit
+                        || next.unwrap().rule == Rule::type_record_unit)
+                {
+                    output += &sep;
+                } else if next == None && now_cst.rule == Rule::comments {
+                    output = output.trim_end().to_string();
                 };
             }
             output
@@ -953,18 +980,10 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::unary => output,
         Rule::unary_prefix => self_text,
         Rule::block_text => {
-            if self_text.starts_with("'") {
-                if output.len() > 0 {
-                    format!("'<{start_indent}{output}{end_indent}>")
-                } else {
-                    format!("'<{output}>")
-                }
+            if output.len() > 0 {
+                format!("'<{start_indent}{output}{end_indent}>")
             } else {
-                if output.len() > 0 {
-                    format!("<{start_indent}{output}{end_indent}>")
-                } else {
-                    format!("<{output}>")
-                }
+                format!("'<{output}>")
             }
         }
         // Rule::horizontal_text => output,
@@ -979,7 +998,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::record | Rule::type_record => {
             if cst.inner.len() > 1 {
                 // 2 つ以上のときは改行
-                format!("(|{start_indent}{output};{end_indent}|)")
+                format!("(|{start_indent}{output}{end_indent}|)")
             } else {
                 // 1つだけの時は、改行しない
                 format!("(|{output}|)")
@@ -1138,11 +1157,11 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
             }
         }
         Rule::horizontal_escaped_char => self_text, // TODO
-        Rule::inline_text_embedding => format!("#{output};"), // TODO
+        Rule::inline_text_embedding => format!("#{output};"),
 
         // vertical
-        Rule::vertical => output,             // TODO
-        Rule::block_text_embedding => self_text, // TODO
+        Rule::vertical => output, // TODO
+        Rule::block_text_embedding => format!("#{output};"),
 
         // constants
         Rule::const_unit => self_text,
