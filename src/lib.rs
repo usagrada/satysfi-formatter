@@ -433,6 +433,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
             // ptn:pat_as() _ guard:match_guard()? _ "->" _ expr:(!match_expr() e:expr() {e})
             match now_cst.rule {
                 Rule::pat_as => current + " " + &s,
+                Rule::match_guard => current + " " + &s,
                 Rule::expr => current + " -> " + &s,
                 _ => current + &s,
             }
