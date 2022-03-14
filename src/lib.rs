@@ -175,6 +175,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     output = s;
                 } else if !(cst.rule == Rule::unary && s.starts_with("(")) {
                     output += &sep;
+                    output += &s;
                 } else {
                     output += &s;
                 }
@@ -1140,7 +1141,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
 
         // vertical
         Rule::vertical => output,             // TODO
-        Rule::block_text_embedding => output, // TODO
+        Rule::block_text_embedding => self_text, // TODO
 
         // constants
         Rule::const_unit => self_text,
