@@ -122,8 +122,8 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
 pub fn to_comment_string(text: String) -> String {
     let index = text.find("%").unwrap();
     let comment = text[index + 1..].trim_end();
-    if comment.starts_with(char::is_whitespace) {
-        // 空白で始まっていたらそのまま表示
+    if comment.starts_with(char::is_whitespace) || comment.starts_with("%") {
+        // 空白or複数の%で始まっていたらそのまま表示
         format!("%{}", comment)
     } else {
         // 空白がない場合は空白を1つ挿入
