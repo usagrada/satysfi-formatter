@@ -27,7 +27,7 @@ let-inline \cmd-rust arg = {
     |> set-basic-font-size 9pt 
     |> set-number-fun CodeDesign.number-fun-null) (arg);
 }
-% インラインシェルコマンド
+% インラインsatysfiコマンド
 let-inline \cmd-saty arg = {
 \code-printer ?:(make-config CodeSyntax.satysfi CodeTheme.basic-dark 
     |> set-basic-font-size 9pt 
@@ -81,7 +81,7 @@ cargo install --path .
             `satysfi-parser`
             で CST 化し、文字列に戻して結合しています。
             % comment
-            現状では、かなり愚直な実装をしている \+ 一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
+            現状では、かなり愚直な実装をしている + 一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
             % comment
             Issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。 その際、実際にそれがコンパイル可能である必要はありません。
         }

@@ -146,6 +146,7 @@ fn to_string_cst_inner(text: &str, cst: &Cst, depth: usize) -> String {
                     match now_cst.rule {
                         Rule::var => current + " " + &s,
                         Rule::block_cmd_name => current + " " + &s,
+                        Rule::bin_operator => current + &format!(" ({s})"),
                         Rule::type_expr => current + ": " + &s,
                         Rule::constraint => {
                             // 1つインデントを深くする
@@ -1033,8 +1034,8 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::pat_cons => output,
         Rule::pattern => self_text, // TODO どのパターンでも中身をそのまま出力
         Rule::pat_variant => output,
-        Rule::pat_list => output,
-        Rule::pat_tuple => output,
+        Rule::pat_list => format!("[{output}]"),
+        Rule::pat_tuple => output, // TODO
 
         // expr
         Rule::expr => {
@@ -1054,7 +1055,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::assignment => output, // TODO
         Rule::dyadic_expr => output, // TODO
         Rule::unary_operator_expr => output, // TODO
-        Rule::unary_operator => output, // TODO
+        Rule::unary_operator => self_text,
         // application
         Rule::application => output,
         Rule::application_args_normal => output,
@@ -1140,6 +1141,21 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::const_length => self_text,
         Rule::const_string => self_text,
 
+        // math
+        Rule::math_single => output,            // TODO
+        Rule::math_list => output,              // TODO
+        Rule::math_token => output,             // TODO
+        Rule::math_sup => format!("^{output}"), // TODO
+        Rule::math_sub => format!("_{output}"), // TODO
+        Rule::math_unary => {
+            if output.is_empty() {
+                self_text
+            } else {
+                output
+            }
+        }
+        Rule::math_embedding => format!("#{output}"), // TODO
+
         // TODO other things
         Rule::misc => " ".to_string(),
         Rule::program_saty => output.trim_start().to_string(),
@@ -1153,7 +1169,7 @@ fn to_string_cst(text: &str, cst: &Cst, depth: usize) -> String {
         Rule::dummy_inline_cmd_incomplete => self_text,
         Rule::dummy_block_cmd_incomplete => self_text,
         Rule::dummy_modvar_incomplete => self_text,
-        _ => "".to_string(),
+        // _ => unreachable!(),
     }
 }
 
