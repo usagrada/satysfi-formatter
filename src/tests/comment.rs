@@ -130,7 +130,6 @@ document(|title = { hello }|)'<
     test_tmpl(text, expect)
 }
 
-
 #[test]
 fn test_comment6() {
     let text = r#"@import: hello
