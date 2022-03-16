@@ -7,7 +7,7 @@ pub struct Comment {
     pub span: Span,
 }
 
-fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
+pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
     let mut comments = VecDeque::new();
     // 全ての行を確認する
     for (index, line) in csttext.lines.iter().enumerate() {
@@ -23,21 +23,10 @@ fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
         };
         if let Some(inner) = text.find('%') {
             // check whether percent is escaped
-            let mut index = inner;
-            let mut is_escaped = false;
-            while index > 1 {
-                if text[..index].ends_with("\\") {
-                    // 再帰的に確認
-                    if text[..index].ends_with("\\\\") {
-                        // escaped percent
-                        index -= 2;
-                        continue;
-                    }
-                    is_escaped = true;
-                    break;
-                }
-                break;
-            }
+            let is_escaped = {
+                let text_removed_backslash = text[..index].trim_matches('\\');
+                text.len() - text_removed_backslash.len() % 2 == 0
+            };
             if is_escaped {
                 continue;
             }
@@ -58,9 +47,10 @@ fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
 
 fn check_comment(cst: &Cst, comment: &Comment) -> bool {
     // headers は例外
-    let inner_contain_comment = cst.inner.iter().fold(false, |current, inner_cst| {
-        current || ( inner_cst.rule != Rule::headers && inner_cst.span.contains(&comment.span))
-    });
+    let inner_contain_comment = cst
+        .inner
+        .iter()
+        .any(|inner_cst| inner_cst.rule != Rule::headers && inner_cst.span.contains(&comment.span));
     let contain_comment = cst.span.contains(&comment.span);
     // コメントを含みかつコメントが内部の要素に含まれていない場合出力する
     contain_comment && !inner_contain_comment && cst.rule != Rule::headers
@@ -84,7 +74,7 @@ pub fn csttext_insert_comments(csttext: CstText) -> CstText {
 fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
     let mut insert_comment = vec![];
     for comment in comments.iter() {
-        let flag = check_comment(cst, &comment);
+        let flag = check_comment(cst, comment);
 
         if flag {
             #[cfg(debug_assertions)]
@@ -102,7 +92,7 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
         cst_insert_comment(inner_cst, comments);
     }
 
-    if insert_comment.len() > 0 {
+    if !insert_comment.is_empty() {
         insert_comment.iter().for_each(|comment| {
             cst.inner.push(Cst {
                 rule: Rule::comments,
@@ -115,14 +105,13 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
         });
         cst.inner.sort_by(|a, b| a.span.start.cmp(&b.span.start))
     }
-
 }
 
 /// コメントを文字列化する関数
 pub fn to_comment_string(text: String) -> String {
-    let index = text.find("%").unwrap();
+    let index = text.find('%').unwrap();
     let comment = text[index + 1..].trim_end();
-    if comment.starts_with(char::is_whitespace) || comment.starts_with("%") {
+    if comment.starts_with(char::is_whitespace) || comment.starts_with('%') {
         // 空白or複数の%で始まっていたらそのまま表示
         format!("%{}", comment)
     } else {
