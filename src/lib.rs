@@ -11,21 +11,23 @@ use satysfi_parser::{grammar, CstText};
 pub use visualize::*;
 
 pub struct OptionData {
-    row_length: usize,
-    indent_space: usize,
+    pub row_length: usize,
+    pub indent_space: usize,
 }
 
-#[allow(non_upper_case_globals)]
-// format 設定のオプション
-static default_option: OptionData = OptionData {
-    row_length: 80,
-    indent_space: 4,
-};
+impl Default for OptionData {
+    fn default() -> Self {
+        Self {
+            row_length: 80,
+            indent_space: 4,
+        }
+    }
+}
 
 /// satysfi の文字列を渡すと format したものを返す
 /// * `input` - satysfi のコード  
 /// * `output` - format された文字列
-pub fn format(input: &str) -> String {
+pub fn format(input: &str, option: OptionData) -> String {
     /*
     CstText {
         text: string,
@@ -35,7 +37,7 @@ pub fn format(input: &str) -> String {
     */
     let csttext = CstText::parse(input, grammar::program).expect("parse error");
     let csttext = csttext_insert_comments(csttext);
-    let formatter = Formatter::new(&csttext);
+    let formatter = Formatter::new(&csttext, option);
 
     #[cfg(debug_assertions)]
     visualize_csttext_tree(&csttext);

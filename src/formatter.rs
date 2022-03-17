@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use super::default_option;
+use super::OptionData;
 use crate::comment::{get_comments, to_comment_string, Comment};
 use crate::reserved_words::*;
 use satysfi_parser::{Cst, CstText};
@@ -10,16 +10,18 @@ pub struct Formatter<'a> {
     pub comments: VecDeque<Comment>,
     pub depth: usize,
     pub output: String,
+    option: OptionData,
 }
 
 impl<'a> Formatter<'a> {
-    pub fn new(csttext: &'a CstText) -> Self {
+    pub fn new(csttext: &'a CstText, option: OptionData) -> Self {
         let comments = get_comments(csttext);
         Self {
             text: &csttext.text,
             comments,
             depth: 0,
             output: String::new(),
+            option,
         }
     }
     // pub fn get_output(&self) -> String {
@@ -37,7 +39,7 @@ impl<'a> Formatter<'a> {
         use satysfi_parser::Rule;
         let csts = cst.inner.clone();
         // 関数内で改行するときはこれを使用する
-        let indent = indent_space(depth);
+        let indent = indent_space(self.option.indent_space, depth);
         let newline = format!("\n{indent}");
         let sep = &match cst.rule {
             Rule::block_cmd | Rule::inline_cmd => " ".to_string(),
@@ -86,7 +88,11 @@ impl<'a> Formatter<'a> {
                             if s.contains('\n') {
                                 // 1つインデントを深くする
                                 let s = self.to_string_cst(text, now_cst, depth + 1);
-                                current + " <-" + &newline + &indent_space(1) + s.trim_start()
+                                current
+                                    + " <-"
+                                    + &newline
+                                    + &indent_space(self.option.indent_space, 1)
+                                    + s.trim_start()
                             } else {
                                 current + " <- " + &s
                             }
@@ -128,7 +134,7 @@ impl<'a> Formatter<'a> {
                             Rule::constraint => {
                                 // 1つインデントを深くする
                                 let s = self.to_string_cst(text, now_cst, depth + 1);
-                                current + &newline + &indent_space(1) + &s
+                                current + &newline + &indent_space(self.option.indent_space, 1) + &s
                             }
                             Rule::expr => {
                                 // 直前がコメント
@@ -144,7 +150,11 @@ impl<'a> Formatter<'a> {
                                 {
                                     // 1つインデントを深くする
                                     let s = self.to_string_cst(text, now_cst, depth + 1);
-                                    current + " =" + &newline + &indent_space(1) + s.trim_start()
+                                    current
+                                        + " ="
+                                        + &newline
+                                        + &indent_space(self.option.indent_space, 1)
+                                        + s.trim_start()
                                 } else {
                                     current + " = " + &s
                                 }
@@ -153,7 +163,11 @@ impl<'a> Formatter<'a> {
                                 if index + 1 < csts.len() && csts[index + 1].rule == Rule::expr {
                                     // 1つインデントを深くする
                                     let s = self.to_string_cst(text, now_cst, depth + 1);
-                                    current + " =" + &newline + &indent_space(1) + &s
+                                    current
+                                        + " ="
+                                        + &newline
+                                        + &indent_space(self.option.indent_space, 1)
+                                        + &s
                                 } else {
                                     current + &s
                                 }
@@ -564,7 +578,9 @@ impl<'a> Formatter<'a> {
                                     } else if s.contains('\n') {
                                         let s = self.to_string_cst(text, now_cst, depth + 1);
                                         // 1つ深くする
-                                        current + &indent_space(1) + s.trim_start()
+                                        current
+                                            + &indent_space(self.option.indent_space, 1)
+                                            + s.trim_start()
                                     } else {
                                         current + s.trim_start()
                                     }
@@ -799,8 +815,8 @@ impl<'a> Formatter<'a> {
             Rule::sig_stmt | Rule::struct_stmt => depth + 1,
             _ => depth,
         };
-        let start_indent = "\n".to_string() + &indent_space(new_depth);
-        let end_indent = "\n".to_string() + &indent_space(depth);
+        let start_indent = "\n".to_string() + &indent_space(self.option.indent_space, new_depth);
+        let end_indent = "\n".to_string() + &indent_space(self.option.indent_space, depth);
 
         let output = self.to_string_cst_inner(text, cst, new_depth);
         let self_text = text.get(cst.span.start..cst.span.end).unwrap().to_string();
@@ -938,7 +954,10 @@ impl<'a> Formatter<'a> {
             Rule::bin_operator => {
                 if self_text == "|>" {
                     // 1つ深くする
-                    format!("{start_indent}{}{self_text}", indent_space(1))
+                    format!(
+                        "{start_indent}{}{self_text}",
+                        indent_space(self.option.indent_space, 1)
+                    )
                 } else {
                     self_text
                 }
@@ -977,7 +996,7 @@ impl<'a> Formatter<'a> {
                     output.find('\n') != None || start_arg == '<' || include_comment;
                 match output.trim().len() {
                     0 => format!("{start_arg}{end_arg}"),
-                    num if include_kaigyou || num > default_option.row_length => {
+                    num if include_kaigyou || num > self.option.row_length => {
                         format!("{start_arg}{start_indent}{output}{end_indent}{end_arg}")
                     }
                     _ => format!("{start_arg} {output} {end_arg}"),
@@ -1048,7 +1067,7 @@ impl<'a> Formatter<'a> {
             // horizontal
             Rule::horizontal_single => output,
             Rule::horizontal_list => {
-                let sep = format!("\n{}", indent_space(new_depth));
+                let sep = format!("\n{}", indent_space(self.option.indent_space, new_depth));
                 let output = self_text
                     .split('\n')
                     .into_iter()
@@ -1062,13 +1081,20 @@ impl<'a> Formatter<'a> {
                     .collect::<Vec<String>>()
                     .join(&sep);
                 // output
-                format!("{}{output}", indent_space(new_depth))
+                format!(
+                    "{}{output}",
+                    indent_space(self.option.indent_space, new_depth)
+                )
             }
             Rule::horizontal_bullet_list => output, // TODO
             Rule::horizontal_bullet => output,      // TODO
-            Rule::horizontal_bullet_star => "  ".repeat(self_text.len() - 1) + &self_text,
+            Rule::horizontal_bullet_star => {
+                " ".repeat(self.option.indent_space / 2)
+                    .repeat(self_text.len() - 1)
+                    + &self_text
+            }
             Rule::regular_text => {
-                let sep = format!("\n{}", indent_space(depth));
+                let sep = format!("\n{}", indent_space(self.option.indent_space, depth));
                 let output = self_text
                     .split('\n')
                     .into_iter()
@@ -1150,8 +1176,7 @@ impl<'a> Formatter<'a> {
         }
     }
 }
-
 #[inline]
-fn indent_space(depth: usize) -> String {
-    " ".repeat(default_option.indent_space * depth)
+fn indent_space(unit: usize, depth: usize) -> String {
+    " ".repeat(unit * depth)
 }
