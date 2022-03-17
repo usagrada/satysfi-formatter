@@ -1,4 +1,4 @@
-use crate::format;
+use crate::{format, OptionData};
 
 mod comment;
 mod common;
@@ -8,7 +8,8 @@ mod module;
 mod space;
 
 fn test_tmpl(input: &str, expect: &str) {
-    let output = format(input);
+    let option = OptionData::default();
+    let output = format(input, option);
     assert_eq!(output, expect);
 }
 

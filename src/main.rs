@@ -1,5 +1,5 @@
 use clap::Parser;
-use satysfi_formatter::format;
+use satysfi_formatter::{format, OptionData};
 use std::{fs, path::PathBuf};
 
 #[derive(Parser, Debug)]
@@ -10,14 +10,18 @@ struct Cli {
     file: PathBuf,
     #[clap(short, long)]
     output: Option<PathBuf>,
-    #[clap(long)]
-    option: Option<String>,
+    #[clap(short, long, default_value_t = 4)]
+    indent_space: usize,
 }
 
 fn main() {
     let cli = Cli::parse();
     let code = fs::read_to_string(&cli.file).expect("Failed to read file");
-    let output = format(&code);
+    let option = OptionData {
+        indent_space: cli.indent_space,
+        ..Default::default()
+    };
+    let output = format(&code, option);
 
     match cli.output {
         Some(path) => fs::write(&path, output).expect("Failed to write file"),

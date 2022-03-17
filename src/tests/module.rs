@@ -1,5 +1,4 @@
 use super::test_tmpl;
-use crate::format;
 use dirs;
 use std::fs;
 
@@ -80,7 +79,6 @@ fn test_option() {
     );
     let text = fs::read(format!("{satypkg}/option.satyg")).unwrap();
     let input = String::from_utf8(text).unwrap();
-    let output = format(&input);
     let expect = r#"@stage: persistent
 
 module Option: sig
@@ -107,5 +105,5 @@ end = struct
             | Some(_) -> false
 end
 "#;
-    assert_eq!(output, expect);
+    test_tmpl(&input, expect);
 }
