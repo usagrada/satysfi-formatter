@@ -24,8 +24,8 @@ pub fn get_comments(csttext: &CstText) -> VecDeque<Comment> {
         if let Some(inner) = text.find('%') {
             // check whether percent is escaped
             let is_escaped = {
-                let text_removed_backslash = text[..index].trim_matches('\\');
-                text.len() - text_removed_backslash.len() % 2 == 0
+                let text_removed_backslash = text[..inner].trim_matches('\\');
+                (text[..inner].len() - text_removed_backslash.len()) % 2 == 1
             };
             if is_escaped {
                 continue;
