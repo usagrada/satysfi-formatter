@@ -13,6 +13,7 @@ pub use visualize::*;
 pub struct OptionData {
     pub row_length: usize,
     pub indent_space: usize,
+    pub command_args_space: bool,
 }
 
 impl Default for OptionData {
@@ -20,6 +21,7 @@ impl Default for OptionData {
         Self {
             row_length: 80,
             indent_space: 4,
+            command_args_space: true,
         }
     }
 }

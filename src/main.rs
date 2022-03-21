@@ -10,8 +10,12 @@ struct Cli {
     file: PathBuf,
     #[clap(short, long)]
     output: Option<PathBuf>,
+    /// indent size
     #[clap(short, long, default_value_t = 4)]
     indent_space: usize,
+     /// Add space before arguments in command
+    #[clap(long)]
+    cspace: bool
 }
 
 fn main() {
@@ -19,6 +23,7 @@ fn main() {
     let code = fs::read_to_string(&cli.file).expect("Failed to read file");
     let option = OptionData {
         indent_space: cli.indent_space,
+        command_args_space: cli.cspace,
         ..Default::default()
     };
     let output = format(&code, option);
