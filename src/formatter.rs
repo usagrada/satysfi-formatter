@@ -777,6 +777,23 @@ impl<'a> Formatter<'a> {
                 })
                 .trim_end()
                 .to_string(),
+            Rule::block_cmd | Rule::inline_cmd => {
+                csts.iter().fold(String::new(), |current, now_cst| {
+                    let s = self.to_string_cst(text, now_cst, depth);
+                    if current.is_empty() {
+                        s
+                    } else if s.is_empty() {
+                        current
+                    } else if current.ends_with(&newline) {
+                        current + &s
+                    } else if now_cst.rule == Rule::cmd_text_arg && !self.option.command_args_space
+                    {
+                        current + &s
+                    } else {
+                        current + sep + &s
+                    }
+                })
+            }
             _ => {
                 csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
