@@ -1147,11 +1147,11 @@ impl<'a> Formatter<'a> {
                     }
                 }
             }
-            Rule::horizontal_escaped_char => self_text, // TODO
+            Rule::horizontal_escaped_char => self_text,
             Rule::inline_text_embedding => format!("#{output};"),
 
             // vertical
-            Rule::vertical => output, // TODO
+            Rule::vertical => output, // インデント制御のため、<> はverticalの親で処理
             Rule::block_text_embedding => format!("#{output};"),
 
             // constants
@@ -1166,8 +1166,8 @@ impl<'a> Formatter<'a> {
             Rule::math_single => output,            // TODO
             Rule::math_list => output,              // TODO
             Rule::math_token => output,             // TODO
-            Rule::math_sup => format!("^{output}"), // TODO
-            Rule::math_sub => format!("_{output}"), // TODO
+            Rule::math_sup => format!("^{output}"), 
+            Rule::math_sub => format!("_{output}"),
             Rule::math_unary => {
                 if output.is_empty() {
                     self_text
