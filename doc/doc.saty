@@ -42,18 +42,18 @@ document(|
     show-title = true;
 |)'<
     +newpage;
-    +p {
+    +p{
         \SATySFi;を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。
-        \footnote { このドキュメントは format のテストも兼ねて書いています。 }
-        \footnote {
+        \footnote{ このドキュメントは format のテストも兼ねて書いています。 }
+        \footnote{
             \SATySFi;の文法に習熟している訳ではないため、parserを元に復元するという手法によりフォーマットを実現おり、容易にビルドが失敗するようになります。(22/3/11 現在)
         }
     }
-    +section { formatter の install 方法 } <
-        +p {
+    +section{ formatter の install 方法 }<
+        +p{
             以下のどちらかの方法で、入れることができます。
             ターミナルに以下のコマンドを打ち込んでください。
-            \footnote {
+            \footnote{
                 --force は無くても入りますが、既にインストールしている場合、
                 最新のデータにアップデートするために同じコマンドを使用できます。
             }
@@ -64,14 +64,14 @@ cd satysfi-formatter
 cargo install --path .
 `);
     >
-    +section { formatter の使い方 } <
+    +section{ formatter の使い方 }<
         +cmd (`satysfi-fmt $input -o $output`);
-        +p {
+        +p{
             `output`を指定しなかった場合、コマンドラインの標準出力に結果が表示されます。
         }
     >
-    +section { 開発者の方 } <
-        +p {
+    +section{ 開発者の方 }<
+        +p{
             `release build`でない場合、
             `src/visualize.rs`にある関数が呼び出されるようになっており、ファイルの構造を確認できるようになってます。
             \cmd (`cargo run -- $input`);
@@ -85,16 +85,15 @@ cargo install --path .
             % comment
             Issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。 その際、実際にそれがコンパイル可能である必要はありません。
         }
-        +subsection { Pull Request } <
-            +p {
+        +subsection{ Pull Request }<
+            +p{
                 実装した部分のテストケースを書いていただいてから、プルリクエストをいただけると幸いです。
                 その際、
                 `src/tests`以下でしたら何処に書いていただいても構いません。
-                \footnote { そもそもまだ全部のテストケースが通らない…… }
             }
         >
-        +subsection { issue } <
-            +p {
+        +subsection{ issue }<
+            +p{
                 以下にサンプル（
                 `src/tests/common.rs` `test1`と同じ）を載せておきます。
                 `r#""`の内部に書かれたテキストはスペースや改行を含め全てそのまま出力されるため、
@@ -121,37 +120,37 @@ document(|title = {hello}|)'<
             }
         >
     >
-    +section { \SATySFi;-formatter の実装 } <
-        +subsection { indent の管理 } <
-            +p {
+    +section{ \SATySFi;-formatter の実装 }<
+        +subsection{ indent の管理 }<
+            +p{
                 \SATySFi;-formatter では以下の場所でインデントの管理を行っています。
             }
-            +p { インデントが以下の場所では深くなります。 }
-            +p {
-                % \listing {
-                \* block_text
-                \* cmd_text_arg
-                \* record
-                \* type_record
-                \* horizontal_list
-                \* list
-                \* type_block_cmd
-                \* type_inline_cmd
-                \* math_cmd
-                \* match_expr
-                \* let_rec_matcharm
-                \* let_rec_inner
-                \* sig_stmt
-                \* struct_stmt
-                % }
+            +p{ インデントが以下の場所では深くなります。 }
+            +p{
+                \listing{
+                    * record
+                    * cmd_text_arg
+                    * type_record
+                    * block_text
+                    * horizontal_list
+                    * list
+                    * type_block_cmd
+                    * type_inline_cmd
+                    * math_cmd
+                    * match_expr
+                    * let_rec_matcharm
+                    * let_rec_inner
+                    * sig_stmt
+                    * struct_stmt
+                }
             }
-            +p {
+            +p{
                 let-\* 文については 次の行が let-\* 文以外のとき、インデントが1つ深くなります。
             }
         >
-        +subsection { そのまま出力する場所 } <
-            +p {
-                \listing {
+        +subsection{ そのまま出力する場所 }<
+            +p{
+                \listing{
                     * 変数名
                       ** pkgname
                       ** arg
@@ -181,8 +180,8 @@ document(|title = {hello}|)'<
             }
         >
     >
-    +section { document の更新 } <
-        +p {
+    +section{ document の更新 }<
+        +p{
             `draft.saty`を更新して、以下のコマンドを叩くと
             `doc.pdf`を更新します。 \cmd (`cargo make build-doc`);
             その際、
@@ -190,9 +189,20 @@ document(|title = {hello}|)'<
             \cmd (`cargo install --force cargo-make`);
         }
     >
-    +section { format } <
-        +p {
-            基本の indent は 4 です。(そのうち引数で管理ができるようにします)
-        }
+    +section{ format option }<
+        +subsection{ インデント }<
+            +p{
+                基本の indent は 4 です。
+                引数に `-i number` を書くことでインデントのスペースを管理できます。
+                \cmd (`satysfi-fmt -i 2 doc/draft.saty -o doc/doc.saty`);
+            }
+        >
+        +subsection{ コマンド名の後のスペース }<
+            +p{
+                `+p`, `\listing` のようなブロックコマンド及びインラインコマンドとその後ろの括弧の間にスペースを入れるかどうかを制御できます。
+                デフォルトではスペース無しになっています。スペースを入れたい場合には、引数に `--cspace` を追加してください。
+                \cmd (`satysfi-fmt --cspace doc/draft.saty -o doc/doc.saty`);
+            }
+        >
     >
 >
