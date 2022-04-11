@@ -11,95 +11,94 @@ open CodePrinter
 let-block ctx +newpage = clear-page
 % シェルコマンド
 let-block +cmd arg = '<
-    +code-printer ?:(make-config CodeSyntax.shell CodeTheme.basic-dark 
-        |> set-basic-font-size 9pt 
-        |> set-number-fun CodeDesign.number-fun-null) (arg);
+  +code-printer ?:(make-config CodeSyntax.shell CodeTheme.basic-dark 
+    |> set-basic-font-size 9pt 
+    |> set-number-fun CodeDesign.number-fun-null) (arg);
 >
 % インラインシェルコマンド
 let-inline \cmd arg = {
 \code-printer ?:(make-config CodeSyntax.shell CodeTheme.basic-dark 
-    |> set-basic-font-size 9pt 
-    |> set-number-fun CodeDesign.number-fun-null) (arg);
+  |> set-basic-font-size 9pt 
+  |> set-number-fun CodeDesign.number-fun-null) (arg);
 }
 % インラインRustコマンド
 let-inline \cmd-rust arg = {
 \code-printer ?:(make-config CodeSyntax.rust CodeTheme.basic-dark 
-    |> set-basic-font-size 9pt 
-    |> set-number-fun CodeDesign.number-fun-null) (arg);
+  |> set-basic-font-size 9pt 
+  |> set-number-fun CodeDesign.number-fun-null) (arg);
 }
 % インラインsatysfiコマンド
 let-inline \cmd-saty arg = {
 \code-printer ?:(make-config CodeSyntax.satysfi CodeTheme.basic-dark 
-    |> set-basic-font-size 9pt 
-    |> set-number-fun CodeDesign.number-fun-null) (arg);
+  |> set-basic-font-size 9pt 
+  |> set-number-fun CodeDesign.number-fun-null) (arg);
 }
 in
 
 document(|
-    title = { \SATySFi;-formatter };
-    author = { usagrada };
-    show-toc = true;
-    show-title = true;
+  title = { \SATySFi;-formatter };
+  author = { usagrada };
+  show-toc = true;
+  show-title = true;
 |)'<
-    +newpage;
-    +p{
-        \SATySFi;を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。
-        \footnote{ このドキュメントは format のテストも兼ねて書いています。 }
-        \footnote{
-            \SATySFi;の文法に習熟している訳ではないため、parserを元に復元するという手法によりフォーマットを実現おり、容易にビルドが失敗するようになります。(22/3/11 現在)
-        }
+  +newpage;
+  +p{
+    \SATySFi;を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。
+    \footnote{ このドキュメントは format のテストも兼ねて書いています。 }
+    \footnote{
+      \SATySFi;の文法に習熟している訳ではないため、parserを元に復元するという手法によりフォーマットを実現おり、容易にビルドが失敗するようになります。(22/3/11 現在)
     }
-    +section{ formatter の install 方法 }<
-        +p{
-            以下のどちらかの方法で、入れることができます。
-            ターミナルに以下のコマンドを打ち込んでください。
-            \footnote{
-                --force は無くても入りますが、既にインストールしている場合、
-                最新のデータにアップデートするために同じコマンドを使用できます。
-            }
-        }
-        +cmd (`cargo install --force --git https://github.com/usagrada/satysfi-formatter.git --branch main`);
-        +cmd (`git clone -b main https://github.com/usagrada/satysfi-formatter.git
+  }
+  +section{ formatter の install 方法 }<
+    +p{
+      以下のどちらかの方法で、入れることができます。
+      ターミナルに以下のコマンドを打ち込んでください。
+      \footnote{
+        --force は無くても入りますが、既にインストールしている場合、
+        最新のデータにアップデートするために同じコマンドを使用できます。
+      }
+    }
+    +cmd (`cargo install --force --git https://github.com/usagrada/satysfi-formatter.git --branch main`);
+    +cmd (`git clone -b main https://github.com/usagrada/satysfi-formatter.git
 cd satysfi-formatter
 cargo install --path .
 `);
+  >
+  +section{ formatter の使い方 }<
+    +cmd (`satysfi-fmt $input -o $output`);
+    +p{
+      `output`を指定しなかった場合、コマンドラインの標準出力に結果が表示されます。
+    }
+  >
+  +section{ 開発者の方 }<
+    +p{
+      `release build`でない場合、
+      `src/visualize.rs`にある関数が呼び出されるようになっており、ファイルの構造を確認できるようになってます。
+      \cmd (`cargo run -- $input`);
+      `lib.rs`の
+      `format`を開始地点とし、
+      コードから
+      `satysfi-parser`
+      で CST 化し、文字列に戻して結合しています。
+      % comment
+      現状では、かなり愚直な実装をしている + 一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
+      % comment
+      Issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。 その際、実際にそれがコンパイル可能である必要はありません。
+    }
+    +subsection{ Pull Request }<
+      +p{
+        実装した部分のテストケースを書いていただいてから、プルリクエストをいただけると幸いです。
+        その際、
+        `src/tests`以下でしたら何処に書いていただいても構いません。
+      }
     >
-    +section{ formatter の使い方 }<
-        +cmd (`satysfi-fmt $input -o $output`);
-        +p{
-            `output`を指定しなかった場合、コマンドラインの標準出力に結果が表示されます。
-        }
-    >
-    +section{ 開発者の方 }<
-        +p{
-            `release build`でない場合、
-            `src/visualize.rs`にある関数が呼び出されるようになっており、ファイルの構造を確認できるようになってます。
-            \cmd (`cargo run -- $input`);
-            `lib.rs`の
-            `format`を開始地点とし、
-            コードから
-            `satysfi-parser`
-            で CST 化し、文字列に戻して結合しています。
-            % comment
-            現状では、かなり愚直な実装をしている + 一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
-            % comment
-            Issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。 その際、実際にそれがコンパイル可能である必要はありません。
-        }
-        +subsection{ Pull Request }<
-            +p{
-                実装した部分のテストケースを書いていただいてから、プルリクエストをいただけると幸いです。
-                その際、
-                `src/tests`以下でしたら何処に書いていただいても構いません。
-                \footnote{ そもそもまだ全部のテストケースが通らない…… }
-            }
-        >
-        +subsection{ issue }<
-            +p{
-                以下にサンプル（
-                `src/tests/common.rs` `test1`と同じ）を載せておきます。
-                `r#""`の内部に書かれたテキストはスペースや改行を含め全てそのまま出力されるため、
-                スペース数改行数等の違いにより、テストが容易に落ちます。
-                \cmd-rust (`#[test]
+    +subsection{ issue }<
+      +p{
+        以下にサンプル（
+        `src/tests/common.rs` `test1`と同じ）を載せておきます。
+        `r#""`の内部に書かれたテキストはスペースや改行を含め全てそのまま出力されるため、
+        スペース数改行数等の違いにより、テストが容易に落ちます。
+        \cmd-rust (`#[test]
 fn test1() {
     // format 前のテキスト
     let text = r#"@import: hello
@@ -118,81 +117,91 @@ document(|title = {hello}|)'<
     test_tmpl(text, expect);
 }
 `);
-            }
-        >
+      }
     >
-    +section{ \SATySFi;-formatter の実装 }<
-        +subsection{ indent の管理 }<
-            +p{
-                \SATySFi;-formatter では以下の場所でインデントの管理を行っています。
-            }
-            +p{ インデントが以下の場所では深くなります。 }
-            +p{
-                % \listing {
-                \* block_text
-                \* cmd_text_arg
-                \* record
-                \* type_record
-                \* horizontal_list
-                \* list
-                \* type_block_cmd
-                \* type_inline_cmd
-                \* math_cmd
-                \* match_expr
-                \* let_rec_matcharm
-                \* let_rec_inner
-                \* sig_stmt
-                \* struct_stmt
-                % }
-            }
-            +p{
-                let-\* 文については 次の行が let-\* 文以外のとき、インデントが1つ深くなります。
-            }
-        >
-        +subsection{ そのまま出力する場所 }<
-            +p{
-                \listing{
-                    * 変数名
-                      ** pkgname
-                      ** arg
-                      ** typename
-                      ** var
-                      ** var_ptn
-                      ** modvar
-                      ** mod_cmd_name
-                      ** module_name
-                      ** variant_name
-                      ** cmd_name_ptn
-                      ** block_cmd_name
-                      ** math_cmd_name
-                      ** math_cmd_expr_arg
-                      ** pattern
-                    * これ以上分解できないもの
-                      ** horizontal_escaped_char
-                      ** const_string
-                    * prefix
-                      ** unary_prefix
-                    * TODO(今後実装予定)
-                      ** expr_with_mod
-                      ** tuple
-                      ** math_cmd
-                      ** math_text
-                }
-            }
-        >
-    >
-    +section{ document の更新 }<
-        +p{
-            `draft.saty`を更新して、以下のコマンドを叩くと
-            `doc.pdf`を更新します。 \cmd (`cargo make build-doc`);
-            その際、
-            `cargo-make`というパッケージが必要なので、インストールしていない方は以下のコマンドでインストールしてください。
-            \cmd (`cargo install --force cargo-make`);
+  >
+  +section{ \SATySFi;-formatter の実装 }<
+    +subsection{ indent の管理 }<
+      +p{
+        \SATySFi;-formatter では以下の場所でインデントの管理を行っています。
+      }
+      +p{ インデントが以下の場所では深くなります。 }
+      +p{
+        \listing{
+          * record
+          * cmd_text_arg
+          * type_record
+          * block_text
+          * horizontal_list
+          * list
+          * type_block_cmd
+          * type_inline_cmd
+          * math_cmd
+          * match_expr
+          * let_rec_matcharm
+          * let_rec_inner
+          * sig_stmt
+          * struct_stmt
         }
+      }
+      +p{
+        let-\* 文については 次の行が let-\* 文以外のとき、インデントが1つ深くなります。
+      }
     >
-    +section{ format }<
-        +p{
-            基本の indent は 4 です。(そのうち引数で管理ができるようにします)
+    +subsection{ そのまま出力する場所 }<
+      +p{
+        \listing{
+          * 変数名
+           ** pkgname
+           ** arg
+           ** typename
+           ** var
+           ** var_ptn
+           ** modvar
+           ** mod_cmd_name
+           ** module_name
+           ** variant_name
+           ** cmd_name_ptn
+           ** block_cmd_name
+           ** math_cmd_name
+           ** math_cmd_expr_arg
+           ** pattern
+          * これ以上分解できないもの
+           ** horizontal_escaped_char
+           ** const_string
+          * prefix
+           ** unary_prefix
+          * TODO(今後実装予定)
+           ** expr_with_mod
+           ** tuple
+           ** math_cmd
+           ** math_text
         }
+      }
     >
+  >
+  +section{ document の更新 }<
+    +p{
+      `draft.saty`を更新して、以下のコマンドを叩くと
+      `doc.pdf`を更新します。 \cmd (`cargo make build-doc`);
+      その際、
+      `cargo-make`というパッケージが必要なので、インストールしていない方は以下のコマンドでインストールしてください。
+      \cmd (`cargo install --force cargo-make`);
+    }
+  >
+  +section{ format option }<
+    +subsection{ インデント }<
+      +p{
+        基本の indent は 4 です。
+        引数に `-i number` を書くことでインデントのスペースを管理できます。
+        \cmd (`satysfi-fmt -i 2 doc/draft.saty -o doc/doc.saty`);
+      }
+    >
+    +subsection{ コマンド名の後のスペース }<
+      +p{
+        `+p`, `\listing` のようなブロックコマンド及びインラインコマンドとその後ろの括弧の間にスペースを入れるかどうかを制御できます。
+        デフォルトではスペース無しになっています。スペースを入れたい場合には、引数に `--cspace` を追加してください。
+        \cmd (`satysfi-fmt --cspace doc/draft.saty -o doc/doc.saty`); }
+    >
+  >
 >

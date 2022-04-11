@@ -51,6 +51,7 @@ impl<'a> Formatter<'a> {
             Rule::unary => "#".to_string(),
             Rule::type_optional => " ?-> ".to_string(),
             Rule::list => format!(";{newline}"),
+            Rule::tuple => ", ".to_string(),
             Rule::record | Rule::type_record => newline.clone(),
             Rule::type_block_cmd | Rule::type_inline_cmd | Rule::type_math_cmd => {
                 format!(";{newline}")
@@ -845,7 +846,7 @@ impl<'a> Formatter<'a> {
             Rule::comments => to_comment_string(self_text) + &end_indent,
             // header
             // stage の次は必ず改行する
-            Rule::stage => "@stage: ".to_string() + self_text.trim() + "\n\n",
+            Rule::stage => "@stage: ".to_string() + &self_text + "\n\n",
             // headers があれば必ず改行する
             Rule::headers => {
                 if !output.is_empty() {
@@ -967,7 +968,7 @@ impl<'a> Formatter<'a> {
                 }
             }
             Rule::record_unit => output,
-            Rule::tuple => self_text,
+            Rule::tuple => format!("({output})"),
             Rule::bin_operator => {
                 if self_text == "|>" {
                     // 1つ深くする
@@ -1146,11 +1147,11 @@ impl<'a> Formatter<'a> {
                     }
                 }
             }
-            Rule::horizontal_escaped_char => self_text, // TODO
+            Rule::horizontal_escaped_char => self_text,
             Rule::inline_text_embedding => format!("#{output};"),
 
             // vertical
-            Rule::vertical => output, // TODO
+            Rule::vertical => output, // インデント制御のため、<> はverticalの親で処理
             Rule::block_text_embedding => format!("#{output};"),
 
             // constants
@@ -1165,8 +1166,8 @@ impl<'a> Formatter<'a> {
             Rule::math_single => output,            // TODO
             Rule::math_list => output,              // TODO
             Rule::math_token => output,             // TODO
-            Rule::math_sup => format!("^{output}"), // TODO
-            Rule::math_sub => format!("_{output}"), // TODO
+            Rule::math_sup => format!("^{output}"), 
+            Rule::math_sub => format!("_{output}"),
             Rule::math_unary => {
                 if output.is_empty() {
                     self_text
