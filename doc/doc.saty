@@ -173,7 +173,6 @@ document(|title = {hello}|)'<
                       ** unary_prefix
                     * TODO(今後実装予定)
                       ** expr_with_mod
-                      ** tuple
                       ** math_cmd
                       ** math_text
                 }
