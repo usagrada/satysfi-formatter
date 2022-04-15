@@ -8,14 +8,18 @@ struct Cli {
     /// input file
     #[clap(parse(from_os_str), value_name = "FILE")]
     file: PathBuf,
+    /// write to input file
+    #[clap(short, long)]
+    write: bool,
+    /// output file
     #[clap(short, long)]
     output: Option<PathBuf>,
     /// indent size
     #[clap(short, long, default_value_t = 4)]
     indent_space: usize,
-     /// Add space before arguments in command
+    /// Add space before arguments in command
     #[clap(long)]
-    cspace: bool
+    cspace: bool,
 }
 
 fn main() {
@@ -28,8 +32,9 @@ fn main() {
     };
     let output = format(&code, option);
 
-    match cli.output {
-        Some(path) => fs::write(&path, output).expect("Failed to write file"),
-        None => println!("{}", output),
+    match (cli.output, cli.write) {
+        (Some(path), _) => fs::write(&path, output).expect("Failed to write file"),
+        (None, true) => fs::write(&cli.file, output).expect("Failed to write file"),
+        (None, false) => println!("{}", output),
     }
 }
