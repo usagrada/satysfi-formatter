@@ -23,6 +23,7 @@ in
 
 document(||)'<
     +newpage;
+
     +p { hello }
 >
 "#;
@@ -56,6 +57,7 @@ in
 
 document(||)'<
     +newpage;
+
     +p { hello }
 >
 "#;
@@ -92,6 +94,7 @@ in
 
 document(||)'<
     +newpage;
+
     +p { hello }
 >
 "#;
@@ -121,6 +124,7 @@ in
 
 document(||)'<
     +newpage;
+
     +p { hello }
 >
 "#;

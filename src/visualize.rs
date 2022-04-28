@@ -38,6 +38,7 @@ fn visualize_cst_tree(csttext: &CstText, cst: &Cst, depth: usize) {
         cst.rule,
         self_text.trim()
     );
+
     for node in cst.inner.iter() {
         visualize_cst_tree(csttext, node, depth + 1);
     }

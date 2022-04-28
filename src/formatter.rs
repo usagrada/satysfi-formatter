@@ -7,6 +7,7 @@ use satysfi_parser::{Cst, CstText};
 
 pub struct Formatter<'a> {
     pub text: &'a str,
+    pub lines: &'a Vec<usize>,
     pub comments: VecDeque<Comment>,
     pub depth: usize,
     pub output: String,
@@ -18,6 +19,7 @@ impl<'a> Formatter<'a> {
         let comments = get_comments(csttext);
         Self {
             text: &csttext.text,
+            lines: &csttext.lines,
             comments,
             depth: 0,
             output: String::new(),
@@ -832,6 +834,32 @@ impl<'a> Formatter<'a> {
 
                 output
             }),
+            Rule::vertical => {
+                let mut line_index = cst.span.end; // 範囲外のusizeで初期化
+                csts.iter().fold(String::new(), |current, now_cst| {
+                    let s = self.to_string_cst(text, now_cst, depth);
+                    let output = if current.is_empty() {
+                        s
+                    } else if s.is_empty() {
+                        current
+                    } else {
+                        // 複数行の改行を省略して1行にする
+                        let start = now_cst.span.start;
+                        let mut cnt = 0;
+                        for &value in self.lines.iter() {
+                            if line_index < value && value < start {
+                                cnt += 1;
+                            }
+                        }
+                        let current = if cnt > 1 { current + "\n" } else { current };
+
+                        current + sep + &s
+                    };
+                    line_index = now_cst.span.end;
+
+                    output
+                })
+            }
             _ => {
                 csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
@@ -991,8 +1019,7 @@ impl<'a> Formatter<'a> {
             // Rule::math_text => self_text,
             Rule::math_text => format!("${{{output}}}"),
             Rule::list => {
-                let mut trimed_self_text = self_text;
-                trimed_self_text.remove_matches(char::is_whitespace);
+                let trimed_self_text: String = self_text.split(char::is_whitespace).collect();
                 if output.is_empty() {
                     "[]".to_string()
                 } else if trimed_self_text.len() < 15 {

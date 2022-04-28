@@ -1,4 +1,3 @@
-#![feature(string_remove_matches)]
 mod comment;
 mod formatter;
 mod reserved_words;
