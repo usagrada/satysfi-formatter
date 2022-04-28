@@ -17,6 +17,8 @@ document(|
                 |4|5|6
                 |a|b|c
                 |}
+
+        ${\forall x , y \in A, 0 \leq t \leq 1 , \app{f}{tx} + \app{f}{\paren{1-t}y} \geq \app{f}{tx + \paren{1-t}y}}
         }
     >
 >
