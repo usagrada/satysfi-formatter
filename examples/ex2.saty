@@ -1,0 +1,22 @@
+@require: stdja
+@require: easytable
+
+open EasyTableAlias
+in
+
+document(|
+    author = { author };
+    show-title = false;
+    show-toc = true;
+    title = { title };
+|)'<
+    +section{ section }<
+        +p{
+            \easytable [l;c;r;]{
+                |1|2|3
+                |4|5|6
+                |a|b|c
+                |}
+        }
+    >
+>

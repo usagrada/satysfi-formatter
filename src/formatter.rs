@@ -3,7 +3,6 @@ use std::collections::VecDeque;
 use super::OptionData;
 use crate::comment::{get_comments, to_comment_string, Comment};
 use crate::reserved_words::*;
-use satysfi_parser::grammar::math_unary;
 use satysfi_parser::{Cst, CstText};
 
 pub struct Formatter<'a> {
@@ -864,7 +863,8 @@ impl<'a> Formatter<'a> {
         // インデントを制御するための変数
         let new_depth = match cst.rule {
             Rule::block_text | Rule::cmd_text_arg | Rule::record | Rule::type_record => depth + 1,
-            Rule::horizontal_list | Rule::list => depth + 1,
+            // Rule::horizontal_list | Rule::list => depth + 1,
+            Rule::list => depth + 1,
             Rule::type_block_cmd | Rule::type_inline_cmd | Rule::math_cmd => depth + 1,
             Rule::match_expr | Rule::let_rec_matcharm => depth + 1,
             Rule::let_rec_inner => depth + 1,
@@ -991,10 +991,22 @@ impl<'a> Formatter<'a> {
             // Rule::math_text => self_text,
             Rule::math_text => format!("${{{output}}}"),
             Rule::list => {
-                if !output.is_empty() {
-                    format!("[{start_indent}{output}{end_indent}]")
-                } else {
+                let mut trimed_self_text = self_text;
+                trimed_self_text.remove_matches(char::is_whitespace);
+                if output.is_empty() {
                     "[]".to_string()
+                } else if trimed_self_text.len() < 15 {
+                    // list の文字の長さが十分に短い easy tableの [l;c;r;] など
+                    let inner = output
+                        .split("\n")
+                        .into_iter()
+                        .map(|line| line.trim().to_string())
+                        .filter(|line| !line.is_empty())
+                        .collect::<Vec<String>>()
+                        .join("");
+                    format!("[{inner}]")
+                } else {
+                    format!("[{start_indent}{output}{end_indent}]")
                 }
             }
             Rule::record | Rule::type_record => {
@@ -1053,6 +1065,10 @@ impl<'a> Formatter<'a> {
                     output.find('\n') != None || start_arg == '<' || include_comment;
                 match output.trim().len() {
                     0 => format!("{start_arg}{end_arg}"),
+                    // easytable
+                    _ if output.starts_with(char::is_whitespace) => {
+                        format!("{start_arg}\n{output}{end_arg}")
+                    }
                     num if include_kaigyou || num > self.option.row_length => {
                         format!("{start_arg}{start_indent}{output}{end_indent}{end_arg}")
                     }
@@ -1235,12 +1251,12 @@ impl<'a> Formatter<'a> {
             Rule::preamble => output.trim_start().to_string(),
             // TODO
             // dummy
-            Rule::dummy_header => self_text,
-            Rule::dummy_sig_stmt => self_text,
-            Rule::dummy_stmt => self_text,
-            Rule::dummy_inline_cmd_incomplete => self_text,
-            Rule::dummy_block_cmd_incomplete => self_text,
-            Rule::dummy_modvar_incomplete => self_text,
+            Rule::dummy_header => panic!("found dummy header"),
+            Rule::dummy_sig_stmt => panic!("found dummy sig_stmt"),
+            Rule::dummy_stmt => panic!("found dummy stmt"),
+            Rule::dummy_inline_cmd_incomplete => panic!("found dummy inline_cmd"),
+            Rule::dummy_block_cmd_incomplete => panic!("found dummy block_cmd"),
+            Rule::dummy_modvar_incomplete => panic!("found dummy modvar"),
             // _ => unreachable!(),
         }
     }
