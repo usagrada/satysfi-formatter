@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use super::OptionData;
 use crate::comment::{get_comments, to_comment_string, Comment};
 use crate::reserved_words::*;
+use satysfi_parser::grammar::math_unary;
 use satysfi_parser::{Cst, CstText};
 
 pub struct Formatter<'a> {
@@ -795,6 +796,43 @@ impl<'a> Formatter<'a> {
                     }
                 })
             }
+            Rule::math_single => csts.iter().fold(String::new(), |current, now_cst| {
+                let s = self.to_string_cst(text, now_cst, depth);
+                let output = if current.is_empty() {
+                    s
+                } else if s.is_empty() {
+                    current
+                } else if current.ends_with(&newline) {
+                    current + &s
+                } else if current.ends_with(char::is_alphabetic)
+                    && s.starts_with(char::is_alphabetic)
+                {
+                    current + &s
+                } else {
+                    current + sep + &s
+                };
+
+                output
+            }),
+            Rule::math_token => csts.iter().fold(String::new(), |current, now_cst| {
+                let s = self.to_string_cst(text, now_cst, depth);
+                let output = if current.is_empty() {
+                    s
+                } else if s.is_empty() {
+                    current
+                } else if current.ends_with(&newline) {
+                    current + &s
+                } else if match now_cst.rule {
+                    Rule::math_sup | Rule::math_sub => true,
+                    _ => false,
+                } {
+                    current + &s
+                } else {
+                    current + sep + &s
+                };
+
+                output
+            }),
             _ => {
                 csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
@@ -950,7 +988,8 @@ impl<'a> Formatter<'a> {
                 }
             }
             // Rule::horizontal_text => output,
-            Rule::math_text => self_text,
+            // Rule::math_text => self_text,
+            Rule::math_text => format!("${{{output}}}"),
             Rule::list => {
                 if !output.is_empty() {
                     format!("[{start_indent}{output}{end_indent}]")
@@ -1037,7 +1076,7 @@ impl<'a> Formatter<'a> {
             }
 
             Rule::block_cmd_name => self_text,
-            Rule::math_cmd => self_text,
+            Rule::math_cmd => self_text.trim().to_string(),
             Rule::math_cmd_name => self_text,
             Rule::math_cmd_expr_arg => output,
             Rule::math_cmd_expr_option => format!(":?{output}"),
@@ -1163,11 +1202,23 @@ impl<'a> Formatter<'a> {
             Rule::const_string => self_text,
 
             // math
-            Rule::math_single => output,            // TODO
-            Rule::math_list => output,              // TODO
-            Rule::math_token => output,             // TODO
-            Rule::math_sup => format!("^{output}"), 
-            Rule::math_sub => format!("_{output}"),
+            Rule::math_single => output, // TODO
+            Rule::math_list => output,   // TODO
+            Rule::math_token => output,  // TODO
+            Rule::math_sup => {
+                if self_text.starts_with("{") {
+                    format!("^{{{output}}}")
+                } else {
+                    format!("^{output}")
+                }
+            }
+            Rule::math_sub => {
+                if self_text.starts_with("{") {
+                    format!("_{{{output}}}")
+                } else {
+                    format!("_{output}")
+                }
+            }
             Rule::math_unary => {
                 if output.is_empty() {
                     self_text
