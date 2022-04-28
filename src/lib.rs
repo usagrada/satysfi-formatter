@@ -1,3 +1,4 @@
+#![feature(string_remove_matches)]
 mod comment;
 mod formatter;
 mod reserved_words;
@@ -43,8 +44,6 @@ pub fn format(input: &str, option: OptionData) -> String {
 
     #[cfg(debug_assertions)]
     visualize_csttext_tree(&csttext);
-    // #[cfg(debug_assertions)]
-    // dbg!(&csttext);
 
     let depth = 0;
     let mut output = formatter.to_string_cst(input, &csttext.cst, depth);

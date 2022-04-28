@@ -795,6 +795,43 @@ impl<'a> Formatter<'a> {
                     }
                 })
             }
+            Rule::math_single => csts.iter().fold(String::new(), |current, now_cst| {
+                let s = self.to_string_cst(text, now_cst, depth);
+                let output = if current.is_empty() {
+                    s
+                } else if s.is_empty() {
+                    current
+                } else if current.ends_with(&newline) {
+                    current + &s
+                } else if current.ends_with(char::is_alphabetic)
+                    && s.starts_with(char::is_alphabetic)
+                {
+                    current + &s
+                } else {
+                    current + sep + &s
+                };
+
+                output
+            }),
+            Rule::math_token => csts.iter().fold(String::new(), |current, now_cst| {
+                let s = self.to_string_cst(text, now_cst, depth);
+                let output = if current.is_empty() {
+                    s
+                } else if s.is_empty() {
+                    current
+                } else if current.ends_with(&newline) {
+                    current + &s
+                } else if match now_cst.rule {
+                    Rule::math_sup | Rule::math_sub => true,
+                    _ => false,
+                } {
+                    current + &s
+                } else {
+                    current + sep + &s
+                };
+
+                output
+            }),
             _ => {
                 csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
@@ -826,7 +863,8 @@ impl<'a> Formatter<'a> {
         // インデントを制御するための変数
         let new_depth = match cst.rule {
             Rule::block_text | Rule::cmd_text_arg | Rule::record | Rule::type_record => depth + 1,
-            Rule::horizontal_list | Rule::list => depth + 1,
+            // Rule::horizontal_list | Rule::list => depth + 1,
+            Rule::list => depth + 1,
             Rule::type_block_cmd | Rule::type_inline_cmd | Rule::math_cmd => depth + 1,
             Rule::match_expr | Rule::let_rec_matcharm => depth + 1,
             Rule::let_rec_inner => depth + 1,
@@ -950,12 +988,25 @@ impl<'a> Formatter<'a> {
                 }
             }
             // Rule::horizontal_text => output,
-            Rule::math_text => self_text,
+            // Rule::math_text => self_text,
+            Rule::math_text => format!("${{{output}}}"),
             Rule::list => {
-                if !output.is_empty() {
-                    format!("[{start_indent}{output}{end_indent}]")
-                } else {
+                let mut trimed_self_text = self_text;
+                trimed_self_text.remove_matches(char::is_whitespace);
+                if output.is_empty() {
                     "[]".to_string()
+                } else if trimed_self_text.len() < 15 {
+                    // list の文字の長さが十分に短い easy tableの [l;c;r;] など
+                    let inner = output
+                        .split("\n")
+                        .into_iter()
+                        .map(|line| line.trim().to_string())
+                        .filter(|line| !line.is_empty())
+                        .collect::<Vec<String>>()
+                        .join("");
+                    format!("[{inner}]")
+                } else {
+                    format!("[{start_indent}{output}{end_indent}]")
                 }
             }
             Rule::record | Rule::type_record => {
@@ -1014,6 +1065,10 @@ impl<'a> Formatter<'a> {
                     output.find('\n') != None || start_arg == '<' || include_comment;
                 match output.trim().len() {
                     0 => format!("{start_arg}{end_arg}"),
+                    // easytable
+                    _ if output.starts_with(char::is_whitespace) => {
+                        format!("{start_arg}\n{output}{end_arg}")
+                    }
                     num if include_kaigyou || num > self.option.row_length => {
                         format!("{start_arg}{start_indent}{output}{end_indent}{end_arg}")
                     }
@@ -1037,7 +1092,7 @@ impl<'a> Formatter<'a> {
             }
 
             Rule::block_cmd_name => self_text,
-            Rule::math_cmd => self_text,
+            Rule::math_cmd => self_text.trim().to_string(),
             Rule::math_cmd_name => self_text,
             Rule::math_cmd_expr_arg => output,
             Rule::math_cmd_expr_option => format!(":?{output}"),
@@ -1163,11 +1218,23 @@ impl<'a> Formatter<'a> {
             Rule::const_string => self_text,
 
             // math
-            Rule::math_single => output,            // TODO
-            Rule::math_list => output,              // TODO
-            Rule::math_token => output,             // TODO
-            Rule::math_sup => format!("^{output}"), 
-            Rule::math_sub => format!("_{output}"),
+            Rule::math_single => output, // TODO
+            Rule::math_list => output,   // TODO
+            Rule::math_token => output,  // TODO
+            Rule::math_sup => {
+                if self_text.starts_with("{") {
+                    format!("^{{{output}}}")
+                } else {
+                    format!("^{output}")
+                }
+            }
+            Rule::math_sub => {
+                if self_text.starts_with("{") {
+                    format!("_{{{output}}}")
+                } else {
+                    format!("_{output}")
+                }
+            }
             Rule::math_unary => {
                 if output.is_empty() {
                     self_text
@@ -1184,12 +1251,12 @@ impl<'a> Formatter<'a> {
             Rule::preamble => output.trim_start().to_string(),
             // TODO
             // dummy
-            Rule::dummy_header => self_text,
-            Rule::dummy_sig_stmt => self_text,
-            Rule::dummy_stmt => self_text,
-            Rule::dummy_inline_cmd_incomplete => self_text,
-            Rule::dummy_block_cmd_incomplete => self_text,
-            Rule::dummy_modvar_incomplete => self_text,
+            Rule::dummy_header => panic!("found dummy header"),
+            Rule::dummy_sig_stmt => panic!("found dummy sig_stmt"),
+            Rule::dummy_stmt => panic!("found dummy stmt"),
+            Rule::dummy_inline_cmd_incomplete => panic!("found dummy inline_cmd"),
+            Rule::dummy_block_cmd_incomplete => panic!("found dummy block_cmd"),
+            Rule::dummy_modvar_incomplete => panic!("found dummy modvar"),
             // _ => unreachable!(),
         }
     }

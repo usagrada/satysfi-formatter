@@ -4,6 +4,7 @@ mod comment;
 mod common;
 mod horizontal_single;
 mod let_block;
+mod math;
 mod module;
 mod space;
 
