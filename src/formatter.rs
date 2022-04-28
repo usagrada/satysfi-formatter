@@ -24,9 +24,7 @@ impl<'a> Formatter<'a> {
             option,
         }
     }
-    // pub fn get_output(&self) -> String {
-    //     self.output.clone()
-    // }
+
     /// cst の inner の要素を結合して文字列に変換する関数
     pub fn to_string_cst_inner(&self, text: &str, cst: &Cst, depth: usize) -> String {
         /*
@@ -418,9 +416,9 @@ impl<'a> Formatter<'a> {
             }),
             Rule::ctrl_if => {
                 // s:p() kwd("if") _ cond:expr() _ kwd("then") _ et:expr() _ kwd("else") _ ee:expr() e:p()
-                if csts.len() < 3 {
-                    panic!("ctrl_if: csts.len() < 3");
-                }
+                // if csts.len() < 3 {
+                //     panic!("ctrl_if: csts.len() < 3");
+                // }
                 let mut cnt = 0;
                 let output = csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
@@ -803,7 +801,8 @@ impl<'a> Formatter<'a> {
                     current
                 } else if current.ends_with(&newline) {
                     current + &s
-                } else if current.ends_with(char::is_alphabetic)
+                } else if char::is_alphabetic(current.chars().last().unwrap_or_default())
+                    && char::is_whitespace(current.chars().nth_back(1).unwrap_or_default())
                     && s.starts_with(char::is_alphabetic)
                 {
                     current + &s
