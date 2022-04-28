@@ -801,9 +801,10 @@ impl<'a> Formatter<'a> {
                     current
                 } else if current.ends_with(&newline) {
                     current + &s
-                } else if char::is_alphabetic(current.chars().last().unwrap_or_default())
-                    && char::is_whitespace(current.chars().nth_back(1).unwrap_or_default())
-                    && s.starts_with(char::is_alphabetic)
+                } else if s.starts_with(",")
+                    || char::is_alphabetic(current.chars().last().unwrap_or_default())
+                        && char::is_whitespace(current.chars().nth_back(1).unwrap_or_default())
+                        && s.starts_with(char::is_alphabetic)
                 {
                     current + &s
                 } else {
