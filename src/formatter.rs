@@ -842,6 +842,8 @@ impl<'a> Formatter<'a> {
                         s
                     } else if s.is_empty() {
                         current
+                    } else if current.ends_with(&newline) {
+                        current + &s
                     } else {
                         // 複数行の改行を省略して1行にする
                         let start = now_cst.span.start;
@@ -852,12 +854,11 @@ impl<'a> Formatter<'a> {
                             }
                         }
                         let current = if cnt > 1 { current + "\n" } else { current };
-
                         current + sep + &s
                     };
                     line_index = now_cst.span.end;
 
-                    output
+                    output.trim_end().to_string()
                 })
             }
             _ => {
