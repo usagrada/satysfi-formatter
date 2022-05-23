@@ -1,9 +1,9 @@
-use std::collections::VecDeque;
-
 use super::OptionData;
 use crate::comment::{get_comments, to_comment_string, Comment};
 use crate::reserved_words::*;
+use itertools::Itertools;
 use satysfi_parser::{Cst, CstText};
+use std::collections::VecDeque;
 
 pub struct Formatter<'a> {
     pub text: &'a str,
@@ -103,15 +103,81 @@ impl<'a> Formatter<'a> {
                     }
                 })
             }
+            Rule::type_stmt | Rule::let_rec_stmt => {
+                let mut cnt = 0;
+                let output = csts.iter().fold(String::new(), |current, now_cst| {
+                    let s = self.to_string_cst(text, now_cst, depth);
+                    if current.is_empty() {
+                        if now_cst.rule != Rule::comments {
+                            cnt+=1;
+                        }
+                        return s;
+                    }
+                    match now_cst.rule {
+                        Rule::type_inner => {
+                            cnt+=1;
+                            if cnt > 1 {
+                                current + " and " + &s
+                            } else {
+                                current + &s
+                            }
+                        },
+                        Rule::let_rec_inner => {
+                            cnt += 1;
+                            if cnt > 2 {
+                                current + " and " + &s
+                            } else {
+                                current + &s
+                            }
+                        }
+                        ,
+                        Rule::comments => current + &s,
+                        _ => unreachable!(),
+                    }
+                });
+                if cnt > 2 {
+                    output.split(" and ").join((newline + &indent + RESERVED_WORD.and).as_str())
+                } else {
+                    output
+                }
+            },
+            Rule::sig_val_stmt
+            | Rule::sig_direct_stmt => {
+                csts.iter()
+                .fold(String::new(), |current, now_cst| {
+                    let s = self.to_string_cst(text, now_cst, depth);
+                    let s = if cst.rule == Rule::sig_val_stmt
+                        && now_cst.rule == Rule::bin_operator
+                    {
+                        format!("({s})")
+                    } else {
+                        s
+                    };
+                    if current.is_empty() {
+                        return s;
+                    }
+                    match now_cst.rule {
+                        Rule::var => current + " " + &s,
+                        Rule::bin_operator => current + &format!(" ({s})"),
+                        Rule::inline_cmd_name => current + " " + &s,
+                        Rule::block_cmd_name => current + " " + &s,
+                        Rule::type_expr => current + ": " + &s,
+                        Rule::comments => {
+                            if current.ends_with(char::is_whitespace) {
+                                current + &s
+                            } else {
+                                current + &newline + &s
+                            }
+                        }
+                        _ => current + " " + &s,
+                    }
+                })
+            },
             Rule::let_block_stmt_ctx
             | Rule::let_block_stmt_noctx
             | Rule::let_inline_stmt_ctx
             | Rule::let_inline_stmt_noctx
             | Rule::let_stmt
-            | Rule::let_rec_stmt
-            | Rule::sig_val_stmt
-            | Rule::sig_direct_stmt
-            | Rule::type_stmt
             | Rule::let_math_stmt => {
                 csts.iter()
                     .enumerate()
@@ -443,7 +509,10 @@ impl<'a> Formatter<'a> {
             }
             Rule::unary => csts.iter().fold(String::new(), |current, now_cst| {
                 let s = self.to_string_cst(text, now_cst, depth);
-                let s = if now_cst.rule == Rule::bin_operator || now_cst.rule == Rule::expr {
+                let s = if now_cst.rule == Rule::bin_operator {
+                    // ( || ) のようなパターンが存在するので、スペースを開ける
+                    format!("( {s} )")
+                } else if now_cst.rule == Rule::expr {
                     format!("({s})")
                 } else {
                     s
@@ -503,6 +572,13 @@ impl<'a> Formatter<'a> {
                 let mut output = String::new();
                 for cst in &csts {
                     let s = self.to_string_cst(text, cst, depth);
+                    if cst.rule == Rule::comments {
+                        if !output.ends_with(char::is_whitespace) {
+                            output += &newline;
+                        }
+                        output += &s;
+                        continue;
+                    }
                     if !output.is_empty() {
                         output += sep;
                     }
@@ -693,13 +769,14 @@ impl<'a> Formatter<'a> {
                 let output = csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
                     match now_cst.rule {
+                        Rule::sig_val_stmt | Rule::sig_type_stmt => current + &newline + &s,
                         Rule::module_name => current + " " + &s,
                         Rule::struct_stmt => current + "= " + RESERVED_WORD.struct_stmt + &s,
                         Rule::comments => current + &s,
                         _ => current + &s,
                     }
                 });
-                output
+                output.trim().to_string()
             }
             Rule::horizontal_single => {
                 let output = csts.iter().fold(String::new(), |current, now_cst| {
@@ -953,15 +1030,15 @@ impl<'a> Formatter<'a> {
 
             // struct
             Rule::sig_stmt => format!(
-                "{}{output}{end_indent}{}",
+                "{}{start_indent}{output}{end_indent}{}",
                 RESERVED_WORD.sig, RESERVED_WORD.end
             ), // TODO
             Rule::struct_stmt => format!(
                 "{}{start_indent}{output}{end_indent}{}",
                 RESERVED_WORD.struct_stmt, RESERVED_WORD.end
             ), // TODO
-            Rule::sig_type_stmt => format!("{start_indent}{} {output}", RESERVED_WORD.type_stmt),
-            Rule::sig_val_stmt => format!("{start_indent}{} {output}", RESERVED_WORD.val),
+            Rule::sig_type_stmt => format!("{} {output}", RESERVED_WORD.type_stmt),
+            Rule::sig_val_stmt => format!("{} {output}", RESERVED_WORD.val),
             Rule::sig_direct_stmt => format!("{start_indent}{} {output}", RESERVED_WORD.direct),
 
             // types
@@ -1282,7 +1359,7 @@ impl<'a> Formatter<'a> {
             Rule::dummy_header => panic!("found dummy header"),
             Rule::dummy_sig_stmt => panic!("found dummy sig_stmt"),
             Rule::dummy_stmt => panic!("found dummy stmt"),
-            Rule::dummy_inline_cmd_incomplete => panic!("found dummy inline_cmd"),
+            Rule::dummy_inline_cmd_incomplete => self_text, // panic!("found dummy inline_cmd"), mdja.satyh のparseで到達する
             Rule::dummy_block_cmd_incomplete => panic!("found dummy block_cmd"),
             Rule::dummy_modvar_incomplete => panic!("found dummy modvar"),
             // _ => unreachable!(),
