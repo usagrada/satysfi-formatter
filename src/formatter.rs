@@ -483,10 +483,6 @@ impl<'a> Formatter<'a> {
                 }
             }),
             Rule::ctrl_if => {
-                // s:p() kwd("if") _ cond:expr() _ kwd("then") _ et:expr() _ kwd("else") _ ee:expr() e:p()
-                // if csts.len() < 3 {
-                //     panic!("ctrl_if: csts.len() < 3");
-                // }
                 let mut cnt = 0;
                 let output = csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
@@ -507,6 +503,25 @@ impl<'a> Formatter<'a> {
 
                 output
             }
+            Rule::ctrl_while => {
+                let mut cnt = 0;
+                let output = csts.iter().fold(String::new(), |current, now_cst| {
+                    let s = self.to_string_cst(text, now_cst, depth);
+                    match now_cst.rule {
+                        Rule::expr => {
+                            cnt += 1;
+                            match cnt {
+                                1 => current + &s + " " + RESERVED_WORD.do_stmt + " ",
+                                _ => current + &s,
+                            }
+                        }
+                        Rule::comments => current + &s,
+                        _ => current + &s,
+                    }
+                });
+
+                format!("{} {output}", RESERVED_WORD.while_stmt, output = output)
+            },
             Rule::unary => csts.iter().fold(String::new(), |current, now_cst| {
                 let s = self.to_string_cst(text, now_cst, depth);
                 let s = if now_cst.rule == Rule::bin_operator {
