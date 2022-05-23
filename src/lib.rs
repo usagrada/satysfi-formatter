@@ -27,7 +27,7 @@ impl Default for OptionData {
 }
 
 /// satysfi の文字列を渡すと format したものを返す
-/// * `input` - satysfi のコード  
+/// * `input` - satysfi のコード
 /// * `output` - format された文字列
 pub fn format(input: &str, option: OptionData) -> String {
     /*
@@ -37,7 +37,11 @@ pub fn format(input: &str, option: OptionData) -> String {
         cst: Cst,
     }
     */
-    let csttext = CstText::parse(input, grammar::program).expect("parse error");
+    let csttext = CstText::parse(input, grammar::program);
+    if csttext.is_err() {
+        return input.to_string();
+    }
+    let csttext = csttext.unwrap();
     let csttext = csttext_insert_comments(csttext);
     let formatter = Formatter::new(&csttext, option);
 
