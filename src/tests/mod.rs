@@ -7,6 +7,7 @@ mod let_block;
 mod math;
 mod module;
 mod space;
+mod ctrl_stmt;
 
 fn test_tmpl(input: &str, expect: &str) {
     let option = OptionData::default();
@@ -17,7 +18,7 @@ fn test_tmpl(input: &str, expect: &str) {
 #[test]
 fn test_unicode() {
     let text = r#"
-  
+
 document(||)'<
 +section{ section }<
 +p {日本語}
