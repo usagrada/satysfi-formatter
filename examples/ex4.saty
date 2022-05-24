@@ -1,0 +1,21 @@
+@require: stdja
+@require: itemize
+
+let max = ( || )
+in
+
+document(|
+    author = {author};
+    show-title = false;
+    show-toc = true;
+    title = {title};
+|)'<
+  % comment
++section{section}<
+    +p {
+      ${\alpha x} % [math_unary whitespace math_unary]
+    }
+    % comment
+    >
+  % comment
+>

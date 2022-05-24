@@ -29,33 +29,20 @@ pub fn format(input: &str, option: OptionData) -> String {
     parser
         .set_language(tree_sitter_satysfi::language())
         .expect("Error loading SATySFi language");
-    // let text = input[296..300].to_string();
-    let text = input;
-    // println!("{}", text);
-    let tree = parser.parse(text, Option::None).unwrap();
-    dbg!(&tree.root_node().child(0).unwrap().kind());
-    dbg!(&tree.root_node().child(0).unwrap().child(0).unwrap());
-    dbg!(&tree.root_node().child(0).unwrap().child(1).unwrap());
-    dbg!(&tree.root_node().child(0).unwrap().child(2).unwrap());
-    dbg!(&tree.root_node().child(1).unwrap());
-    let root_node = tree.root_node();
-    dbg!(root_node);
 
-    // assert_eq!(root_node.kind(), "source_file");
-    // assert_eq!(root_node.start_position().column, 0);
-    // assert_eq!(root_node.end_position().column, 12);
+    let tree = parser.parse(input, Option::None).unwrap();
+    #[cfg(debug_assertions)]
+    visualize::visualize_csttext_tree(input, &tree);
 
     "format".to_string()
-    // let mut output = String::new();
 }
-
 
 /// tree-sitter でどのように parse されるかの確認用
 #[test]
-fn test_tree_sitter(){
+fn test_tree_sitter() {
     let mut parser = tree_sitter::Parser::new();
     parser
-        .set_language(language())
+        .set_language(tree_sitter_satysfi::language())
         .expect("Error loading SATySFi language");
     // let text = input[296..300].to_string();
     let text = r#"@require: stdja
@@ -89,8 +76,17 @@ document(|
     dbg!(root_node);
     assert_eq!(root_node.kind(), "source_file");
     assert_eq!(tree.root_node().child(0).unwrap().kind(), "program_saty");
-    assert_eq!(tree.root_node().child(0).unwrap().child(0).unwrap().kind(), "headers");
-    assert_eq!(tree.root_node().child(0).unwrap().child(1).unwrap().kind(), "whitespace");
-    assert_eq!(tree.root_node().child(0).unwrap().child(2).unwrap().kind(), "application");
+    assert_eq!(
+        tree.root_node().child(0).unwrap().child(0).unwrap().kind(),
+        "headers"
+    );
+    assert_eq!(
+        tree.root_node().child(0).unwrap().child(1).unwrap().kind(),
+        "whitespace"
+    );
+    assert_eq!(
+        tree.root_node().child(0).unwrap().child(2).unwrap().kind(),
+        "application"
+    );
     assert_eq!(tree.root_node().child(1).unwrap().kind(), "whitespace");
 }
