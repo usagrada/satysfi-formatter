@@ -1,5 +1,5 @@
 use super::test_tmpl;
-use dirs;
+
 use std::fs;
 
 #[test]
