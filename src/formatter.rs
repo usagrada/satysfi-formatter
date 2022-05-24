@@ -893,7 +893,7 @@ impl<'a> Formatter<'a> {
                     current
                 } else if current.ends_with(&newline) {
                     current + &s
-                } else if s.starts_with(",")
+                } else if s.starts_with(',')
                     || char::is_alphabetic(current.chars().last().unwrap_or_default())
                         && char::is_whitespace(current.chars().nth_back(1).unwrap_or_default())
                         && s.starts_with(char::is_alphabetic)
@@ -907,22 +907,18 @@ impl<'a> Formatter<'a> {
             }),
             Rule::math_token => csts.iter().fold(String::new(), |current, now_cst| {
                 let s = self.to_string_cst(text, now_cst, depth);
-                let output = if current.is_empty() {
+
+                if current.is_empty() {
                     s
                 } else if s.is_empty() {
                     current
                 } else if current.ends_with(&newline) {
                     current + &s
-                } else if match now_cst.rule {
-                    Rule::math_sup | Rule::math_sub => true,
-                    _ => false,
-                } {
+                } else if matches!(now_cst.rule, Rule::math_sup | Rule::math_sub) {
                     current + &s
                 } else {
                     current + sep + &s
-                };
-
-                output
+                }
             }),
             Rule::vertical => {
                 let mut line_index = cst.span.end; // 範囲外のusizeで初期化
@@ -1116,7 +1112,7 @@ impl<'a> Formatter<'a> {
                 } else if trimed_self_text.len() < 15 {
                     // list の文字の長さが十分に短い easy tableの [l;c;r;] など
                     let inner = output
-                        .split("\n")
+                        .split('\n')
                         .into_iter()
                         .map(|line| line.trim().to_string())
                         .filter(|line| !line.is_empty())
@@ -1340,14 +1336,14 @@ impl<'a> Formatter<'a> {
             Rule::math_list => output,   // TODO
             Rule::math_token => output,  // TODO
             Rule::math_sup => {
-                if self_text.starts_with("{") {
+                if self_text.starts_with('{') {
                     format!("^{{{output}}}")
                 } else {
                     format!("^{output}")
                 }
             }
             Rule::math_sub => {
-                if self_text.starts_with("{") {
+                if self_text.starts_with('{') {
                     format!("_{{{output}}}")
                 } else {
                     format!("_{output}")
