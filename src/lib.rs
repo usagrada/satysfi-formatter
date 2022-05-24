@@ -1,13 +1,8 @@
-mod comment;
-mod formatter;
 mod reserved_words;
 #[cfg(test)]
 mod tests;
 mod visualize;
 
-use comment::*;
-use formatter::Formatter;
-use satysfi_parser::{grammar, CstText};
 pub use visualize::*;
 
 pub struct OptionData {
@@ -30,31 +25,72 @@ impl Default for OptionData {
 /// * `input` - satysfi のコード
 /// * `output` - format された文字列
 pub fn format(input: &str, option: OptionData) -> String {
-    /*
-    CstText {
-        text: string,
-        lines: Vec<usize>, // start
-        cst: Cst,
-    }
-    */
-    let csttext = CstText::parse(input, grammar::program);
-    if csttext.is_err() {
-        return input.to_string();
-    }
-    let csttext = csttext.unwrap();
-    let csttext = csttext_insert_comments(csttext);
-    let formatter = Formatter::new(&csttext, option);
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(tree_sitter_satysfi::language())
+        .expect("Error loading SATySFi language");
+    // let text = input[296..300].to_string();
+    let text = input;
+    // println!("{}", text);
+    let tree = parser.parse(text, Option::None).unwrap();
+    dbg!(&tree.root_node().child(0).unwrap().kind());
+    dbg!(&tree.root_node().child(0).unwrap().child(0).unwrap());
+    dbg!(&tree.root_node().child(0).unwrap().child(1).unwrap());
+    dbg!(&tree.root_node().child(0).unwrap().child(2).unwrap());
+    dbg!(&tree.root_node().child(1).unwrap());
+    let root_node = tree.root_node();
+    dbg!(root_node);
 
-    #[cfg(debug_assertions)]
-    visualize_csttext_tree(&csttext);
+    // assert_eq!(root_node.kind(), "source_file");
+    // assert_eq!(root_node.start_position().column, 0);
+    // assert_eq!(root_node.end_position().column, 12);
 
-    let depth = 0;
-    let mut output = formatter.to_string_cst(input, &csttext.cst, depth);
+    "format".to_string()
+    // let mut output = String::new();
+}
 
-    // 末尾に改行がない場合、改行を挿入して終了
-    if !output.ends_with('\n') {
-        output += "\n";
-    }
 
-    output
+/// tree-sitter でどのように parse されるかの確認用
+#[test]
+fn test_tree_sitter(){
+    let mut parser = tree_sitter::Parser::new();
+    parser
+        .set_language(language())
+        .expect("Error loading SATySFi language");
+    // let text = input[296..300].to_string();
+    let text = r#"@require: stdja
+@require: itemize
+
+document(|
+    author = {author};
+    show-title = false;
+    show-toc = true;
+    title = {title};
+|)'<
+    +section{section}<
+        +p {
+            \listing{
+                * item1
+                * item2
+                * item3
+            }
+        }
+    >
+>
+"#;
+    // println!("{}", text);
+    let tree = parser.parse(text, Option::None).unwrap();
+    dbg!(&tree.root_node().child(0).unwrap().kind());
+    dbg!(&tree.root_node().child(0).unwrap().child(0).unwrap());
+    dbg!(&tree.root_node().child(0).unwrap().child(1).unwrap());
+    dbg!(&tree.root_node().child(0).unwrap().child(2).unwrap());
+    dbg!(&tree.root_node().child(1).unwrap());
+    let root_node = tree.root_node();
+    dbg!(root_node);
+    assert_eq!(root_node.kind(), "source_file");
+    assert_eq!(tree.root_node().child(0).unwrap().kind(), "program_saty");
+    assert_eq!(tree.root_node().child(0).unwrap().child(0).unwrap().kind(), "headers");
+    assert_eq!(tree.root_node().child(0).unwrap().child(1).unwrap().kind(), "whitespace");
+    assert_eq!(tree.root_node().child(0).unwrap().child(2).unwrap().kind(), "application");
+    assert_eq!(tree.root_node().child(1).unwrap().kind(), "whitespace");
 }

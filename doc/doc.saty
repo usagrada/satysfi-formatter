@@ -5,32 +5,33 @@
 @require: code-printer/code-syntax
 @require: code-printer/code-theme
 @require: code-printer/code-design
+%//# hello world
 
 open CodePrinter
 % 改ページ
 let-block ctx +newpage = clear-page
 % シェルコマンド
 let-block +cmd arg = '<
-  +code-printer ?:(make-config CodeSyntax.shell CodeTheme.basic-dark 
-    |> set-basic-font-size 9pt 
+  +code-printer ?:(make-config CodeSyntax.shell CodeTheme.basic-dark
+    |> set-basic-font-size 9pt
     |> set-number-fun CodeDesign.number-fun-null) (arg);
 >
 % インラインシェルコマンド
 let-inline \cmd arg = {
-\code-printer ?:(make-config CodeSyntax.shell CodeTheme.basic-dark 
-  |> set-basic-font-size 9pt 
+\code-printer ?:(make-config CodeSyntax.shell CodeTheme.basic-dark
+  |> set-basic-font-size 9pt
   |> set-number-fun CodeDesign.number-fun-null) (arg);
 }
 % インラインRustコマンド
 let-inline \cmd-rust arg = {
-\code-printer ?:(make-config CodeSyntax.rust CodeTheme.basic-dark 
-  |> set-basic-font-size 9pt 
+\code-printer ?:(make-config CodeSyntax.rust CodeTheme.basic-dark
+  |> set-basic-font-size 9pt
   |> set-number-fun CodeDesign.number-fun-null) (arg);
 }
 % インラインsatysfiコマンド
 let-inline \cmd-saty arg = {
-\code-printer ?:(make-config CodeSyntax.satysfi CodeTheme.basic-dark 
-  |> set-basic-font-size 9pt 
+\code-printer ?:(make-config CodeSyntax.satysfi CodeTheme.basic-dark
+  |> set-basic-font-size 9pt
   |> set-number-fun CodeDesign.number-fun-null) (arg);
 }
 in
@@ -106,7 +107,7 @@ fn test1() {
     // format 前のテキスト
     let text = r#"@import: hello
   @require: local
-  
+
 document(|title = {hello}|)'<+p{hello world}>"#;
 
     // 期待されるテキスト
