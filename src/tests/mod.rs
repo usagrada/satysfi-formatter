@@ -2,12 +2,12 @@ use crate::{format, OptionData};
 
 mod comment;
 mod common;
+mod ctrl_stmt;
 mod horizontal_single;
 mod let_block;
 mod math;
 mod module;
 mod space;
-mod ctrl_stmt;
 
 fn test_tmpl(input: &str, expect: &str) {
     let option = OptionData::default();

@@ -109,19 +109,19 @@ impl<'a> Formatter<'a> {
                     let s = self.to_string_cst(text, now_cst, depth);
                     if current.is_empty() {
                         if now_cst.rule != Rule::comments {
-                            cnt+=1;
+                            cnt += 1;
                         }
                         return s;
                     }
                     match now_cst.rule {
                         Rule::type_inner => {
-                            cnt+=1;
+                            cnt += 1;
                             if cnt > 1 {
                                 current + " and " + &s
                             } else {
                                 current + &s
                             }
-                        },
+                        }
                         Rule::let_rec_inner => {
                             cnt += 1;
                             if cnt > 2 {
@@ -130,24 +130,22 @@ impl<'a> Formatter<'a> {
                                 current + &s
                             }
                         }
-                        ,
                         Rule::comments => current + &s,
                         _ => unreachable!(),
                     }
                 });
                 if cnt > 2 {
-                    output.split(" and ").join((newline + &indent + RESERVED_WORD.and).as_str())
+                    output
+                        .split(" and ")
+                        .join((newline + &indent + RESERVED_WORD.and).as_str())
                 } else {
                     output
                 }
-            },
-            Rule::sig_val_stmt
-            | Rule::sig_direct_stmt => {
-                csts.iter()
-                .fold(String::new(), |current, now_cst| {
+            }
+            Rule::sig_val_stmt | Rule::sig_direct_stmt => {
+                csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
-                    let s = if cst.rule == Rule::sig_val_stmt
-                        && now_cst.rule == Rule::bin_operator
+                    let s = if cst.rule == Rule::sig_val_stmt && now_cst.rule == Rule::bin_operator
                     {
                         format!("({s})")
                     } else {
@@ -172,7 +170,7 @@ impl<'a> Formatter<'a> {
                         _ => current + " " + &s,
                     }
                 })
-            },
+            }
             Rule::let_block_stmt_ctx
             | Rule::let_block_stmt_noctx
             | Rule::let_inline_stmt_ctx
@@ -521,7 +519,7 @@ impl<'a> Formatter<'a> {
                 });
 
                 format!("{} {output}", RESERVED_WORD.while_stmt, output = output)
-            },
+            }
             Rule::unary => csts.iter().fold(String::new(), |current, now_cst| {
                 let s = self.to_string_cst(text, now_cst, depth);
                 let s = if now_cst.rule == Rule::bin_operator {
