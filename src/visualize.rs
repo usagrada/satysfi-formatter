@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use tree_sitter::{Node, Tree};
 
 pub fn visualize_csttext_tree(text: &str, tree: &Tree) {
