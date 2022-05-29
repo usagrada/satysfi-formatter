@@ -36,7 +36,8 @@ pub fn format(input: &str, option: OptionData) -> String {
     #[cfg(debug_assertions)]
     visualize::visualize_csttext_tree(input, &tree);
 
-    "format".to_string()
+    // "format".to_string()
+    format::format(input, &tree).to_string()
 }
 
 /// tree-sitter でどのように parse されるかの確認用

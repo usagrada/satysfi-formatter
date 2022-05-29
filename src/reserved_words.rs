@@ -42,6 +42,7 @@ pub struct ReservedWord {
     pub in_stmt: ReservedText,
     pub of: ReservedText,
 }
+
 #[allow(unused_variables, dead_code)]
 pub const RESERVED_WORD: ReservedWord = ReservedWord {
     constraint: "constraint",

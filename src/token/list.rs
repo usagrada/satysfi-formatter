@@ -1,5 +1,5 @@
 #[allow(dead_code, non_camel_case_types)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Token {
 	extras,
 	word,
@@ -130,4 +130,5 @@ pub enum Token {
 	_math_group,
 	math_unary,
 	math_embedding,
+	other(String),
 }

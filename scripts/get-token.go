@@ -28,12 +28,12 @@ func main() {
 		}
 	}
 	fmt.Println("#[allow(dead_code, non_camel_case_types)]")
-	fmt.Println("#[derive(Debug, Clone)]")
+	fmt.Println("#[derive(Debug, Clone, PartialEq, PartialOrd)]")
 	fmt.Println("pub enum Token {")
 	for _, token := range tokenList {
-		// println(token)
 		fmt.Println("\t" + token + ",")
 	}
+	fmt.Println("\tother(String),")
 	fmt.Println("}")
 }
 
