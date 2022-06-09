@@ -1,6 +1,8 @@
 #[allow(dead_code, non_camel_case_types)]
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Token {
+	whitespace,
+	cmd_name,
 	extras,
 	word,
 	supertype,

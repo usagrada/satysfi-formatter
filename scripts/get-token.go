@@ -12,9 +12,25 @@ const grammmerUrl = "https://raw.githubusercontent.com/monaqa/tree-sitter-satysf
 func main() {
 	data := getData()
 	grammer := fmtGrammer(data)
+	tokens := fmtToken(data)
 	// println("data: ", grammer)
 	lines := strings.Split(grammer, "\n")
 	tokenList := make([]string, 0)
+
+	tokenlines := strings.Split(tokens, "\n")
+
+	// tokenListを抽出
+	for _, line := range tokenlines {
+		trimLine := strings.TrimLeft(line, " ")
+		if strings.HasPrefix(trimLine, "//") {
+			continue
+		}
+		flag := regexp.MustCompile(`[A-z_]+: `).MatchString(trimLine)
+		if flag {
+			token := strings.Split(trimLine, ":")[0]
+			tokenList = append(tokenList, token)
+		}
+	}
 	// grammerのruleからtokenを抽出
 	for _, line := range lines {
 		trimLine := strings.TrimLeft(line, " ")
@@ -27,6 +43,7 @@ func main() {
 			tokenList = append(tokenList, token)
 		}
 	}
+
 	fmt.Println("#[allow(dead_code, non_camel_case_types)]")
 	fmt.Println("#[derive(Debug, Clone, PartialEq, PartialOrd)]")
 	fmt.Println("pub enum Token {")
@@ -37,8 +54,23 @@ func main() {
 	fmt.Println("}")
 }
 
+func fmtToken(data string) string {
+	// "module.exports = grammar({" + data + "});"
+	index := strings.Index(data, "const tokens = {")
+	if index == -1 {
+		panic("Error: could not find const tokens = {")
+		// return data
+	}
+	data = data[index+len("const tokens = {"):]
+	last_index := strings.Index(data, "};")
+	if last_index == -1 {
+		panic("Error: could not find };")
+	}
+	return data[:last_index+1]
+}
+
 func fmtGrammer(data string) string {
-	println("data: ", data)
+	// println("data: ", data)
 	// "module.exports = grammar({" + data + "});"
 	index := strings.Index(data, "module.exports = grammar({")
 	if index == -1 {
