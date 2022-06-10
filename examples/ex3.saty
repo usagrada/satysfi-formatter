@@ -1,0 +1,12 @@
+@require: stdja
+
+document(|
+    author = { author };
+    show-title = false;
+    show-toc = true;
+    title = { title };
+|)'<
+  +p{
+    ${\sin x = hello}
+  }
+>

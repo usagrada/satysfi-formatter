@@ -885,26 +885,32 @@ impl<'a> Formatter<'a> {
                     }
                 })
             }
-            Rule::math_single => csts.iter().fold(String::new(), |current, now_cst| {
-                let s = self.to_string_cst(text, now_cst, depth);
-                let output = if current.is_empty() {
-                    s
-                } else if s.is_empty() {
-                    current
-                } else if current.ends_with(&newline) {
-                    current + &s
-                } else if s.starts_with(',')
-                    || char::is_alphabetic(current.chars().last().unwrap_or_default())
-                        && char::is_whitespace(current.chars().nth_back(1).unwrap_or_default())
-                        && s.starts_with(char::is_alphabetic)
-                {
-                    current + &s
-                } else {
-                    current + sep + &s
-                };
+            Rule::math_single => {
+                let mut last_token = String::new();
 
+                let output = csts.iter().fold(String::new(), |current, now_cst| {
+                    let s = self.to_string_cst(text, now_cst, depth);
+
+                    let output = if current.is_empty() {
+                        s.clone()
+                    } else if s.is_empty() {
+                        current
+                    } else if current.ends_with(&newline) {
+                        current + &s
+                    } else if last_token.starts_with("\\") {
+                        current + sep + &s
+                    } else if now_cst.rule == Rule::comments {
+                        format!("{}{newline}{s}", current.trim_end())
+                    } else if s.starts_with(char::is_alphabetic) && current.ends_with(char::is_alphabetic) {
+                        current + &s
+                    } else {
+                        current + sep + &s
+                    };
+                    last_token = s.clone();
+                    output
+                });
                 output
-            }),
+            }
             Rule::math_token => csts.iter().fold(String::new(), |current, now_cst| {
                 let s = self.to_string_cst(text, now_cst, depth);
 
