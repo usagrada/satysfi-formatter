@@ -254,3 +254,32 @@ document(|title = { hello }|)'<
 "#;
     test_tmpl(text, expect);
 }
+
+#[test]
+fn test13(){
+    let text = r#"@require: local
+
+document(|title = {}|)'<
+    +fig-center(vconcat [
+        gap 10pt;
+        textbox { hello } 
+            |> glass-box ?:(align-center, align-center) 100pt 100pt 
+            |> bgcolor (Color.gray 0.8);
+        gap 10pt;
+    ]);
+>"#;
+
+    let expect = r#"@require: local
+
+document(|title = {}|)'<
+    +fig-center (vconcat [
+        gap 10pt;
+        textbox { hello }
+            |> glass-box ?:(align-center, align-center) 100pt 100pt
+            |> bgcolor (Color.gray 0.8);
+        gap 10pt;
+    ]);
+>
+"#;
+    test_tmpl(text, expect);
+}

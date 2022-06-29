@@ -901,7 +901,9 @@ impl<'a> Formatter<'a> {
                         current + sep + &s
                     } else if now_cst.rule == Rule::comments {
                         format!("{}{newline}{s}", current.trim_end())
-                    } else if s.starts_with(char::is_alphabetic) && current.ends_with(char::is_alphabetic) {
+                    } else if s.starts_with(char::is_alphabetic)
+                        && current.ends_with(char::is_alphabetic)
+                    {
                         current + &s
                     } else {
                         current + sep + &s
@@ -953,6 +955,23 @@ impl<'a> Formatter<'a> {
                     output.trim_end().to_string()
                 })
             }
+            Rule::dyadic_expr => csts.iter().fold(String::new(), |current, now_cst| {
+                let s = self.to_string_cst(text, now_cst, depth);
+                let output = if current.is_empty() {
+                    s
+                } else if s.is_empty() {
+                    current
+                } else if current.ends_with(&newline) {
+                    current + &s
+                } else {
+                    if now_cst.rule == Rule::bin_operator && s.trim() == "|>" {
+                        current + &s
+                    } else {
+                        current + sep + &s
+                    }
+                };
+                output
+            }),
             _ => {
                 csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
