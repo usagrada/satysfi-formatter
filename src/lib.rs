@@ -39,6 +39,10 @@ pub fn format(input: &str, option: OptionData) -> String {
     */
     let csttext = CstText::parse(input, grammar::program);
     if csttext.is_err() {
+        let err = csttext.unwrap_err();
+        let line = err.0.line;
+        let col = err.0.column;
+        eprintln!("disable to format\n[parse error] line: {}, column: {}", line, col);
         return input.to_string();
     }
     let csttext = csttext.unwrap();
