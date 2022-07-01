@@ -53,17 +53,7 @@ pub fn format(input: &str, option: OptionData) -> String {
     visualize_csttext_tree(&csttext);
 
     let depth = 0;
-    let mut output = formatter.to_string_cst(input, &csttext.cst, depth);
-
-    // 末尾スペースを全て除去
-    output = output.split("\n").map(|line| {
-        line.trim_end()
-    }).collect::<Vec<_>>().join("\n");
-
-    // 末尾に改行がない場合、改行を挿入して終了
-    if !output.ends_with('\n') {
-        output += "\n";
-    }
+    let output = formatter.format(input, &csttext.cst, depth);
 
     output
 }

@@ -27,8 +27,24 @@ impl<'a> Formatter<'a> {
         }
     }
 
+    /// 文字列を format して出力する
+    /// 前処理後処理もここで行う
+    pub fn format(&self, input: &str, cst: &Cst, depth: usize) -> String {
+        let mut output = self.to_string_cst(input, &cst, depth);
+        // 末尾スペースを全て除去
+        output = output.split("\n").map(|line| {
+            line.trim_end()
+        }).collect::<Vec<_>>().join("\n");
+
+        // 末尾に改行がない場合、改行を挿入して終了
+        if !output.ends_with('\n') {
+            output += "\n";
+        }
+        output
+    }
+
     /// cst の inner の要素を結合して文字列に変換する関数
-    pub fn to_string_cst_inner(&self, text: &str, cst: &Cst, depth: usize) -> String {
+    fn to_string_cst_inner(&self, text: &str, cst: &Cst, depth: usize) -> String {
         /*
         Cst {
             rule: Rule,
@@ -999,7 +1015,7 @@ impl<'a> Formatter<'a> {
     }
 
     /// cst を文字列にするための関数
-    pub fn to_string_cst(&self, text: &str, cst: &Cst, depth: usize) -> String {
+    fn to_string_cst(&self, text: &str, cst: &Cst, depth: usize) -> String {
         // インデントを制御するための変数
         let new_depth = match cst.rule {
             Rule::block_text | Rule::cmd_text_arg | Rule::record | Rule::type_record => depth + 1,
