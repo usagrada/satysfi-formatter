@@ -55,6 +55,11 @@ pub fn format(input: &str, option: OptionData) -> String {
     let depth = 0;
     let mut output = formatter.to_string_cst(input, &csttext.cst, depth);
 
+    // 末尾スペースを全て除去
+    output = output.split("\n").map(|line| {
+        line.trim_end()
+    }).collect::<Vec<_>>().join("\n");
+
     // 末尾に改行がない場合、改行を挿入して終了
     if !output.ends_with('\n') {
         output += "\n";
