@@ -16,6 +16,8 @@ impl std::fmt::Display for Token {
 impl Into<Token> for &str {
     fn into(self) -> Token {
         match self {
+            "whitespace" => Token::whitespace,
+            "cmd_name" => Token::cmd_name,
             "extras" => Token::extras,
             "word" => Token::word,
             "supertype" => Token::supertype,

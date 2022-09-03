@@ -15,8 +15,6 @@ document(|
     +p {
       hello world
       \\こんにちは
-    }
-    % comment
-    >
-  % comment
+    } % comment
+    > % comment
 >

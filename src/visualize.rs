@@ -4,6 +4,7 @@ pub fn visualize_csttext_tree(text: &str, tree: &Tree) {
     println!("visualize");
     let root = tree.root_node();
     visualize_cst_tree(text, tree, root, 0);
+    println!("\n============================================\n");
 }
 
 // for debug

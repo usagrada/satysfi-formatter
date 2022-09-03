@@ -1,5 +1,6 @@
 @require: stdja
 @require: itemize
+@import: local
 
 document(|
     author = {author};
@@ -9,11 +10,11 @@ document(|
 |)'<
 +section{section}<
         +p {
-            
+
             \listing{ * item1
 * item2
             * item3}
     }
     >
-    
+
 >
