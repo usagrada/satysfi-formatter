@@ -32,9 +32,11 @@ impl<'a> Formatter<'a> {
     pub fn format(&self, input: &str, cst: &Cst, depth: usize) -> String {
         let mut output = self.to_string_cst(input, &cst, depth);
         // 末尾スペースを全て除去
-        output = output.split("\n").map(|line| {
-            line.trim_end()
-        }).collect::<Vec<_>>().join("\n");
+        output = output
+            .split("\n")
+            .map(|line| line.trim_end())
+            .collect::<Vec<_>>()
+            .join("\n");
 
         // 末尾に改行がない場合、改行を挿入して終了
         if !output.ends_with('\n') {
@@ -497,25 +499,40 @@ impl<'a> Formatter<'a> {
                 }
             }),
             Rule::ctrl_if => {
-                let mut cnt = 0;
+                // let mut break_line_flag = false;
+
                 let output = csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
-                    match now_cst.rule {
-                        Rule::expr => {
-                            cnt += 1;
-                            match cnt {
-                                1 => current + "if " + &s,
-                                2 => current + " then " + &s,
-                                3 => current + " else " + &s,
-                                _ => unreachable!(),
-                            }
-                        }
-                        Rule::comments => current + &s,
+                    let current = match now_cst.rule {
+                        Rule::expr => current + "if " + &s,
+                        Rule::ctrl_then => current + &newline + &s,
+                        Rule::ctrl_else => current + &newline + &s,
+                        Rule::comments => current + &newline + &s,
                         _ => unreachable!(),
-                    }
+                    };
+                    current
                 });
 
                 output
+            }
+            Rule::ctrl_then | Rule::ctrl_else => {
+                let output = csts.iter().fold(String::new(), |current, now_cst| {
+                    let s = self.to_string_cst(text, now_cst, depth);
+                    let output = if current.is_empty() {
+                        newline.clone() + &s
+                    } else if s.is_empty() {
+                        current
+                    } else if current.ends_with(&newline) {
+                        current + &s
+                    } else {
+                        current + sep + &s
+                    };
+                    output
+                });
+                output
+                    .split("\n")
+                    .filter(|line| !line.trim().is_empty())
+                    .join("\n")
             }
             Rule::ctrl_while => {
                 let mut cnt = 0;
@@ -1025,6 +1042,7 @@ impl<'a> Formatter<'a> {
             Rule::match_expr | Rule::let_rec_matcharm => depth + 1,
             Rule::let_rec_inner => depth + 1,
             Rule::sig_stmt | Rule::struct_stmt => depth + 1,
+            Rule::ctrl_then | Rule::ctrl_else => depth + 1,
             _ => depth,
         };
         let start_indent = "\n".to_string() + &indent_space(self.option.indent_space, new_depth);
@@ -1274,9 +1292,15 @@ impl<'a> Formatter<'a> {
             Rule::bind_stmt => output,  // TODO
             Rule::ctrl_while => output, // TODO
             Rule::ctrl_if => output,    // TODO
-            Rule::lambda => output,     // TODO
-            Rule::assignment => output, // TODO
-            Rule::dyadic_expr => output, // TODO
+            Rule::ctrl_then => {
+                format!("{}\n{output}", RESERVED_WORD.then)
+            }
+            Rule::ctrl_else => {
+                format!("{}\n{output}", RESERVED_WORD.else_stmt)
+            }
+            Rule::lambda => output,              // TODO
+            Rule::assignment => output,          // TODO
+            Rule::dyadic_expr => output,         // TODO
             Rule::unary_operator_expr => output, // TODO
             Rule::unary_operator => self_text,
             // application
