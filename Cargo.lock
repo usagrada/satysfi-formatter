@@ -321,7 +321,6 @@ dependencies = [
 [[package]]
 name = "satysfi-parser"
 version = "0.0.3"
-source = "git+https://github.com/usagrada/satysfi-parser.git#a59ca0c6195df6e5e4431f5d30a38e8c7648acd0"
 dependencies = [
  "anyhow",
  "glob",
