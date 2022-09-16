@@ -1,7 +1,6 @@
 use super::OptionData;
 use crate::comment::{get_comments, to_comment_string, Comment};
 use crate::reserved_words::*;
-use itertools::Itertools;
 use satysfi_parser::{Cst, CstText};
 use std::collections::VecDeque;
 
@@ -155,6 +154,7 @@ impl<'a> Formatter<'a> {
                 if cnt > 2 {
                     output
                         .split(" and ")
+                        .collect::<Vec<_>>()
                         .join((newline + &indent + RESERVED_WORD.and).as_str())
                 } else {
                     output
@@ -532,6 +532,7 @@ impl<'a> Formatter<'a> {
                 output
                     .split("\n")
                     .filter(|line| !line.trim().is_empty())
+                    .collect::<Vec<_>>()
                     .join("\n")
             }
             Rule::ctrl_while => {
