@@ -23,6 +23,8 @@ impl Into<Token> for &str {
             "supertype" => Token::supertype,
             "conflicts" => Token::conflicts,
             "externals" => Token::externals,
+            "literal_string" => Token::literal_string,
+            "inline_token" => Token::inline_token,
             "source_file" => Token::source_file,
             "comment" => Token::comment,
             "program_saty" => Token::program_saty,
@@ -156,8 +158,59 @@ pub fn token_to_string(token: Token) -> String {
     token.to_string()
 }
 
+pub const LIST_EXPR: [Token; 13] = [
+    Token::match_expr,
+    Token::bind_stmt,
+    Token::ctrl_while,
+    Token::ctrl_if,
+    Token::lambda,
+    Token::assignment,
+    Token::binary_expr,
+    Token::application,
+    Token::unary_operator_expr,
+    Token::command_application,
+    Token::variant_constructor,
+    Token::record_member,
+    Token::_unary,
+];
+
+pub const LIST_UNARY: [Token; 18] = [
+    Token::block_text,
+    Token::inline_text,
+    Token::inline_text_list,
+    Token::inline_text_bullet_list,
+    Token::math_text,
+    Token::math_list,
+    Token::record,
+    Token::list,
+    Token::tuple,
+    // Token::binary_operator,
+    // Token::_expr,
+    Token::expr_with_mod,
+    Token::modvar,
+    // Token::_literal,
+    Token::literal_unit,
+    Token::literal_bool,
+    Token::literal_length,
+    Token::literal_int,
+    Token::literal_string,
+    Token::literal_float,
+    Token::identifier,
+];
+
+pub const LIST_RECORD_INNER: [Token; 1] = [Token::record_unit];
+
+pub const LIST_LITERAL: [Token; 6] = [
+    Token::literal_unit,
+    Token::literal_bool,
+    Token::literal_length,
+    Token::literal_int,
+    Token::literal_string,
+    Token::literal_float,
+];
+
 #[test]
-fn token() {
+fn token_test() {
     let token = Token::word;
     assert_eq!(token.value(), "word");
 }

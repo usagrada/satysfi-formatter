@@ -34,10 +34,12 @@ pub fn format(input: &str, option: OptionData) -> String {
 
     let tree = parser.parse(input, Option::None).unwrap();
     #[cfg(debug_assertions)]
+    println!("{:#?}", tree.root_node().to_sexp());
+    #[cfg(debug_assertions)]
     visualize::visualize_csttext_tree(input, &tree);
 
     // "format".to_string()
-    format::format(input, &tree).to_string()
+    format::format(input, &tree)
 }
 
 /// tree-sitter でどのように parse されるかの確認用

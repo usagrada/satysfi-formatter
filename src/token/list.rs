@@ -3,6 +3,8 @@
 pub enum Token {
 	whitespace,
 	cmd_name,
+    literal_string,
+    inline_token,
 	extras,
 	word,
 	supertype,

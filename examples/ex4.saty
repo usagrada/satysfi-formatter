@@ -1,9 +1,6 @@
 @require: stdja
 @require: itemize
 
-let max = ( || )
-in
-
 document(|
     author = {author};
     show-title = false;
@@ -11,11 +8,8 @@ document(|
     title = {title};
 |)'<
   % comment
-+section{section}<
     +p {
-      ${\alpha x} % [math_unary whitespace math_unary]
+      hello
     }
-    % comment
-    >
-  % comment
+
 >
