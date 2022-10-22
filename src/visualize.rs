@@ -16,12 +16,8 @@ pub fn visualize_csttext_tree(text: &str, tree: &Tree) {
 // for debug
 fn visualize_cst_tree(text: &str, tree: &Tree, node: Node, depth: usize) {
     let range = node.byte_range();
-    // let mut output = text[range.start..range.end].trim();
-    let mut output = "";
-    if false {
-        let output = node.to_owned();
-        println!("{}{:?}", " ".repeat(depth), output);
-    } else if output.contains("\n") {
+    let mut output = text[range.start..range.end].trim();
+    if output.contains("\n") {
         output = &output[..output.find("\n").unwrap()];
         println!(
             "{}* {:?}: {}……",
