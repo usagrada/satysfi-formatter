@@ -7,6 +7,7 @@ mod format;
 
 pub use visualize::*;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct OptionData {
     pub row_length: usize,
     pub indent_space: usize,
@@ -39,7 +40,7 @@ pub fn format(input: &str, option: OptionData) -> String {
     visualize::visualize_csttext_tree(input, &tree);
 
     // "format".to_string()
-    format::format(input, &tree)
+    format::format(input, &tree, option)
 }
 
 /// tree-sitter でどのように parse されるかの確認用

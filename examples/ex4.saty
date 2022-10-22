@@ -2,7 +2,7 @@
 @require: itemize
 
 document(|
-    author = {author};
+    author = { author };
     show-title = false;
     show-toc = true;
     title = {title};
@@ -10,6 +10,7 @@ document(|
   % comment
     +p {
       hello
+      ${a + 1}
     }
 
 >
