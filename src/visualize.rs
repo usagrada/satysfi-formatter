@@ -18,12 +18,12 @@ fn visualize_cst_tree(text: &str, tree: &Tree, node: Node, depth: usize) {
     let range = node.byte_range();
     let mut output = text[range.start..range.end].trim();
     if output.contains("\n") {
-        output = &output[..output.find("\n").unwrap()];
+        // output = &output[..output.find("\n").unwrap()];
         println!(
             "{}* {:?}: {}……",
             " ".repeat(depth * 2),
             node.kind(),
-            output.trim(),
+            output,
         );
     } else {
         println!(
