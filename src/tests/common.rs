@@ -95,7 +95,7 @@ fn test6() {
 document(|title = {hello}|)'<+p{hello world}+p {${ax^2 + bx + c = 0}}>"#;
     let expect = r#"document(|title = { hello }|)'<
     +p { hello world }
-    +p { ${a x^2 + bx + c = 0} }
+    +p { ${ax^2 + bx + c = 0} }
 >
 "#;
     test_tmpl(text, expect);

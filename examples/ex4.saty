@@ -10,7 +10,8 @@ document(|
   % comment
     +p {
       hello
-      ${a + 1}
+      ${a + 1 \pi}
+      ${ax^2 +bx+c \app{f}{x}}
     }
 
 >

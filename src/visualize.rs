@@ -23,7 +23,8 @@ fn visualize_cst_tree(text: &str, tree: &Tree, node: Node, depth: usize) {
             "{}* {:?}: {}……",
             " ".repeat(depth * 2),
             node.kind(),
-            output,
+            // output,
+            output.trim()
         );
     } else {
         println!(

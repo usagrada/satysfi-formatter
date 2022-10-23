@@ -544,9 +544,7 @@ fn format_inline_token<'a>(data: &mut Formatter<'a>, node: &Node) {
         let sep = "\n".to_string() + &data.indent();
         text = text
             .split("\n")
-            .map(|line| {
-                line.trim().to_string()
-            })
+            .map(|line| line.trim().to_string())
             .filter(|line| !line.is_empty())
             .collect::<Vec<String>>()
             .join(&sep);
@@ -888,16 +886,60 @@ fn format_cmd_text_arg<'a>(data: &mut Formatter<'a>, node: &Node) {
 
 fn format_math<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
+    let mut last_token = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            Token::math_token => {
-                data.inner = data.node_to_text_trim(&child);
-            }
-            Token::math_unary => {
-                data.inner = data.node_to_text_trim(&child);
-            }
+            Token::math_token => format_math_token(data, &child),
+            Token::math_unary => format_math_unary(data, &child),
             Token::whitespace => {
-                format_whitespace(data, &child);
+                format_ignore(data, &child);
+                continue;
+            }
+            _ => {
+                unreachable!();
+            }
+        }
+        if !(last_token.starts_with("\\") || last_token == "." || data.inner == ".") && !(output.ends_with(char::is_alphabetic) && data.inner.starts_with(char::is_alphabetic)) {
+            output += " ";
+        }
+        output += &data.inner;
+        last_token = data.inner.clone();
+    }
+    data.inner = output.trim().to_string();
+}
+
+fn format_math_token<'a>(data: &mut Formatter<'a>, node: &Node) {
+    let text = data.node_to_text_trim(node);
+    data.inner = text;
+}
+
+fn format_math_unary<'a>(data: &mut Formatter<'a>, node: &Node) {
+    if node.child_count() > 0 {
+        for child in node.children(&mut node.walk()) {
+            let text = data.node_to_text_trim(node);
+            println!("math_unary: {}", text);
+            match child.kind().into() {
+                Token::math_cmd => format_math_cmd(data, &child),
+                Token::math_embedding => format_math_unary(data, &child),
+                _ => {
+                    unreachable!();
+                }
+            }
+        }
+    } else {
+        data.inner = data.node_to_text_trim(node);
+    }
+}
+
+fn format_math_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
+    let mut output = String::new();
+    for child in node.children(&mut node.walk()) {
+        match child.kind().into() {
+            Token::math_cmd_name => {
+                data.inner = data.node_to_text_trim(&child);
+            }
+            Token::math_cmd_expr_arg | Token::math_cmd_expr_option => {
+                format_math_cmd_expr_arg(data, &child);
             }
             _ => {
                 unreachable!();
@@ -906,6 +948,10 @@ fn format_math<'a>(data: &mut Formatter<'a>, node: &Node) {
         output += &data.inner;
     }
     data.inner = output;
+}
+
+fn format_math_cmd_expr_arg<'a>(data: &mut Formatter<'a>, node: &Node) {
+    data.inner = data.node_to_text_trim(node);
 }
 
 fn format_whitespace<'a>(data: &mut Formatter<'a>, node: &Node) {
