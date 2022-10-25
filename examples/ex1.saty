@@ -1,9 +1,10 @@
 @require: stdja
 @require: itemize
-@import: local
-
+% @import: local
+let a = 1
+in
 document(|
-    author = {author};
+  author = {author};
     show-title = false;
     show-toc = true;
     title = {title};
@@ -15,6 +16,7 @@ document(|
 * item2
             * item3}
     }
+    %%hello
     >
 
 >

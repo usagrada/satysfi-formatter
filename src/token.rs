@@ -209,6 +209,18 @@ pub const LIST_LITERAL: [Token; 6] = [
     Token::literal_float,
 ];
 
+pub const LIST_TYPE_EXPR: [Token; 9] = [
+    Token::type_fun,
+    Token::type_prod,
+    Token::type_inline_cmd,
+    Token::type_block_cmd,
+    Token::type_math_cmd,
+    Token::type_application,
+    Token::type_record,
+    Token::type_param,
+    Token::type_name,
+];
+
 #[test]
 fn token_test() {
     let token = Token::word;
