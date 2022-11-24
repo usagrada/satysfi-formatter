@@ -271,7 +271,6 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "dirs",
- "itertools",
  "tree-sitter",
  "tree-sitter-satysfi",
 ]

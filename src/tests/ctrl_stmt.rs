@@ -15,7 +15,45 @@ document(|title = {hello}|)'<
 @require: local
 
 let-mutable x <- 0
-let () = if (1 < 2) then x <- 1 else x <- 2
+let () =
+    if (1 < 2)
+    then
+        x <- 1
+    else
+        x <- 2
+in
+
+document(|title = { hello }|)'<>
+"#;
+
+    test_tmpl(text, expect)
+}
+
+#[test]
+fn if_stmt2() {
+    let text = r#"@import: hello
+  @require: local
+  let-mutable x <- 0
+  let () = if (1 < 2) then
+    % always true
+    x <- 1
+  else x <- 2
+in
+
+document(|title = {hello}|)'<
+>"#;
+
+    let expect = r#"@import: hello
+@require: local
+
+let-mutable x <- 0
+let () =
+    if (1 < 2)
+    then
+        % always true
+        x <- 1
+    else
+        x <- 2
 in
 
 document(|title = { hello }|)'<>
