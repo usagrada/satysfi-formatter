@@ -10,7 +10,7 @@ repository = "https://github.com/usagrada/"
 
 [dependencies]
 tree-sitter = "*"
-tree-sitter-satysfi = { git = "https://github.com/monaqa/tree-sitter-satysfi.git" }
+tree_sitter_satysfi = { git = "https://github.com/monaqa/tree-sitter-satysfi.git", branch = "grammar-v0_1_0" }
 clap = { version = "3", features = ["derive"] }
 dirs = "*"
 
