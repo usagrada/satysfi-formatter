@@ -1,8 +1,6 @@
-use crate::{
-    token::{Token, *},
-    OptionData,
-};
+use crate::token::{Token, *};
 mod helper;
+use lsp_types::FormattingOptions;
 use tree_sitter::{Node, Tree};
 
 #[derive(Debug, Clone)]
@@ -15,21 +13,21 @@ struct Formatter<'a> {
     inner: String,
     // 現在のインデントの深さ
     depth: usize,
-    config: OptionData,
+    config: FormattingOptions,
     tree: &'a Tree,
 }
 
 impl<'a> Formatter<'a> {
     fn indent(&self) -> String {
         use self::helper::indent_space;
-        let result = indent_space(self.depth * self.config.indent_space);
+        let result = indent_space(self.depth * self.config.tab_size as usize);
         result
     }
 
     /// depth + 1 したインデント用
     fn indent_start(&self) -> String {
         use self::helper::indent_space;
-        let result = indent_space((self.depth + 1) * self.config.indent_space);
+        let result = indent_space((self.depth + 1) * self.config.tab_size as usize);
         result
     }
     /// node を与えたときにテキストを返すための関数
@@ -45,7 +43,7 @@ impl<'a> Formatter<'a> {
 
 /// format するための関数
 /// inner にフォーマットされたテキストを入れていく
-pub fn format<'a>(input: &'a str, tree: &Tree, config: OptionData) -> String {
+pub fn format<'a>(input: &'a str, tree: &Tree, config: FormattingOptions) -> String {
     let root_node = tree.root_node();
     let output = String::new();
     let inner = String::new();
@@ -90,9 +88,9 @@ fn format_program_saty<'a>(data: &mut Formatter<'a>, node: &Node) {
                 format_headers(data, &child);
                 data.inner += (data.indent() + "\n").as_str();
             }
-            Token::preamble => {
-                format_preamble(data, &child);
-            }
+            // Token::preamble => {
+            //     format_preamble(data, &child);
+            // }
             token if LIST_EXPR.contains(&token) || LIST_UNARY.contains(&token) => {
                 format_expr(data, &child);
             }
@@ -183,27 +181,25 @@ fn format_header_inner<'a>(data: &mut Formatter<'a>, node: &Node) -> bool {
     match node.kind().into() {
         Token::header_require => format_header_require(data, node),
         Token::header_import => format_header_import(data, node),
-        Token::other(token) => {
-            match token.as_str() {
-                "pkgname" => {
-                    let text = data.node_to_text_trim(&node);
-                    data.inner = text;
-                }
-                "\n" => {
-                    data.inner = "\n".to_string();
-                }
-                _ => {
-                    unreachable!("header inner: {}", token)
-                }
+        Token::other(token) => match token.as_str() {
+            "pkgname" => {
+                let text = data.node_to_text_trim(&node);
+                data.inner = text;
             }
-        }
+            "\n" => {
+                data.inner = "\n".to_string();
+            }
+            _ => {
+                unreachable!("header inner: {}", token)
+            }
+        },
         // Token::header_stage => format_header_stage(data, node),
         _ => {
             println!("header: {:?}", node.kind());
             unreachable!()
-        },
+        }
     }
-    return true
+    return true;
 }
 
 fn format_header_import<'a>(data: &mut Formatter<'a>, node: &Node) {
@@ -921,7 +917,7 @@ fn format_inline_text<'a>(data: &mut Formatter<'a>, node: &Node) {
         let indent_end = "\n".to_string() + &data.indent();
         output = output.replace(
             "\n",
-            &("\n".to_string() + &" ".repeat(data.config.indent_space)),
+            &("\n".to_string() + &" ".repeat(data.config.tab_size as usize)),
         );
         data.inner = format!("{{{}{}{}}}", indent_start, output, indent_end);
     } else {

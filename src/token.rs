@@ -183,7 +183,6 @@ impl Into<Token> for &str {
             "literal_length" => Token::literal_length,
             "literal_int" => Token::literal_int,
             "literal_float" => Token::literal_float,
-            "other(String)" => Token::other(String),
 
             // add rule
             "@require:" => Token::header_require,

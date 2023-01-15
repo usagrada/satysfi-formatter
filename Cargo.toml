@@ -13,6 +13,7 @@ tree-sitter = "*"
 tree_sitter_satysfi = { git = "https://github.com/monaqa/tree-sitter-satysfi.git", branch = "grammar-v0_1_0" }
 clap = { version = "3", features = ["derive"] }
 dirs = "*"
+lsp-types = "0.93.2"
 
 [[bin]]
 name = "satysfi-fmt"

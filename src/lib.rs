@@ -5,29 +5,13 @@ mod token;
 mod visualize;
 mod format;
 
+use lsp_types::FormattingOptions;
 pub use visualize::*;
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct OptionData {
-    pub row_length: usize,
-    pub indent_space: usize,
-    pub command_args_space: bool,
-}
-
-impl Default for OptionData {
-    fn default() -> Self {
-        Self {
-            row_length: 80,
-            indent_space: 4,
-            command_args_space: true,
-        }
-    }
-}
 
 /// satysfi の文字列を渡すと format したものを返す
 /// * `input` - satysfi のコード
 /// * `output` - format された文字列
-pub fn format(input: &str, option: OptionData) -> String {
+pub fn format(input: &str, option: FormattingOptions) -> String {
     let mut parser = tree_sitter::Parser::new();
     parser
         .set_language(tree_sitter_satysfi::language())
