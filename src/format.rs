@@ -102,17 +102,17 @@ fn format_program_saty<'a>(data: &mut Formatter<'a>, node: &Node) {
             Token::comment => {
                 format_comment(data, &child);
             }
-            Token::other(s) => match s.as_str() {
+            Token::other(token) => match token.as_str() {
                 "in" => {
                     output += "\n";
-                    data.inner = s + "\n\n";
+                    data.inner = token + "\n\n";
                 }
                 _ => {
-                    unreachable!()
+                    unreachable!("program: {}", token)
                 }
             },
             _ => {
-                unreachable!()
+                unreachable!("program: {}", child.kind())
             }
         }
         output += &data.inner;
@@ -162,15 +162,15 @@ fn format_headers<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            Token::header_import | Token::header_require => {
-                format_header_inner(data, &child);
-            }
             Token::whitespace => {
                 // println!("whitespace: {:?}", child.range());
                 format_ignore(data, &child);
             }
-            _ => {
-                unreachable!()
+            token => {
+                let is_inner = format_header_inner(data, &child);
+                if !is_inner {
+                    unreachable!("{}", token)
+                }
             }
         }
         output += &data.inner;
@@ -179,15 +179,31 @@ fn format_headers<'a>(data: &mut Formatter<'a>, node: &Node) {
 }
 
 #[inline]
-fn format_header_inner<'a>(data: &mut Formatter<'a>, node: &Node) {
+fn format_header_inner<'a>(data: &mut Formatter<'a>, node: &Node) -> bool {
     match node.kind().into() {
         Token::header_require => format_header_require(data, node),
         Token::header_import => format_header_import(data, node),
+        Token::other(token) => {
+            match token.as_str() {
+                "pkgname" => {
+                    let text = data.node_to_text_trim(&node);
+                    data.inner = text;
+                }
+                "\n" => {
+                    data.inner = "\n".to_string();
+                }
+                _ => {
+                    unreachable!("header inner: {}", token)
+                }
+            }
+        }
         // Token::header_stage => format_header_stage(data, node),
         _ => {
+            println!("header: {:?}", node.kind());
             unreachable!()
-        }
+        },
     }
+    return true
 }
 
 fn format_header_import<'a>(data: &mut Formatter<'a>, node: &Node) {
@@ -533,7 +549,7 @@ fn format_type_name<'a>(data: &mut Formatter<'a>, node: &Node) {
             }
             Token::modvar => {
                 format_modvar(data, &child);
-            },
+            }
             _ => {
                 unreachable!()
             }
@@ -545,7 +561,6 @@ fn format_type_name<'a>(data: &mut Formatter<'a>, node: &Node) {
 fn format_modvar<'a>(data: &mut Formatter<'a>, node: &Node) {
     todo!()
 }
-
 
 fn format_let_stmt<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
@@ -618,8 +633,7 @@ fn format_let_rec_stmt<'a>(data: &mut Formatter<'a>, node: &Node) {
     data.inner = output;
 }
 
-fn format_let_rec_inner<'a>(data: &mut Formatter<'a>, node: &Node) {
-}
+fn format_let_rec_inner<'a>(data: &mut Formatter<'a>, node: &Node) {}
 
 fn format_pattern<'a>(data: &mut Formatter<'a>, node: &Node) {
     data.inner = data.node_to_text(node);

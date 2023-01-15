@@ -56,12 +56,12 @@ func main() {
 
 func fmtToken(data string) string {
 	// "module.exports = grammar({" + data + "});"
-	index := strings.Index(data, "const tokens = {")
+	index := strings.Index(data, "function tokens() {")
 	if index == -1 {
 		panic("Error: could not find const tokens = {")
 		// return data
 	}
-	data = data[index+len("const tokens = {"):]
+	data = data[index+len("function tokens() {"):]
 	last_index := strings.Index(data, "};")
 	if last_index == -1 {
 		panic("Error: could not find };")
@@ -86,7 +86,7 @@ func fmtGrammer(data string) string {
 }
 
 func getData() string {
-	fileName := "./scripts/grammar.js"
+	fileName := "./scripts/grammar.v0_1_0.js"
 	bytes, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		panic(err)
