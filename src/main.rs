@@ -1,5 +1,6 @@
 use clap::Parser;
-use satysfi_formatter::{format, OptionData};
+use lspower::lsp::FormattingOptions;
+use satysfi_formatter::{format, format_lsp};
 use std::{fs, path::PathBuf};
 
 #[derive(Parser, Debug)]
@@ -25,16 +26,16 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
     let code = fs::read_to_string(&cli.file).expect("Failed to read file");
-    let option = OptionData {
-        indent_space: cli.indent_space,
-        command_args_space: cli.cspace,
+    let option = FormattingOptions {
+        tab_size: cli.indent_space as u32,
         ..Default::default()
     };
     let output = format(&code, option);
 
     match (cli.output, cli.write) {
-        (Some(path), _) => fs::write(&path, output).expect("Failed to write file"),
-        (None, true) => fs::write(&cli.file, output).expect("Failed to write file"),
+        (Some(path), _) => fs::write(&path, &output).expect("Failed to write file"),
+        (None, true) => fs::write(&cli.file, &output).expect("Failed to write file"),
         (None, false) => println!("{}", output),
     }
+    println!("{:?}", output)
 }

@@ -44,6 +44,27 @@ impl<'a> Formatter<'a> {
         output
     }
 
+    fn indent(&self) -> String {
+        use crate::helper::{indent_space, indent_tab};
+        let result = if self.option.insert_spaces {
+            indent_space(self.depth * self.option.tab_size as usize)
+        } else {
+            indent_tab(self.depth)
+        };
+        result
+    }
+
+    /// depth + 1 したインデント用
+    fn indent_start(&self) -> String {
+        use crate::helper::{indent_space, indent_tab};
+        let result = if self.option.insert_spaces {
+            indent_space((self.depth + 1) * self.option.tab_size as usize)
+        } else {
+            indent_tab(self.depth + 1)
+        };
+        result
+    }
+
     /// cst の inner の要素を結合して文字列に変換する関数
     fn to_string_cst_inner(&self, text: &str, cst: &Cst, depth: usize) -> String {
         /*
@@ -217,7 +238,10 @@ impl<'a> Formatter<'a> {
                             Rule::constraint => {
                                 // 1つインデントを深くする
                                 let s = self.to_string_cst(text, now_cst, depth + 1);
-                                current + &newline + &indent_space(self.option.tab_size as usize, 1) + &s
+                                current
+                                    + &newline
+                                    + &indent_space(self.option.tab_size as usize, 1)
+                                    + &s
                             }
                             Rule::expr => {
                                 // 直前がコメント
@@ -911,8 +935,7 @@ impl<'a> Formatter<'a> {
                         current
                     } else if current.ends_with(&newline) {
                         current + &s
-                    } else if now_cst.rule == Rule::cmd_text_arg
-                    {
+                    } else if now_cst.rule == Rule::cmd_text_arg {
                         current + &s
                     } else {
                         current + sep + &s
@@ -1046,7 +1069,8 @@ impl<'a> Formatter<'a> {
             Rule::ctrl_then | Rule::ctrl_else => depth + 1,
             _ => depth,
         };
-        let start_indent = "\n".to_string() + &indent_space(self.option.tab_size as usize, new_depth);
+        let start_indent =
+            "\n".to_string() + &indent_space(self.option.tab_size as usize, new_depth);
         let end_indent = "\n".to_string() + &indent_space(self.option.tab_size as usize, depth);
 
         let output = self.to_string_cst_inner(text, cst, new_depth);
@@ -1320,7 +1344,10 @@ impl<'a> Formatter<'a> {
             // horizontal
             Rule::horizontal_single => output,
             Rule::horizontal_list => {
-                let sep = format!("\n{}", indent_space(self.option.tab_size as usize, new_depth));
+                let sep = format!(
+                    "\n{}",
+                    indent_space(self.option.tab_size as usize, new_depth)
+                );
                 let output = self_text
                     .split('\n')
                     .into_iter()
