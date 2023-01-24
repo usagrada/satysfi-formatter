@@ -6,3 +6,8 @@ pub fn indent_space(depth: usize) -> String {
     }
     result
 }
+
+#[inline]
+pub fn indent_tab(depth: usize) -> String {
+    String::from("\t".repeat(depth))
+}

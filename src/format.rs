@@ -1,4 +1,7 @@
-use crate::token::{Token, *};
+use crate::{
+    format::helper::indent_tab,
+    token::{Token, *},
+};
 mod helper;
 use lsp_types::FormattingOptions;
 use tree_sitter::{Node, Tree};
@@ -20,14 +23,22 @@ struct Formatter<'a> {
 impl<'a> Formatter<'a> {
     fn indent(&self) -> String {
         use self::helper::indent_space;
-        let result = indent_space(self.depth * self.config.tab_size as usize);
+        let result = if self.config.insert_spaces {
+            indent_space(self.depth * self.config.tab_size as usize)
+        } else {
+            indent_tab(self.depth)
+        };
         result
     }
 
     /// depth + 1 したインデント用
     fn indent_start(&self) -> String {
         use self::helper::indent_space;
-        let result = indent_space((self.depth + 1) * self.config.tab_size as usize);
+        let result = if self.config.insert_spaces {
+            indent_space((self.depth + 1) * self.config.tab_size as usize)
+        } else {
+            indent_tab(self.depth + 1)
+        };
         result
     }
     /// node を与えたときにテキストを返すための関数
@@ -72,7 +83,7 @@ fn format_source_file<'a>(data: &mut Formatter<'a>, node: &Node) {
         };
         output += &data.inner;
     }
-    data.output = output.trim().to_string() + "\n";
+    data.output = output.trim().to_string();
 }
 
 fn format_comment<'a>(data: &mut Formatter<'a>, node: &Node) {
