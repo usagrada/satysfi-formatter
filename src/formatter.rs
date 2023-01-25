@@ -1,6 +1,6 @@
-use super::OptionData;
 use crate::comment::{get_comments, to_comment_string, Comment};
 use crate::reserved_words::*;
+use lspower::lsp::FormattingOptions;
 use satysfi_parser::{Cst, CstText};
 use std::collections::VecDeque;
 
@@ -10,11 +10,11 @@ pub struct Formatter<'a> {
     pub comments: VecDeque<Comment>,
     pub depth: usize,
     pub output: String,
-    option: OptionData,
+    option: FormattingOptions,
 }
 
 impl<'a> Formatter<'a> {
-    pub fn new(csttext: &'a CstText, option: OptionData) -> Self {
+    pub fn new(csttext: &'a CstText, option: FormattingOptions) -> Self {
         let comments = get_comments(csttext);
         Self {
             text: &csttext.text,
@@ -29,10 +29,10 @@ impl<'a> Formatter<'a> {
     /// 文字列を format して出力する
     /// 前処理後処理もここで行う
     pub fn format(&self, input: &str, cst: &Cst, depth: usize) -> String {
-        let mut output = self.to_string_cst(input, &cst, depth);
+        let mut output = self.to_string_cst(input, cst, depth);
         // 末尾スペースを全て除去
         output = output
-            .split("\n")
+            .split('\n')
             .map(|line| line.trim_end())
             .collect::<Vec<_>>()
             .join("\n");
@@ -56,7 +56,7 @@ impl<'a> Formatter<'a> {
         use satysfi_parser::Rule;
         let csts = cst.inner.clone();
         // 関数内で改行するときはこれを使用する
-        let indent = indent_space(self.option.indent_space, depth);
+        let indent = indent_space(self.option.tab_size as usize, depth);
         let newline = format!("\n{indent}");
         let sep = &match cst.rule {
             Rule::block_cmd | Rule::inline_cmd => " ".to_string(),
@@ -75,6 +75,7 @@ impl<'a> Formatter<'a> {
             }
             Rule::horizontal_single => "".to_string(),
             // Rule::variant_constructor => " ".to_string(),
+            Rule::program_saty | Rule::program_satyh => newline.clone(),
             _ => " ".to_string(),
         };
 
@@ -109,7 +110,7 @@ impl<'a> Formatter<'a> {
                                 current
                                     + " <-"
                                     + &newline
-                                    + &indent_space(self.option.indent_space, 1)
+                                    + &indent_space(self.option.tab_size as usize, 1)
                                     + s.trim_start()
                             } else {
                                 current + " <- " + &s
@@ -217,7 +218,10 @@ impl<'a> Formatter<'a> {
                             Rule::constraint => {
                                 // 1つインデントを深くする
                                 let s = self.to_string_cst(text, now_cst, depth + 1);
-                                current + &newline + &indent_space(self.option.indent_space, 1) + &s
+                                current
+                                    + &newline
+                                    + &indent_space(self.option.tab_size as usize, 1)
+                                    + &s
                             }
                             Rule::expr => {
                                 // 直前がコメント
@@ -236,7 +240,7 @@ impl<'a> Formatter<'a> {
                                     current
                                         + " ="
                                         + &newline
-                                        + &indent_space(self.option.indent_space, 1)
+                                        + &indent_space(self.option.tab_size as usize, 1)
                                         + s.trim_start()
                                 } else {
                                     current + " = " + &s
@@ -249,7 +253,7 @@ impl<'a> Formatter<'a> {
                                     current
                                         + " ="
                                         + &newline
-                                        + &indent_space(self.option.indent_space, 1)
+                                        + &indent_space(self.option.tab_size as usize, 1)
                                         + &s
                                 } else {
                                     current + &s
@@ -346,7 +350,7 @@ impl<'a> Formatter<'a> {
                 }
                 let mut iter = csts.into_iter().peekable();
                 let mut output = String::new();
-                while iter.peek() != None {
+                while iter.peek().is_some() {
                     let now_cst = &iter.next().unwrap();
                     let s = self.to_string_cst(text, now_cst, depth);
                     let s = if now_cst.rule == Rule::unary {
@@ -376,17 +380,17 @@ impl<'a> Formatter<'a> {
                     };
                     // 次の要素が存在すれば結合
                     let next = iter.peek();
-                    if next != None
+                    if next.is_some()
                         && now_cst.rule != Rule::comments
                         && next.unwrap().rule == Rule::comments
                     {
                         output += sep;
-                    } else if next != None
+                    } else if next.is_some()
                         && (next.unwrap().rule == Rule::record_unit
                             || next.unwrap().rule == Rule::type_record_unit)
                     {
                         output += sep;
-                    } else if next == None && now_cst.rule == Rule::comments {
+                    } else if next.is_none() && now_cst.rule == Rule::comments {
                         output = output.trim_end().to_string();
                     };
                 }
@@ -503,14 +507,14 @@ impl<'a> Formatter<'a> {
 
                 let output = csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
-                    let current = match now_cst.rule {
+                    
+                    match now_cst.rule {
                         Rule::expr => current + "if " + &s,
                         Rule::ctrl_then => current + &newline + &s,
                         Rule::ctrl_else => current + &newline + &s,
                         Rule::comments => current + &newline + &s,
                         _ => unreachable!(),
-                    };
-                    current
+                    }
                 });
 
                 output
@@ -518,7 +522,8 @@ impl<'a> Formatter<'a> {
             Rule::ctrl_then | Rule::ctrl_else => {
                 let output = csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
-                    let output = if current.is_empty() {
+                    
+                    if current.is_empty() {
                         newline.clone() + &s
                     } else if s.is_empty() {
                         current
@@ -526,11 +531,10 @@ impl<'a> Formatter<'a> {
                         current + &s
                     } else {
                         current + sep + &s
-                    };
-                    output
+                    }
                 });
                 output
-                    .split("\n")
+                    .split('\n')
                     .filter(|line| !line.trim().is_empty())
                     .collect::<Vec<_>>()
                     .join("\n")
@@ -703,7 +707,7 @@ impl<'a> Formatter<'a> {
                                         let s = self.to_string_cst(text, now_cst, depth + 1);
                                         // 1つ深くする
                                         current
-                                            + &indent_space(self.option.indent_space, 1)
+                                            + &indent_space(self.option.tab_size as usize, 1)
                                             + s.trim_start()
                                     } else {
                                         current + s.trim_start()
@@ -725,7 +729,7 @@ impl<'a> Formatter<'a> {
                 let mut iter = csts.into_iter().peekable();
                 let mut now_cst = iter.next().unwrap();
                 let mut output = self.to_string_cst(text, &now_cst, depth);
-                while iter.peek() != None {
+                while iter.peek().is_some() {
                     // 次の要素が存在すれば結合
                     if now_cst.rule == Rule::type_optional {
                         output += " ?-> ";
@@ -751,7 +755,7 @@ impl<'a> Formatter<'a> {
                 let mut iter = csts.into_iter().peekable();
                 let first = iter.next().unwrap();
                 let mut output = self.to_string_cst(text, &first, depth);
-                while iter.peek() != None {
+                while iter.peek().is_some() {
                     let now_cst = &iter.next().unwrap();
                     let s = self.to_string_cst(text, now_cst, depth);
                     match now_cst.rule {
@@ -903,20 +907,22 @@ impl<'a> Formatter<'a> {
                 .trim_end()
                 .to_string(),
             Rule::block_cmd | Rule::inline_cmd => {
+                let mut last_cst_rule = Rule::comments; // 無視できるルールを入れておく
                 csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
-                    if current.is_empty() {
+                    let output = if current.is_empty() {
                         s
                     } else if s.is_empty() {
                         current
                     } else if current.ends_with(&newline) {
                         current + &s
-                    } else if now_cst.rule == Rule::cmd_text_arg && !self.option.command_args_space
-                    {
+                    } else if last_cst_rule == Rule::cmd_text_arg {
                         current + &s
                     } else {
                         current + sep + &s
-                    }
+                    };
+                    last_cst_rule = now_cst.rule;
+                    output
                 })
             }
             Rule::math_single => {
@@ -931,7 +937,7 @@ impl<'a> Formatter<'a> {
                         current
                     } else if current.ends_with(&newline) {
                         current + &s
-                    } else if last_token.starts_with("\\") {
+                    } else if last_token.starts_with('\\') {
                         current + sep + &s
                     } else if now_cst.rule == Rule::comments {
                         format!("{}{newline}{s}", current.trim_end())
@@ -942,7 +948,7 @@ impl<'a> Formatter<'a> {
                     } else {
                         current + sep + &s
                     };
-                    last_token = s.clone();
+                    last_token = s;
                     output
                 });
                 output
@@ -972,6 +978,8 @@ impl<'a> Formatter<'a> {
                         current
                     } else if current.ends_with(&newline) {
                         current + &s
+                    } else if s.starts_with("%\n") {
+                        current + &s
                     } else {
                         // 複数行の改行を省略して1行にする
                         let start = now_cst.span.start;
@@ -997,16 +1005,14 @@ impl<'a> Formatter<'a> {
                     current
                 } else if current.ends_with(&newline) {
                     current + &s
+                } else if now_cst.rule == Rule::bin_operator && s.trim() == "|>" {
+                    current + &s
                 } else {
-                    if now_cst.rule == Rule::bin_operator && s.trim() == "|>" {
-                        current + &s
-                    } else {
-                        current + sep + &s
-                    }
+                    current + sep + &s
                 };
                 output
             }),
-            _ => {
+            Rule::program_saty => {
                 csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
                     let output = if current.is_empty() {
@@ -1015,15 +1021,31 @@ impl<'a> Formatter<'a> {
                         current
                     } else if current.ends_with(&newline) {
                         current + &s
+                    } else if s.starts_with("%\n") {
+                        current + &s
                     } else {
                         current + sep + &s
                     };
-
-                    if cst.rule == Rule::program_saty && now_cst.rule == Rule::preamble {
+                    if now_cst.rule == Rule::preamble {
                         // program saty だった場合、in を入れる
                         output + "\n" + RESERVED_WORD.in_stmt + "\n\n"
                     } else {
                         output
+                    }
+                })
+            },
+            _ => {
+                csts.iter().fold(String::new(), |current, now_cst| {
+                    let s = self.to_string_cst(text, now_cst, depth);
+                    
+                    if current.is_empty() {
+                        s
+                    } else if s.is_empty() {
+                        current
+                    } else if current.ends_with(&newline) {
+                        current + &s
+                    } else {
+                        current + sep + &s
                     }
                 })
             }
@@ -1046,8 +1068,9 @@ impl<'a> Formatter<'a> {
             Rule::ctrl_then | Rule::ctrl_else => depth + 1,
             _ => depth,
         };
-        let start_indent = "\n".to_string() + &indent_space(self.option.indent_space, new_depth);
-        let end_indent = "\n".to_string() + &indent_space(self.option.indent_space, depth);
+        let start_indent =
+            "\n".to_string() + &indent_space(self.option.tab_size as usize, new_depth);
+        let end_indent = "\n".to_string() + &indent_space(self.option.tab_size as usize, depth);
 
         let output = self.to_string_cst_inner(text, cst, new_depth);
         let self_text = text.get(cst.span.start..cst.span.end).unwrap().to_string();
@@ -1158,6 +1181,8 @@ impl<'a> Formatter<'a> {
             Rule::block_text => {
                 if !output.is_empty() {
                     format!("'<{start_indent}{output}{end_indent}>")
+                } else if output.starts_with("%\n") {
+                    format!("'<{output}{end_indent}>")
                 } else {
                     format!("'<{output}>")
                 }
@@ -1199,7 +1224,7 @@ impl<'a> Formatter<'a> {
                     // 1つ深くする
                     format!(
                         "{start_indent}{}{self_text}",
-                        indent_space(self.option.indent_space, 1)
+                        indent_space(self.option.tab_size as usize, 1)
                     )
                 } else {
                     self_text
@@ -1230,23 +1255,32 @@ impl<'a> Formatter<'a> {
                 }
             }
             Rule::cmd_text_arg | Rule::horizontal_text => {
+                let output = output.trim();
                 // 括弧の種類を取得
                 let start_arg = self_text.chars().next().unwrap();
                 let end_arg = self_text.chars().last().unwrap();
                 // コメントで開始 or 改行を含んでいたら、改行を入れる
                 let include_comment = output.starts_with('%');
                 let include_kaigyou =
-                    output.find('\n') != None || start_arg == '<' || include_comment;
-                match output.trim().len() {
-                    0 => format!("{start_arg}{end_arg}"),
-                    // easytable
-                    _ if output.starts_with(char::is_whitespace) => {
-                        format!("{start_arg}\n{output}{end_arg}")
+                    output.find('\n').is_some() || start_arg == '<' || include_comment;
+                if output.starts_with("%\n") {
+                    if include_kaigyou {
+                        format!("{start_arg}{output}{end_indent}{end_arg}")
+                    } else {
+                        format!("{start_arg} {output} {end_arg}")
                     }
-                    num if include_kaigyou || num > self.option.row_length => {
-                        format!("{start_arg}{start_indent}{output}{end_indent}{end_arg}")
+                } else {
+                    match output.trim().len() {
+                        0 => format!("{start_arg}{end_arg}"),
+                        // easytable
+                        _ if output.starts_with(char::is_whitespace) => {
+                            format!("{start_arg}\n{output}{end_arg}")
+                        }
+                        _num if include_kaigyou => {
+                            format!("{start_arg}{start_indent}{output}{end_indent}{end_arg}")
+                        }
+                        _ => format!("{start_arg} {output} {end_arg}"),
                     }
-                    _ => format!("{start_arg} {output} {end_arg}"),
                 }
             }
             Rule::inline_cmd => {
@@ -1320,7 +1354,10 @@ impl<'a> Formatter<'a> {
             // horizontal
             Rule::horizontal_single => output,
             Rule::horizontal_list => {
-                let sep = format!("\n{}", indent_space(self.option.indent_space, new_depth));
+                let sep = format!(
+                    "\n{}",
+                    indent_space(self.option.tab_size as usize, new_depth)
+                );
                 let output = self_text
                     .split('\n')
                     .into_iter()
@@ -1336,18 +1373,18 @@ impl<'a> Formatter<'a> {
                 // output
                 format!(
                     "{}{output}",
-                    indent_space(self.option.indent_space, new_depth)
+                    indent_space(self.option.tab_size as usize, new_depth)
                 )
             }
             Rule::horizontal_bullet_list => output, // TODO
             Rule::horizontal_bullet => output,      // TODO
             Rule::horizontal_bullet_star => {
-                " ".repeat(self.option.indent_space / 2)
+                " ".repeat(self.option.tab_size as usize / 2)
                     .repeat(self_text.len() - 1)
                     + &self_text
             }
             Rule::regular_text => {
-                let sep = format!("\n{}", indent_space(self.option.indent_space, depth));
+                let sep = format!("\n{}", indent_space(self.option.tab_size as usize, depth));
                 let output = self_text
                     .split('\n')
                     .into_iter()

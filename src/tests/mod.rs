@@ -1,4 +1,5 @@
-use crate::{format, OptionData};
+use crate::format;
+use lspower::lsp::FormattingOptions;
 
 mod comment;
 mod common;
@@ -10,7 +11,11 @@ mod module;
 mod space;
 
 fn test_tmpl(input: &str, expect: &str) {
-    let option = OptionData::default();
+    let option = FormattingOptions {
+        tab_size: 4,
+        insert_spaces: true,
+        ..Default::default()
+    };
     let output = format(input, option);
     assert_eq!(output, expect);
 }
