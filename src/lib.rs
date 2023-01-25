@@ -1,5 +1,4 @@
 mod comment;
-mod format_lsp;
 mod formatter;
 mod helper;
 mod reserved_words;
@@ -62,7 +61,7 @@ pub fn formatting(input: &str, option: FormattingOptions) -> Vec<TextEdit> {
     }
     let csttext = csttext.unwrap();
     let csttext = csttext_insert_comments(csttext);
-    let formatter = format_lsp::Formatter::new(&csttext, option);
+    let formatter = Formatter::new(&csttext, option);
     let output = formatter.format(input, &csttext.cst, 0);
     let mut edits = Vec::new();
     edits.push(TextEdit {
