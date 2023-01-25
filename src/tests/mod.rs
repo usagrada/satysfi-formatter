@@ -14,7 +14,11 @@ mod module;
 mod space;
 
 fn test_tmpl(input: &str, expect: &str) {
-    let option = FormattingOptions::default();
+    let option = FormattingOptions {
+        tab_size: 4,
+        insert_spaces: true,
+        ..Default::default()
+    };
     let output = format(input, option);
     assert_eq!(output, expect);
 }

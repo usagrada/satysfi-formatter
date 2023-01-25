@@ -911,9 +911,6 @@ impl<'a> Formatter<'a> {
                         current
                     } else if current.ends_with(&newline) {
                         current + &s
-                    } else if now_cst.rule == Rule::cmd_text_arg
-                    {
-                        current + &s
                     } else {
                         current + sep + &s
                     }
