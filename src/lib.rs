@@ -48,7 +48,7 @@ pub fn format(input: &str, option: FormattingOptions) -> String {
     output
 }
 
-pub fn format_lsp(input: &str, option: FormattingOptions) -> Vec<TextEdit> {
+pub fn formatting(input: &str, option: FormattingOptions) -> Vec<TextEdit> {
     let csttext = CstText::parse(input, grammar::program);
     if csttext.is_err() {
         let err = csttext.unwrap_err();
