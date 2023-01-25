@@ -42,9 +42,9 @@ pub fn format(input: &str, option: FormattingOptions) -> String {
     visualize_csttext_tree(&csttext);
 
     let depth = 0;
-    let output = formatter.format(input, &csttext.cst, depth);
+    
 
-    output
+    formatter.format(input, &csttext.cst, depth)
 }
 
 pub fn formatting(input: &str, option: FormattingOptions) -> Vec<TextEdit> {
@@ -72,7 +72,7 @@ pub fn formatting(input: &str, option: FormattingOptions) -> Vec<TextEdit> {
             },
             end: lspower::lsp::Position {
                 line: csttext.lines.len() as u32,
-                character: csttext.text.split("\n").last().unwrap().len() as u32,
+                character: csttext.text.split('\n').last().unwrap().len() as u32,
             },
         },
         new_text: output,

@@ -29,10 +29,10 @@ impl<'a> Formatter<'a> {
     /// 文字列を format して出力する
     /// 前処理後処理もここで行う
     pub fn format(&self, input: &str, cst: &Cst, depth: usize) -> String {
-        let mut output = self.to_string_cst(input, &cst, depth);
+        let mut output = self.to_string_cst(input, cst, depth);
         // 末尾スペースを全て除去
         output = output
-            .split("\n")
+            .split('\n')
             .map(|line| line.trim_end())
             .collect::<Vec<_>>()
             .join("\n");
@@ -350,7 +350,7 @@ impl<'a> Formatter<'a> {
                 }
                 let mut iter = csts.into_iter().peekable();
                 let mut output = String::new();
-                while iter.peek() != None {
+                while iter.peek().is_some() {
                     let now_cst = &iter.next().unwrap();
                     let s = self.to_string_cst(text, now_cst, depth);
                     let s = if now_cst.rule == Rule::unary {
@@ -380,17 +380,17 @@ impl<'a> Formatter<'a> {
                     };
                     // 次の要素が存在すれば結合
                     let next = iter.peek();
-                    if next != None
+                    if next.is_some()
                         && now_cst.rule != Rule::comments
                         && next.unwrap().rule == Rule::comments
                     {
                         output += sep;
-                    } else if next != None
+                    } else if next.is_some()
                         && (next.unwrap().rule == Rule::record_unit
                             || next.unwrap().rule == Rule::type_record_unit)
                     {
                         output += sep;
-                    } else if next == None && now_cst.rule == Rule::comments {
+                    } else if next.is_none() && now_cst.rule == Rule::comments {
                         output = output.trim_end().to_string();
                     };
                 }
@@ -507,14 +507,14 @@ impl<'a> Formatter<'a> {
 
                 let output = csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
-                    let current = match now_cst.rule {
+                    
+                    match now_cst.rule {
                         Rule::expr => current + "if " + &s,
                         Rule::ctrl_then => current + &newline + &s,
                         Rule::ctrl_else => current + &newline + &s,
                         Rule::comments => current + &newline + &s,
                         _ => unreachable!(),
-                    };
-                    current
+                    }
                 });
 
                 output
@@ -522,7 +522,8 @@ impl<'a> Formatter<'a> {
             Rule::ctrl_then | Rule::ctrl_else => {
                 let output = csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
-                    let output = if current.is_empty() {
+                    
+                    if current.is_empty() {
                         newline.clone() + &s
                     } else if s.is_empty() {
                         current
@@ -530,11 +531,10 @@ impl<'a> Formatter<'a> {
                         current + &s
                     } else {
                         current + sep + &s
-                    };
-                    output
+                    }
                 });
                 output
-                    .split("\n")
+                    .split('\n')
                     .filter(|line| !line.trim().is_empty())
                     .collect::<Vec<_>>()
                     .join("\n")
@@ -729,7 +729,7 @@ impl<'a> Formatter<'a> {
                 let mut iter = csts.into_iter().peekable();
                 let mut now_cst = iter.next().unwrap();
                 let mut output = self.to_string_cst(text, &now_cst, depth);
-                while iter.peek() != None {
+                while iter.peek().is_some() {
                     // 次の要素が存在すれば結合
                     if now_cst.rule == Rule::type_optional {
                         output += " ?-> ";
@@ -755,7 +755,7 @@ impl<'a> Formatter<'a> {
                 let mut iter = csts.into_iter().peekable();
                 let first = iter.next().unwrap();
                 let mut output = self.to_string_cst(text, &first, depth);
-                while iter.peek() != None {
+                while iter.peek().is_some() {
                     let now_cst = &iter.next().unwrap();
                     let s = self.to_string_cst(text, now_cst, depth);
                     match now_cst.rule {
@@ -937,7 +937,7 @@ impl<'a> Formatter<'a> {
                         current
                     } else if current.ends_with(&newline) {
                         current + &s
-                    } else if last_token.starts_with("\\") {
+                    } else if last_token.starts_with('\\') {
                         current + sep + &s
                     } else if now_cst.rule == Rule::comments {
                         format!("{}{newline}{s}", current.trim_end())
@@ -948,7 +948,7 @@ impl<'a> Formatter<'a> {
                     } else {
                         current + sep + &s
                     };
-                    last_token = s.clone();
+                    last_token = s;
                     output
                 });
                 output
@@ -1005,12 +1005,10 @@ impl<'a> Formatter<'a> {
                     current
                 } else if current.ends_with(&newline) {
                     current + &s
+                } else if now_cst.rule == Rule::bin_operator && s.trim() == "|>" {
+                    current + &s
                 } else {
-                    if now_cst.rule == Rule::bin_operator && s.trim() == "|>" {
-                        current + &s
-                    } else {
-                        current + sep + &s
-                    }
+                    current + sep + &s
                 };
                 output
             }),
@@ -1039,7 +1037,8 @@ impl<'a> Formatter<'a> {
             _ => {
                 csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
-                    let output = if current.is_empty() {
+                    
+                    if current.is_empty() {
                         s
                     } else if s.is_empty() {
                         current
@@ -1047,8 +1046,7 @@ impl<'a> Formatter<'a> {
                         current + &s
                     } else {
                         current + sep + &s
-                    };
-                    output
+                    }
                 })
             }
         };
@@ -1264,7 +1262,7 @@ impl<'a> Formatter<'a> {
                 // コメントで開始 or 改行を含んでいたら、改行を入れる
                 let include_comment = output.starts_with('%');
                 let include_kaigyou =
-                    output.find('\n') != None || start_arg == '<' || include_comment;
+                    output.find('\n').is_some() || start_arg == '<' || include_comment;
                 if output.starts_with("%\n") {
                     if include_kaigyou {
                         format!("{start_arg}{output}{end_indent}{end_arg}")
@@ -1278,7 +1276,7 @@ impl<'a> Formatter<'a> {
                         _ if output.starts_with(char::is_whitespace) => {
                             format!("{start_arg}\n{output}{end_arg}")
                         }
-                        num if include_kaigyou => {
+                        _num if include_kaigyou => {
                             format!("{start_arg}{start_indent}{output}{end_indent}{end_arg}")
                         }
                         _ => format!("{start_arg} {output} {end_arg}"),

@@ -1,8 +1,5 @@
-
-
-use lspower::lsp::FormattingOptions;
-
 use crate::format;
+use lspower::lsp::FormattingOptions;
 
 mod comment;
 mod common;
