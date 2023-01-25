@@ -507,7 +507,7 @@ impl<'a> Formatter<'a> {
 
                 let output = csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
-                    
+
                     match now_cst.rule {
                         Rule::expr => current + "if " + &s,
                         Rule::ctrl_then => current + &newline + &s,
@@ -522,7 +522,7 @@ impl<'a> Formatter<'a> {
             Rule::ctrl_then | Rule::ctrl_else => {
                 let output = csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
-                    
+
                     if current.is_empty() {
                         newline.clone() + &s
                     } else if s.is_empty() {
@@ -907,22 +907,17 @@ impl<'a> Formatter<'a> {
                 .trim_end()
                 .to_string(),
             Rule::block_cmd | Rule::inline_cmd => {
-                let mut last_cst_rule = Rule::comments; // 無視できるルールを入れておく
                 csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
-                    let output = if current.is_empty() {
+                    if current.is_empty() {
                         s
                     } else if s.is_empty() {
                         current
                     } else if current.ends_with(&newline) {
                         current + &s
-                    } else if last_cst_rule == Rule::cmd_text_arg {
-                        current + &s
                     } else {
                         current + sep + &s
-                    };
-                    last_cst_rule = now_cst.rule;
-                    output
+                    }
                 })
             }
             Rule::math_single => {
@@ -1037,7 +1032,7 @@ impl<'a> Formatter<'a> {
             _ => {
                 csts.iter().fold(String::new(), |current, now_cst| {
                     let s = self.to_string_cst(text, now_cst, depth);
-                    
+
                     if current.is_empty() {
                         s
                     } else if s.is_empty() {
