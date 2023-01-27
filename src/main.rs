@@ -37,5 +37,4 @@ fn main() {
         (None, true) => fs::write(&cli.file, &output).expect("Failed to write file"),
         (None, false) => println!("{}", output),
     }
-    println!("{:?}", output)
 }
