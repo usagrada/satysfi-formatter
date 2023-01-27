@@ -46,7 +46,7 @@ document(|
     \SATySFi;を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。
     \footnote{ このドキュメントは format のテストも兼ねて書いています。 }
     \footnote{
-      \SATySFi;の文法に習熟している訳ではないため、parserを元に復元するという手法によりフォーマットを実現おり、容易にビルドが失敗するようになります。(22/3/11 現在)
+      愚直な実装をしているため、期待するフォーマットが得られない場合が存在します。その場合は、 Issue やPull Request いただけると幸いです。(23/1/27 現在)
     }
   }
   +section{ formatter の install 方法 }<
@@ -84,7 +84,7 @@ cargo install --path .
       `satysfi-parser`
       で CST 化し、文字列に戻して結合しています。
       % comment
-      現状では、かなり愚直な実装をしている + 一部のみしか対応していない(コメントが消去される、改行入れて欲しいのに消える etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
+      かなり愚直な実装をしている + 一部のみしか対応していない(改行入れて欲しいのに消える etc.)ため、 修正等があれば、 Pull Request や Issue にお願いいたします。
       % comment
       Issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。 その際、実際にそれがコンパイル可能である必要はありません。
     }
@@ -97,8 +97,7 @@ cargo install --path .
     >
     +subsection{ issue }<
       +p{
-        以下にサンプル（
-        `src/tests/common.rs` `test1`と同じ）を載せておきます。
+        以下にサンプル（`src/tests/common.rs` `test1`と同じ）を載せておきます。
         `r#""`の内部に書かれたテキストはスペースや改行を含め全てそのまま出力されるため、
         スペース数改行数等の違いにより、テストが容易に落ちます。
         \cmd-rust (`#[test]
@@ -197,13 +196,6 @@ document(|title = {hello}|)'<
         基本の indent は 4 です。
         引数に `-i number` を書くことでインデントのスペースを管理できます。
         \cmd (`satysfi-fmt -i 2 doc/draft.saty -o doc/doc.saty`);
-      }
-    >
-    +subsection{ コマンド名の後のスペース }<
-      +p{
-        `+p`, `\listing` のようなブロックコマンド及びインラインコマンドとその後ろの括弧の間にスペースを入れるかどうかを制御できます。
-        デフォルトではスペース無しになっています。スペースを入れたい場合には、引数に `--cspace` を追加してください。
-        \cmd (`satysfi-fmt --cspace doc/draft.saty -o doc/doc.saty`);
       }
     >
   >
