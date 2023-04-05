@@ -5,22 +5,52 @@ use crate::token::Token;
 use super::{Formatter, format_ignore, format_literal};
 
 pub(crate) fn format_headers<'a>(data: &mut Formatter<'a>, node: &Node) {
-    let mut output = String::new();
+    let mut output_vec = vec![];
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
             Token::whitespace => {
                 // println!("whitespace: {:?}", child.range());
                 format_ignore(data, &child);
             }
-            token => {
+            _ => {
                 let is_inner = format_header_inner(data, &child);
                 if !is_inner {
-                    unreachable!("{}", token)
+                    unreachable!("headers: {}", child.kind())
                 }
             }
         }
-        output += &data.inner;
+        output_vec.push(data.inner.clone());
     }
+    eprintln!("output_vec: {:?}", output_vec);
+
+    let output = {
+        output_vec.sort_by(|line1, line2|{
+            // use package open pkgname
+            // use package pkgname
+            match (line1.contains(" of "), line2.contains(" of ")) {
+                (true, true) | (false, false) => {
+                    match (line1.contains(" open "), line2.contains(" open ")) {
+                        (true, true) | (false, false) => {
+                            line1.cmp(line2)
+                        }
+                        (true, false) => {
+                            std::cmp::Ordering::Greater
+                        }
+                        (false, true) => {
+                            std::cmp::Ordering::Less
+                        }
+                    }
+                }
+                (true, false) => {
+                    std::cmp::Ordering::Greater
+                }
+                (false, true) => {
+                    std::cmp::Ordering::Less
+                }
+            }
+        });
+        output_vec.join("")
+    };
     data.inner = output;
 }
 
@@ -43,7 +73,7 @@ fn format_header_inner<'a>(data: &mut Formatter<'a>, node: &Node) -> bool {
         // Token::header_stage => format_header_stage(data, node),
         _ => {
             println!("header: {:?}", node.kind());
-            unreachable!()
+            return false;
         }
     }
     return true;
