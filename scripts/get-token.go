@@ -43,6 +43,8 @@ func main() {
 			tokenList = append(tokenList, token)
 		}
 	}
+	tokenList = append(tokenList, "literal_string")
+	tokenList = append(tokenList, "inline_token")
 
 	fmt.Println("#[allow(dead_code, non_camel_case_types)]")
 	fmt.Println("#[derive(Debug, Clone, PartialEq, PartialOrd)]")
@@ -50,8 +52,48 @@ func main() {
 	for _, token := range tokenList {
 		fmt.Println("\t" + token + ",")
 	}
+
 	fmt.Println("\tother(String),")
 	fmt.Println("}")
+
+	implTokenFunc(tokenList)
+}
+
+func implTokenFunc(tokenList []string) {
+	fmt.Println("")
+
+	fmt.Println("impl Token {")
+	fmt.Println("\tpub fn value(&self) -> String {")
+	fmt.Println("\t\tself.to_string()")
+	fmt.Println("\t}")
+	fmt.Println("}")
+
+	fmt.Println("")
+
+	fmt.Println(`impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}`)
+
+	fmt.Println("")
+
+	fmt.Println("impl Into<Token> for &str {")
+	fmt.Println("\tfn into(self) -> Token {")
+	fmt.Println("\t\tmatch self {")
+	for _, token := range tokenList {
+		fmt.Println("\t\t\t\"" + token + "\" => Token::" + token + ",")
+	}
+	fmt.Println("\t\t\ttoken => Token::other(token.to_string()),")
+	fmt.Println("\t\t}")
+	fmt.Println("\t}")
+	fmt.Println("}")
+
+	fmt.Println("")
+
+	fmt.Println(`pub fn token_to_string(token: Token) -> String {
+    token.to_string()
+}`)
 }
 
 func fmtToken(data string) string {

@@ -3,11 +3,14 @@ use crate::{
     token::{Token, *},
 };
 mod helper;
-use lsp_types::FormattingOptions;
+mod pkg_config;
+mod header;
+mod expr;
+use lspower::lsp::FormattingOptions;
 use tree_sitter::{Node, Tree};
 
 #[derive(Debug, Clone)]
-struct Formatter<'a> {
+pub(crate) struct Formatter<'a> {
     // 入力
     input: &'a str,
     // 出力
@@ -95,15 +98,18 @@ fn format_program_saty<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
+            Token::pkg_config => {
+                pkg_config::format_config(data, &child);
+            }
             Token::headers => {
-                format_headers(data, &child);
+                header::format_headers(data, &child);
                 data.inner += (data.indent() + "\n").as_str();
             }
             // Token::preamble => {
             //     format_preamble(data, &child);
             // }
-            token if LIST_EXPR.contains(&token) || LIST_UNARY.contains(&token) => {
-                format_expr(data, &child);
+            token if LIST_EXPR.contains(&token) => {
+                expr::format_expr(data, &child);
             }
             Token::whitespace => {
                 format_ignore(data, &child);
@@ -133,15 +139,18 @@ fn format_program_satyh<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
+            Token::pkg_config => {
+                pkg_config::format_config(data, &child);
+            }
             Token::headers => {
-                format_headers(data, &child);
+                header::format_headers(data, &child);
                 data.inner += (data.indent() + "\n").as_str();
             }
-            Token::preamble => {
-                format_preamble(data, &child);
-            }
-            token if LIST_EXPR.contains(&token) || LIST_UNARY.contains(&token) => {
-                format_expr(data, &child);
+            // Token::preamble => {
+            //     format_preamble(data, &child);
+            // }
+            token if LIST_EXPR.contains(&token) => {
+                expr::format_expr(data, &child);
             }
             Token::whitespace => {
                 format_ignore(data, &child);
@@ -167,122 +176,18 @@ fn format_program_satyh<'a>(data: &mut Formatter<'a>, node: &Node) {
     data.inner = output;
 }
 
-fn format_headers<'a>(data: &mut Formatter<'a>, node: &Node) {
-    let mut output = String::new();
-    for child in node.children(&mut node.walk()) {
-        match child.kind().into() {
-            Token::whitespace => {
-                // println!("whitespace: {:?}", child.range());
-                format_ignore(data, &child);
-            }
-            token => {
-                let is_inner = format_header_inner(data, &child);
-                if !is_inner {
-                    unreachable!("{}", token)
-                }
-            }
-        }
-        output += &data.inner;
-    }
-    data.inner = output;
-}
-
-#[inline]
-fn format_header_inner<'a>(data: &mut Formatter<'a>, node: &Node) -> bool {
-    match node.kind().into() {
-        Token::header_require => format_header_require(data, node),
-        Token::header_import => format_header_import(data, node),
-        Token::other(token) => match token.as_str() {
-            "pkgname" => {
-                let text = data.node_to_text_trim(&node);
-                data.inner = text;
-            }
-            "\n" => {
-                data.inner = "\n".to_string();
-            }
-            _ => {
-                unreachable!("header inner: {}", token)
-            }
-        },
-        // Token::header_stage => format_header_stage(data, node),
-        _ => {
-            println!("header: {:?}", node.kind());
-            unreachable!()
-        }
-    }
-    return true;
-}
-
-fn format_header_import<'a>(data: &mut Formatter<'a>, node: &Node) {
-    let mut output = String::new();
-    for child in node.children(&mut node.walk()) {
-        match child.kind().into() {
-            Token::whitespace => {
-                format_ignore(data, &child);
-            }
-            Token::other(token) => {
-                data.output += &token;
-                if token == "@import:" {
-                    data.inner = token;
-                } else if token == "pkgname" {
-                    let text = data.node_to_text_trim(&child);
-                    output += " ";
-                    data.inner = text;
-                } else {
-                    unimplemented!()
-                }
-            }
-            _ => {
-                unreachable!()
-            }
-        }
-        output += &data.inner;
-    }
-    output += "\n";
-    data.inner = output;
-}
-
-fn format_header_require<'a>(data: &mut Formatter<'a>, node: &Node) {
-    let mut output = String::new();
-    for child in node.children(&mut node.walk()) {
-        match child.kind().into() {
-            Token::other(token) => {
-                if token == "@require:" {
-                    data.inner = token;
-                } else if token == "pkgname" {
-                    // format_pkg_name(data, &child);
-                    let text = data.node_to_text_trim(&child);
-                    output += " ";
-                    data.inner = text;
-                } else {
-                    unimplemented!()
-                }
-            }
-            Token::whitespace => {
-                // format_whitespace(data, &child);
-                data.inner = "".to_string();
-            }
-            _ => {
-                unreachable!()
-            }
-        }
-        output += &data.inner;
-    }
-    output += "\n";
-    data.inner = output;
-}
 
 fn format_preamble<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            Token::let_stmt => {
-                format_let_stmt(data, &child);
-            }
-            Token::open_stmt => {
-                // format_open_stmt(data, &child);
-                data.inner = data.node_to_text(&child);
-            }
+            // Token::let_stmt => {
+            //     format_let_stmt(data, &child);
+            // }
+            // Token::open_stmt => {
+            //     // format_open_stmt(data, &child);
+            //     data.inner = data.node_to_text(&child);
+            // }
             Token::whitespace => {
                 format_ignore(data, &child);
             }
@@ -297,13 +202,13 @@ fn format_preamble<'a>(data: &mut Formatter<'a>, node: &Node) {
 
 fn format_type_expr<'a>(data: &mut Formatter<'a>, node: &Node) {
     match node.kind().into() {
-        Token::type_fun => format_type_fun(data, node),
-        Token::type_prod => format_type_prod(data, node),
+        // Token::type_fun => format_type_fun(data, node),
+        // Token::type_prod => format_type_prod(data, node),
         Token::type_block_cmd => format_type_block_cmd(data, node),
         Token::type_math_cmd => format_type_math_cmd(data, node),
         Token::type_application => format_type_application(data, node),
         Token::type_record => format_type_record(data, node),
-        Token::type_param => format_type_param(data, node),
+        // Token::type_param => format_type_param(data, node),
         Token::type_name => format_type_name(data, node),
         Token::other(s) => match s.as_str() {
             "(" => {
@@ -377,9 +282,9 @@ fn format_type_inline_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            Token::type_list => {
-                format_type_list(data, &child);
-            }
+            // Token::type_list => {
+            //     format_type_list(data, &child);
+            // }
             Token::other(s) => match s.as_str() {
                 "inline-cmd" => {
                     data.inner = s;
@@ -401,9 +306,9 @@ fn format_type_block_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            Token::type_list => {
-                format_type_list(data, &child);
-            }
+            // Token::type_list => {
+            //     format_type_list(data, &child);
+            // }
             Token::other(s) => match s.as_str() {
                 "inline-cmd" => {
                     data.inner = s;
@@ -425,9 +330,9 @@ fn format_type_math_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            Token::type_list => {
-                format_type_list(data, &child);
-            }
+            // Token::type_list => {
+            //     format_type_list(data, &child);
+            // }
             Token::other(s) => match s.as_str() {
                 "math-cmd" => {
                     data.inner = s;
@@ -480,9 +385,9 @@ fn format_type_record<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            Token::type_record_unit => {
-                format_type_record_unit(data, &child);
-            }
+            // Token::type_record_unit => {
+            //     format_type_record_unit(data, &child);
+            // }
             Token::other(s) => match s.as_str() {
                 "|)" => {
                     data.inner = s;
@@ -510,9 +415,9 @@ fn format_type_record_unit<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            Token::identifier => {
-                format_identifier(data, &child);
-            }
+            // Token::identifier => {
+            //     format_identifier(data, &child);
+            // }
             token if LIST_TYPE_EXPR.contains(&token) => {
                 format_type_expr(data, &child);
             }
@@ -550,13 +455,13 @@ fn format_type_param<'a>(data: &mut Formatter<'a>, node: &Node) {
 fn format_type_name<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
-        match child.kind().into() {
-            Token::identifier => {
-                format_identifier(data, &child);
-            }
-            Token::modvar => {
-                format_modvar(data, &child);
-            }
+        match child.kind() {
+            // Token::identifier => {
+            //     format_identifier(data, &child);
+            // }
+            // Token::modvar => {
+            //     format_modvar(data, &child);
+            // }
             _ => {
                 unreachable!()
             }
@@ -579,7 +484,7 @@ fn format_let_stmt<'a>(data: &mut Formatter<'a>, node: &Node) {
     }
     let expr = node.child_by_field_name("expr");
     if let Some(expr) = expr {
-        format_expr(data, &expr);
+        expr::format_expr(data, &expr);
         let expr_text = data.inner.clone();
         println!("expr_text: {}", expr_text);
         output += " ";
@@ -587,8 +492,8 @@ fn format_let_stmt<'a>(data: &mut Formatter<'a>, node: &Node) {
     }
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            token if LIST_EXPR.contains(&token) | LIST_UNARY.contains(&token) => {
-                format_expr(data, &child);
+            token if LIST_EXPR.contains(&token) => {
+                expr::format_expr(data, &child);
             }
             Token::whitespace => {
                 format_ignore(data, &child);
@@ -616,9 +521,9 @@ fn format_let_rec_stmt<'a>(data: &mut Formatter<'a>, node: &Node) {
     let pattern = node.child_by_field_name("pattern");
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            Token::let_rec_inner => {
-                format_let_rec_inner(data, &child);
-            }
+            // Token::let_rec_inner => {
+            //     format_let_rec_inner(data, &child);
+            // }
             Token::whitespace => {
                 format_ignore(data, &child);
             }
@@ -644,78 +549,6 @@ fn format_let_rec_inner<'a>(data: &mut Formatter<'a>, node: &Node) {}
 
 fn format_pattern<'a>(data: &mut Formatter<'a>, node: &Node) {
     data.inner = data.node_to_text(node);
-}
-
-fn format_expr<'a>(data: &mut Formatter<'a>, node: &Node) {
-    match node.kind().into() {
-        Token::match_expr => {
-            todo!()
-        }
-        Token::bind_stmt => {
-            todo!()
-        }
-        Token::ctrl_while => {
-            todo!()
-        }
-        Token::ctrl_if => {
-            todo!()
-        }
-        Token::lambda => {
-            todo!()
-        }
-        Token::assignment => {
-            todo!()
-        }
-        Token::binary_expr => {
-            todo!()
-        }
-        Token::application => {
-            format_application(data, node);
-        }
-        Token::unary_operator_expr => {
-            todo!()
-        }
-        Token::command_application => {
-            todo!()
-        }
-        Token::variant_constructor => {
-            todo!()
-        }
-        Token::record_member => {
-            todo!()
-        }
-        Token::_unary => {
-            todo!()
-        }
-        token if LIST_UNARY.contains(&token) => {
-            format_unary(data, node);
-        }
-        _ => {
-            unreachable!()
-        }
-    }
-}
-
-fn format_application<'a>(data: &mut Formatter<'a>, node: &Node) {
-    let mut output = String::new();
-    for child in node.children(&mut node.walk()) {
-        match child.kind().into() {
-            Token::application => {
-                format_application(data, &child);
-            }
-            Token::identifier => {
-                format_identifier(data, &child);
-            }
-            token if LIST_UNARY.contains(&token) => {
-                format_unary(data, &child);
-            }
-            _ => {
-                unreachable!();
-            }
-        }
-        output += &data.inner;
-    }
-    data.inner = output;
 }
 
 fn format_identifier<'a>(data: &mut Formatter<'a>, node: &Node) {
@@ -744,40 +577,37 @@ fn format_unary<'a>(data: &mut Formatter<'a>, node: &Node) {
         Token::math_list => {
             todo!();
         }
-        Token::record => {
-            format_record(data, node);
-        }
-        Token::list => {
-            todo!();
-        }
-        Token::tuple => {
-            todo!();
-        }
+        // Token::record => {
+        //     format_record(data, node);
+        // }
+        // Token::list => {
+        //     todo!();
+        // }
+        // Token::tuple => {
+        //     todo!();
+        // }
         Token::binary_operator => {
             todo!();
         }
         token if LIST_EXPR.contains(&token) => {
             let mut output = String::new();
             output += "(";
-            format_expr(data, node);
+            expr::format_expr(data, node);
             output += &data.inner;
             output += ")";
             data.inner = output;
         }
-        Token::expr_with_mod => {
-            todo!();
-        }
-        Token::modvar => {
-            todo!();
-        }
+        // Token::expr_with_mod => {
+        //     todo!();
+        // }
+        // Token::modvar => {
+        //     todo!();
+        // }
         // Token::_literal => {
         //     todo!();
         // }
         token if LIST_LITERAL.contains(&token) => {
             format_literal(data, node);
-        }
-        Token::identifier => {
-            format_identifier(data, node);
         }
         _ => {
             unreachable!();
@@ -790,9 +620,6 @@ fn format_record<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut records_vec = vec![];
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            token if LIST_UNARY.contains(&token) => {
-                format_unary(data, &child);
-            }
             token if LIST_RECORD_INNER.contains(&token) => {
                 format_record_inner(data, &child);
                 records_vec.push(data.inner.clone());
@@ -868,11 +695,8 @@ fn format_record_unit<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            Token::identifier => {
-                format_identifier(data, &child);
-            }
-            token if LIST_EXPR.contains(&token) || LIST_UNARY.contains(&token) => {
-                format_expr(data, &child);
+            token if LIST_EXPR.contains(&token) => {
+                expr::format_expr(data, &child);
             }
             Token::whitespace => {
                 // format_whitespace(data, &child);
@@ -949,9 +773,9 @@ fn format_horizontal<'a>(data: &mut Formatter<'a>, node: &Node) {
             Token::math_text => {
                 format_math_text(data, &child);
             }
-            Token::literal_string => {
-                // todo!();
-            }
+            // Token::literal_string => {
+            //     // todo!();
+            // }
             Token::inline_cmd => {
                 format_inline_cmd(data, &child);
             }
@@ -1012,15 +836,11 @@ fn format_inline_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
                 format_inline_cmd_name(data, &child);
             }
             Token::cmd_text_arg => {
-                if data.config.command_args_space {
-                    output += " ";
-                }
+                output += " ";
                 format_cmd_text_arg(data, &child);
             }
             Token::cmd_expr_arg => {
-                if data.config.command_args_space {
-                    output += " ";
-                }
+                output += " ";
                 format_cmd_expr_arg(data, &child);
             }
             Token::other(s) => match s.as_str() {
@@ -1281,9 +1101,7 @@ fn format_block_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
                 todo!()
             }
             Token::cmd_text_arg => {
-                if data.config.command_args_space {
-                    output += " ";
-                }
+                output += " ";
                 format_cmd_text_arg(data, &child);
             }
             Token::whitespace => format_ignore(data, &child),
@@ -1305,11 +1123,11 @@ fn format_cmd_expr_arg<'a>(data: &mut Formatter<'a>, node: &Node) {
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
             token if LIST_EXPR.contains(&token) => {
-                format_expr(data, &child);
+                expr::format_expr(data, &child);
             }
-            Token::list => {
-                format_ignore(data, &child);
-            }
+            // Token::list => {
+            //     format_ignore(data, &child);
+            // }
             Token::other(s) => match s.as_str() {
                 "(" => {
                     data.depth += 1;

@@ -5,7 +5,7 @@ mod token;
 mod visualize;
 mod format;
 
-use lsp_types::{FormattingOptions, TextEdit};
+use lspower::lsp::{FormattingOptions, TextEdit, Range, Position};
 pub use visualize::*;
 
 /// satysfi の文字列を渡すと format したものを返す
@@ -31,9 +31,9 @@ pub fn format(input: &str, option: FormattingOptions) -> String {
 pub fn format_lsp(input: &str, option: FormattingOptions) -> Vec<TextEdit> {
     let s = format(input, option);
     let mut edits = Vec::new();
-    edits.push(TextEdit::new(lsp_types::Range::new(
-        lsp_types::Position::new(0, 0),
-        lsp_types::Position::new(input.split('\n').collect::<Vec<_>>().len() as u32, 0),
+    edits.push(TextEdit::new(Range::new(
+        Position::new(0, 0),
+        Position::new(input.split('\n').collect::<Vec<_>>().len() as u32, 0),
     ), s));
     edits
 }
