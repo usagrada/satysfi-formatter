@@ -4,7 +4,7 @@ use crate::token::{Token, LIST_EXPR, LIST_RECORD_INNER, LIST_LITERAL};
 
 use super::{
     format_block_text, format_ignore, format_inline_text, format_math_text, format_record_unit,
-    Formatter, format_comment, format_literal,
+    Formatter, format_comment, format_literal, format_module_path,
 };
 
 pub(crate) fn format_expr<'a>(data: &mut Formatter<'a>, node: &Node) {
@@ -12,7 +12,6 @@ pub(crate) fn format_expr<'a>(data: &mut Formatter<'a>, node: &Node) {
         Token::expr_parened => format_expr_parened(data, node),
         Token::expr_constructor => {
             // todo!()
-            // data.inner = data.node_to_text(node);
             data.inner = "todo!()".to_string();
         }
         Token::expr_application => {
@@ -22,31 +21,31 @@ pub(crate) fn format_expr<'a>(data: &mut Formatter<'a>, node: &Node) {
             format_expr_var_path(data, &node);
         }
         Token::expr_lambda => {
-            todo!()
+            format_expr_lambda(data, &node);
         }
         Token::expr_bind => {
-            todo!()
+            format_expr_bind(data, &node);
         }
         Token::expr_open => {
-            todo!()
+            format_expr_open(data, node);
         }
         Token::expr_match => {
-            todo!()
+            format_expr_match(data, &node);
         }
         Token::expr_if => {
-            todo!()
+            format_expr_if(data, &node);
         }
         Token::expr_assignment => {
-            todo!()
+            todo!("expr_assignment")
         }
         Token::expr_binary_operation => {
-            todo!()
+            todo!("expr_binary_operation")
         }
         Token::expr_binary_operator => {
-            todo!()
+            todo!("expr_binary_operator")
         }
         Token::expr_unary_operation => {
-            todo!()
+            todo!("expr_unary_operation")
         }
         Token::inline_text => format_inline_text(data, node),
         Token::block_text => format_block_text(data, node),
@@ -58,13 +57,13 @@ pub(crate) fn format_expr<'a>(data: &mut Formatter<'a>, node: &Node) {
             format_expr_list(data, node)
         }
         Token::expr_tuple => {
-            todo!()
+            todo!("expr_tuple")
         }
         Token::expr_record_member => {
-            todo!()
+            todo!("expr_record_member")
         }
         Token::expr_command => {
-            todo!()
+            todo!("expr_command")
         }
         token if LIST_LITERAL.contains(&token) => {
             format_literal(data, node)
@@ -252,4 +251,79 @@ fn format_expr_list<'a>(data: &mut Formatter<'a>, node: &Node) {
         output += &data.inner;
     }
     data.inner = output
+}
+
+fn format_expr_lambda<'a>(data: &mut Formatter<'a>, node: &Node) {
+    let mut output = String::new();
+
+    for child in node.children(&mut node.walk()) {
+        match child.kind().into() {
+            token if LIST_EXPR.contains(&token) || LIST_LITERAL.contains(&token) => {
+                format_expr(data, &child);
+            }
+            Token::expr_lambda => {
+                format_expr_lambda(data, &child);
+            }
+            Token::bind_val_parameter => {
+                format_bind_val_parameter(data, &child);
+            }
+            Token::other(token) if token == "fun" => {
+                data.inner = token;
+            }
+            Token::other(token) if token == "->" => {
+                data.inner = token;
+            }
+            _ => {
+                unreachable!("expr lambda: {}", child.kind());
+            }
+        }
+        output += &data.inner;
+    }
+
+    data.inner = output;
+}
+
+fn format_bind_val_parameter<'a>(data: &mut Formatter<'a>, node: &Node) {
+
+}
+
+
+fn format_expr_bind<'a>(data: &mut Formatter<'a>, node: &Node) {
+
+}
+
+fn format_expr_open<'a>(data: &mut Formatter<'a>, node: &Node) {
+    let mut output = String::new();
+
+    for child in node.children(&mut node.walk()) {
+        match child.kind().into() {
+            token if LIST_EXPR.contains(&token) || LIST_LITERAL.contains(&token) => {
+                format_expr(data, &child);
+            }
+            Token::module_path => {
+                format_module_path(data, &child);
+            }
+            Token::other(token) => {
+                data.inner = token;
+            }
+            _ => {
+                unreachable!("expr open: {}", child.kind());
+            }
+        }
+        output += &data.inner;
+    }
+
+    data.inner = output;
+}
+
+fn format_expr_match<'a>(data: &mut Formatter<'a>, node: &Node) {
+
+}
+
+fn format_expr_if<'a>(data: &mut Formatter<'a>, node: &Node) {
+
+}
+
+fn format_expr_binary_operation<'a>(data: &mut Formatter<'a>, node: &Node) {
+
 }

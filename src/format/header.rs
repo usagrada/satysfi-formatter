@@ -2,7 +2,7 @@ use tree_sitter::Node;
 
 use crate::token::Token;
 
-use super::{Formatter, format_ignore};
+use super::{Formatter, format_ignore, format_literal};
 
 pub(crate) fn format_headers<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
@@ -63,8 +63,10 @@ fn format_header_use_package<'a>(data: &mut Formatter<'a>, node: &Node) {
                 let text = data.node_to_text_trim(&child);
                 data.inner = text;
             }
+            Token::literal_string => {
+                format_literal(data, &child);
+            }
             _ => {
-                eprintln!("header use package: {}", child.kind());
                 unreachable!()
             }
         }

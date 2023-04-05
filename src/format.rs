@@ -6,6 +6,14 @@ mod helper;
 mod pkg_config;
 mod header;
 mod expr;
+mod module;
+
+pub(crate) use helper::*;
+pub(crate) use pkg_config::*;
+pub(crate) use header::*;
+pub(crate) use expr::*;
+pub(crate) use module::*;
+
 use lspower::lsp::FormattingOptions;
 use tree_sitter::{Node, Tree};
 
