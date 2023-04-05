@@ -38,7 +38,7 @@ impl<'a> Formatter<'a> {
             .join("\n");
 
         // 末尾に改行がない場合、改行を挿入して終了
-        if !output.ends_with('\n') {
+        if self.option.insert_final_newline.unwrap_or(true) && !output.ends_with('\n') {
             output += "\n";
         }
         output
@@ -1028,22 +1028,20 @@ impl<'a> Formatter<'a> {
                         output
                     }
                 })
-            },
-            _ => {
-                csts.iter().fold(String::new(), |current, now_cst| {
-                    let s = self.to_string_cst(text, now_cst, depth);
-
-                    if current.is_empty() {
-                        s
-                    } else if s.is_empty() {
-                        current
-                    } else if current.ends_with(&newline) {
-                        current + &s
-                    } else {
-                        current + sep + &s
-                    }
-                })
             }
+            _ => csts.iter().fold(String::new(), |current, now_cst| {
+                let s = self.to_string_cst(text, now_cst, depth);
+
+                if current.is_empty() {
+                    s
+                } else if s.is_empty() {
+                    current
+                } else if current.ends_with(&newline) {
+                    current + &s
+                } else {
+                    current + sep + &s
+                }
+            }),
         };
 
         output
