@@ -695,7 +695,13 @@ fn format_record_unit<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
+            Token::label_name => {
+                format_label_name(data, &child);
+            }
             token if LIST_EXPR.contains(&token) => {
+                expr::format_expr(data, &child);
+            }
+            token if LIST_LITERAL.contains(&token) => {
                 expr::format_expr(data, &child);
             }
             Token::whitespace => {
@@ -711,7 +717,7 @@ fn format_record_unit<'a>(data: &mut Formatter<'a>, node: &Node) {
                 }
             },
             _ => {
-                println!("record_unit: {:?}", child.kind());
+                eprintln!("record_unit: {:?}", child.kind());
                 unreachable!();
             }
         }
@@ -880,22 +886,22 @@ fn format_inline_cmd_name<'a>(data: &mut Formatter<'a>, node: &Node) {
 fn format_literal<'a>(data: &mut Formatter<'a>, node: &Node) {
     match node.kind().into() {
         Token::literal_unit => {
-            todo!();
+            data.inner = data.node_to_text_trim(node);
         }
         Token::literal_bool => {
             data.inner = data.node_to_text_trim(node);
         }
         Token::literal_length => {
-            todo!();
+            data.inner = data.node_to_text_trim(node);
         }
         Token::literal_int => {
             data.inner = data.node_to_text_trim(node);
         }
         Token::literal_string => {
-            todo!();
+            data.inner = data.node_to_text_trim(node);
         }
         Token::literal_float => {
-            todo!();
+            data.inner = data.node_to_text_trim(node);
         }
         _ => {
             unreachable!();
@@ -1272,6 +1278,13 @@ fn format_whitespace<'a>(data: &mut Formatter<'a>, node: &Node) {
     let text = data.node_to_text_trim(node);
     data.inner = " ".to_string();
 }
+
+// format for label_name
+fn format_label_name<'a>(data: &mut Formatter<'a>, node: &Node) {
+    let text = data.node_to_text_trim(node);
+    data.inner = text;
+}
+
 
 fn format_ignore<'a>(data: &mut Formatter<'a>, node: &Node) {
     data.inner = "".to_string();

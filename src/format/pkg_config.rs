@@ -1,8 +1,8 @@
 use tree_sitter::Node;
 
-use crate::token::Token;
+use crate::{format::expr::format_expr, token::Token};
 
-use super::{Formatter, format_ignore};
+use super::{format_ignore, Formatter};
 
 pub(crate) fn format_config<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
@@ -13,7 +13,7 @@ pub(crate) fn format_config<'a>(data: &mut Formatter<'a>, node: &Node) {
             }
             Token::other(s) => {
                 // s matches #[, config, ]
-                output += &s;
+                data.inner = s;
             }
             Token::whitespace => {
                 data.inner = " ".to_string();
@@ -34,7 +34,28 @@ fn format_config_record<'a>(data: &mut Formatter<'a>, node: &Node) {
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
             Token::other(s) => {
-                output += &s;
+                match s.as_str() {
+                    "|)" => {
+                        output += "\n";
+                        data.inner = s;
+                    }
+                    "]" => {
+                        data.inner = s;
+                    }
+                    _ => {
+                        data.inner = s;
+                    }
+                }
+            }
+            Token::config_registries => {
+                format_config_registries(data, &child);
+                output += "\n";
+                output += data.indent_start().as_str();
+            }
+            Token::config_dependencies => {
+                format_config_dependencies(data, &child);
+                output += "\n";
+                output += data.indent_start().as_str();
             }
             _ => {
                 // todo!()
@@ -42,5 +63,51 @@ fn format_config_record<'a>(data: &mut Formatter<'a>, node: &Node) {
         }
         output += &data.inner;
     }
+    data.inner = output;
+}
+
+fn format_config_registries<'a>(data: &mut Formatter<'a>, node: &Node) {
+    let mut output = String::new();
+    data.depth += 1;
+
+    for child in node.children(&mut node.walk()) {
+        match child.kind().into() {
+            Token::other(s) => {
+                data.inner = s;
+            }
+            Token::expr_list => {
+                format_expr(data, &child);
+            }
+            _ => {
+                todo!()
+            }
+        }
+        output += &data.inner;
+    }
+
+    data.depth -= 1;
+    data.inner = output;
+}
+
+fn format_config_dependencies<'a>(data: &mut Formatter<'a>, node: &Node) {
+    let mut output = String::new();
+    data.depth += 1;
+
+    for child in node.children(&mut node.walk()) {
+        match child.kind().into() {
+            Token::other(s) => {
+                data.inner = s;
+            }
+            Token::expr_list => {
+                format_expr(data, &child);
+            }
+            _ => {
+                todo!()
+            }
+        }
+        output += &data.inner;
+    }
+
+    data.depth -= 1;
     data.inner = output;
 }

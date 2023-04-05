@@ -757,7 +757,6 @@ dependencies = [
 [[package]]
 name = "tree_sitter_satysfi"
 version = "0.0.1"
-source = "git+https://github.com/monaqa/tree-sitter-satysfi.git?branch=grammar-v0_1_0#9f40e3bc55735d05d8d75fd06af3d266061931aa"
 dependencies = [
  "anyhow",
  "cc",
