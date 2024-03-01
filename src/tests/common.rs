@@ -256,7 +256,7 @@ document(|title = { hello }|)'<
 }
 
 #[test]
-fn test13(){
+fn test13() {
     let text = r#"@require: local
 
 document(|title = {}|)'<

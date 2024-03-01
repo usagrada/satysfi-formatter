@@ -33,20 +33,18 @@ fn format_config_record<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
-            Token::other(s) => {
-                match s.as_str() {
-                    "|)" => {
-                        output += "\n";
-                        data.inner = s;
-                    }
-                    "]" => {
-                        data.inner = s;
-                    }
-                    _ => {
-                        data.inner = s;
-                    }
+            Token::other(s) => match s.as_str() {
+                "|)" => {
+                    output += "\n";
+                    data.inner = s;
                 }
-            }
+                "]" => {
+                    data.inner = s;
+                }
+                _ => {
+                    data.inner = s;
+                }
+            },
             Token::config_registries => {
                 format_config_registries(data, &child);
                 output += "\n";
@@ -70,13 +68,16 @@ fn format_config_registries<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
     data.depth += 1;
 
+    let mut output_vec = vec![];
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
             Token::other(s) => {
-                data.inner = s;
+                // data.inner = s;
+                output_vec.push(s);
             }
             Token::expr_list => {
                 format_expr(data, &child);
+                output_vec.push(data.inner.clone());
             }
             _ => {
                 todo!()
@@ -84,6 +85,7 @@ fn format_config_registries<'a>(data: &mut Formatter<'a>, node: &Node) {
         }
         output += &data.inner;
     }
+    println!("registries: {:?}", output_vec);
 
     data.depth -= 1;
     data.inner = output;

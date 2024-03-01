@@ -1,6 +1,6 @@
 use lspower::lsp::FormattingOptions;
 
-use crate::{format};
+use crate::format;
 
 mod comment;
 mod common;
@@ -9,11 +9,17 @@ mod horizontal_single;
 mod let_block;
 mod math;
 mod module;
+// mod package;
 mod space;
 
 fn test_tmpl(input: &str, expect: &str) {
-    let option = FormattingOptions::default();
+    let option = FormattingOptions {
+        insert_spaces: true,
+        tab_size: 4,
+        ..Default::default()
+    };
     let output = format(input, option);
+    eprintln!("output\n=======\n{}\n=======", output);
     assert_eq!(output, expect);
 }
 

@@ -1,6 +1,6 @@
 use clap::Parser;
 use lspower::lsp::FormattingOptions;
-use satysfi_formatter::{format};
+use satysfi_formatter::format;
 use std::{fs, path::PathBuf};
 
 #[derive(Parser, Debug)]

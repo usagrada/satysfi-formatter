@@ -1,5 +1,5 @@
 mod list;
-pub use {list::Token, list::token_to_string};
+pub use {list::token_to_string, list::Token};
 
 pub const LIST_EXPR: &[Token] = &[
     Token::expr_parened,
@@ -26,9 +26,7 @@ pub const LIST_EXPR: &[Token] = &[
     Token::_literal,
 ];
 
-pub const LIST_RECORD_INNER: &[Token] = &[
-    Token::record_unit,
-];
+pub const LIST_RECORD_INNER: &[Token] = &[Token::record_unit];
 
 pub const LIST_LITERAL: &[Token] = &[
     Token::literal_unit,

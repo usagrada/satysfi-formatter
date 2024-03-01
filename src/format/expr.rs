@@ -1,10 +1,10 @@
 use tree_sitter::Node;
 
-use crate::token::{Token, LIST_EXPR, LIST_RECORD_INNER, LIST_LITERAL};
+use crate::token::{Token, LIST_EXPR, LIST_LITERAL, LIST_RECORD_INNER};
 
 use super::{
-    format_block_text, format_ignore, format_inline_text, format_math_text, format_record_unit,
-    Formatter, format_comment, format_literal, format_module_path,
+    format_block_text, format_comment, format_ignore, format_inline_text, format_literal,
+    format_math_text, format_module_path, format_record_unit, Formatter,
 };
 
 pub(crate) fn format_expr<'a>(data: &mut Formatter<'a>, node: &Node) {
@@ -53,9 +53,7 @@ pub(crate) fn format_expr<'a>(data: &mut Formatter<'a>, node: &Node) {
         Token::expr_record => {
             format_expr_record(data, node);
         }
-        Token::expr_list => {
-            format_expr_list(data, node)
-        }
+        Token::expr_list => format_expr_list(data, node),
         Token::expr_tuple => {
             todo!("expr_tuple")
         }
@@ -65,9 +63,7 @@ pub(crate) fn format_expr<'a>(data: &mut Formatter<'a>, node: &Node) {
         Token::expr_command => {
             todo!("expr_command")
         }
-        token if LIST_LITERAL.contains(&token) => {
-            format_literal(data, node)
-        }
+        token if LIST_LITERAL.contains(&token) => format_literal(data, node),
         Token::comment => {
             format_ignore(data, node);
         }
@@ -84,6 +80,9 @@ fn format_expr_parened<'a>(data: &mut Formatter<'a>, node: &Node) {
         match child.kind().into() {
             token if LIST_EXPR.contains(&token) => {
                 format_expr(data, &child);
+            }
+            Token::other(token) => {
+                data.inner = token;
             }
             _ => {
                 unreachable!("expr application: {}", child.kind());
@@ -112,20 +111,28 @@ fn format_expr_application<'a>(data: &mut Formatter<'a>, node: &Node) {
             token if LIST_EXPR.contains(&token) => {
                 format_expr(data, &child);
             }
-            // Token::expr_application => {
-            //     format_expr_application(data, &child);
-            // }
-            // Token::identifier => {
-            //     format_identifier(data, &child);
-            // }
-            // token if LIST_UNARY.contains(&token) => {
-            //     format_unary(data, &child);
-            // }
+            Token::expr_opts => {
+                format_expr_opts(data, &child);
+            }
+            token if LIST_LITERAL.contains(&token) => {
+                format_literal(data, &child);
+            }
+            Token::other(token) if token == "." => {
+                data.inner = token;
+            }
             _ => {
                 unreachable!("expr application: {}", child.kind());
             }
         }
         output += &data.inner;
+    }
+    data.inner = output;
+}
+
+fn format_expr_opts<'a>(data: &mut Formatter<'a>, node: &Node) {
+    let mut output = String::new();
+    for child in node.children(&mut node.walk()) {
+        // output += &data.inner;
     }
     data.inner = output;
 }
@@ -186,9 +193,7 @@ fn format_expr_record<'a>(data: &mut Formatter<'a>, node: &Node) {
             Token::other(token) if token.as_str() == "," => {
                 data.inner = token;
             }
-            Token::other(token) if token == "(|" || token == "|)" => {
-                format_ignore(data, &child)
-            }
+            Token::other(token) if token == "(|" || token == "|)" => format_ignore(data, &child),
             Token::other(token) => {
                 data.inner = token;
             }
@@ -225,7 +230,6 @@ fn format_expr_record_inner<'a>(data: &mut Formatter<'a>, node: &Node) {
         }
     }
 }
-
 
 fn format_expr_list<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
@@ -283,14 +287,9 @@ fn format_expr_lambda<'a>(data: &mut Formatter<'a>, node: &Node) {
     data.inner = output;
 }
 
-fn format_bind_val_parameter<'a>(data: &mut Formatter<'a>, node: &Node) {
+fn format_bind_val_parameter<'a>(data: &mut Formatter<'a>, node: &Node) {}
 
-}
-
-
-fn format_expr_bind<'a>(data: &mut Formatter<'a>, node: &Node) {
-
-}
+fn format_expr_bind<'a>(data: &mut Formatter<'a>, node: &Node) {}
 
 fn format_expr_open<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
@@ -316,14 +315,8 @@ fn format_expr_open<'a>(data: &mut Formatter<'a>, node: &Node) {
     data.inner = output;
 }
 
-fn format_expr_match<'a>(data: &mut Formatter<'a>, node: &Node) {
+fn format_expr_match<'a>(data: &mut Formatter<'a>, node: &Node) {}
 
-}
+fn format_expr_if<'a>(data: &mut Formatter<'a>, node: &Node) {}
 
-fn format_expr_if<'a>(data: &mut Formatter<'a>, node: &Node) {
-
-}
-
-fn format_expr_binary_operation<'a>(data: &mut Formatter<'a>, node: &Node) {
-
-}
+fn format_expr_binary_operation<'a>(data: &mut Formatter<'a>, node: &Node) {}

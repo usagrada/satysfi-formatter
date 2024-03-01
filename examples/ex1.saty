@@ -1,22 +1,11 @@
-@require: stdja
-@require: itemize
-% @import: local
-let a = 1
-in
-document(|
-  author = {author};
-    show-title = false;
-    show-toc = true;
-    title = {title};
-|)'<
-+section{section}<
-        +p {
+use package open Stdlib 
+use package open Stdlib.Pervasives 
+use package Tabular 
+use open Local of `./local` 
 
-            \listing{ * item1
-* item2
-            * item3}
-    }
-    %%hello
-    >
+document(|
+  title = {\SATySFi;概説},
+  author = {Takashi SUWA},
+|)'<
 
 >

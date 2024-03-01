@@ -1,21 +1,35 @@
 use crate::{
     format::helper::indent_tab,
     token::{Token, *},
+    utils::FormatUtility,
 };
-mod helper;
-mod pkg_config;
-mod header;
 mod expr;
+mod header;
+mod helper;
 mod module;
+mod pkg_config;
 
-pub(crate) use helper::*;
-pub(crate) use pkg_config::*;
-pub(crate) use header::*;
 pub(crate) use expr::*;
+pub(crate) use header::*;
+pub(crate) use helper::*;
 pub(crate) use module::*;
+pub(crate) use pkg_config::*;
 
 use lspower::lsp::FormattingOptions;
 use tree_sitter::{Node, Tree};
+
+impl FormatUtility for String {
+    fn add_word(&mut self, word: &str) {
+        if self.len() > 0 && self.chars().last().unwrap().is_whitespace() {
+            self.pop();
+        }
+        self.push_str(word);
+    }
+    fn add_newline(&mut self, indent_size: usize) {
+        self.push('\n');
+        self.push_str(indent_space(indent_size).as_str());
+    }
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct Formatter<'a> {
@@ -33,7 +47,6 @@ pub(crate) struct Formatter<'a> {
 
 impl<'a> Formatter<'a> {
     fn indent(&self) -> String {
-        use self::helper::indent_space;
         let result = if self.config.insert_spaces {
             indent_space(self.depth * self.config.tab_size as usize)
         } else {
@@ -44,7 +57,6 @@ impl<'a> Formatter<'a> {
 
     /// depth + 1 したインデント用
     fn indent_start(&self) -> String {
-        use self::helper::indent_space;
         let result = if self.config.insert_spaces {
             indent_space((self.depth + 1) * self.config.tab_size as usize)
         } else {
@@ -92,7 +104,7 @@ fn format_source_file<'a>(data: &mut Formatter<'a>, node: &Node) {
             Token::whitespace => format_whitespace(data, &child),
             _ => unreachable!(),
         };
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.output = output.trim().to_string();
 }
@@ -112,6 +124,7 @@ fn format_program_saty<'a>(data: &mut Formatter<'a>, node: &Node) {
             Token::headers => {
                 header::format_headers(data, &child);
                 data.inner += (data.indent() + "\n").as_str();
+                data.inner += "\n";
             }
             // Token::preamble => {
             //     format_preamble(data, &child);
@@ -138,7 +151,7 @@ fn format_program_saty<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!("program: {}", child.kind())
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -179,11 +192,10 @@ fn format_program_satyh<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
-
 
 fn format_preamble<'a>(data: &mut Formatter<'a>, node: &Node) {
     let mut output = String::new();
@@ -203,7 +215,7 @@ fn format_preamble<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -257,7 +269,7 @@ fn format_type_fun<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -281,7 +293,7 @@ fn format_type_prod<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -305,7 +317,7 @@ fn format_type_inline_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -329,7 +341,7 @@ fn format_type_block_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -353,7 +365,7 @@ fn format_type_math_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -384,7 +396,7 @@ fn format_type_list<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -414,7 +426,7 @@ fn format_type_record<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -447,7 +459,7 @@ fn format_type_record_unit<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -474,7 +486,7 @@ fn format_type_name<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
 }
 
@@ -488,7 +500,7 @@ fn format_let_stmt<'a>(data: &mut Formatter<'a>, node: &Node) {
     if let Some(pattern) = pattern {
         format_pattern(data, &pattern);
         output += " ";
-        // output += &data.inner;
+        // output.add_word(&data.inner);
     }
     let expr = node.child_by_field_name("expr");
     if let Some(expr) = expr {
@@ -496,7 +508,7 @@ fn format_let_stmt<'a>(data: &mut Formatter<'a>, node: &Node) {
         let expr_text = data.inner.clone();
         println!("expr_text: {}", expr_text);
         output += " ";
-        // output += &data.inner;
+        // output.add_word(&data.inner);
     }
     for child in node.children(&mut node.walk()) {
         match child.kind().into() {
@@ -506,20 +518,22 @@ fn format_let_stmt<'a>(data: &mut Formatter<'a>, node: &Node) {
             Token::whitespace => {
                 format_ignore(data, &child);
             }
-            Token::other(token) => {
-                if token == "let" {
+            Token::other(token) => match token.as_str() {
+                "let" => {
                     data.inner = token;
-                } else if token == "=" {
+                }
+                "=" => {
                     data.inner = " = ".to_string();
-                } else {
+                }
+                _ => {
                     unreachable!()
                 }
-            }
+            },
             _ => {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -535,20 +549,25 @@ fn format_let_rec_stmt<'a>(data: &mut Formatter<'a>, node: &Node) {
             Token::whitespace => {
                 format_ignore(data, &child);
             }
-            Token::other(token) => {
-                if token == "let-rec" {
+            Token::other(token) => match token.as_str() {
+                "let-rec" => {
                     data.inner = token;
-                } else if token == "and" {
+                }
+                "and" => {
                     data.inner = token;
-                } else {
+                }
+                "=" => {
+                    data.inner = " = ".to_string();
+                }
+                _ => {
                     unreachable!()
                 }
-            }
+            },
             _ => {
                 unreachable!()
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -601,7 +620,7 @@ fn format_unary<'a>(data: &mut Formatter<'a>, node: &Node) {
             let mut output = String::new();
             output += "(";
             expr::format_expr(data, node);
-            output += &data.inner;
+            output.add_word(&data.inner);
             output += ")";
             data.inner = output;
         }
@@ -677,7 +696,7 @@ fn format_record<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!();
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -725,7 +744,7 @@ fn format_record_unit<'a>(data: &mut Formatter<'a>, node: &Node) {
                 }
             },
             _ => {
-                eprintln!("record_unit: {:?}", child.kind());
+                // eprintln!("record_unit: {:?}", child.kind());
                 unreachable!();
             }
         }
@@ -759,7 +778,7 @@ fn format_inline_text<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!();
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     if output.contains("\n") {
         let indent_start = "\n".to_string() + &data.indent_start();
@@ -817,7 +836,7 @@ fn format_horizontal<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!();
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output.trim().to_string();
 }
@@ -857,6 +876,10 @@ fn format_inline_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
                 output += " ";
                 format_cmd_expr_arg(data, &child);
             }
+            Token::cmd_expr_option => {
+                output += " ";
+                format_cmd_expr_option(data, &child);
+            }
             Token::other(s) => match s.as_str() {
                 "{" => {
                     data.inner = s;
@@ -869,7 +892,6 @@ fn format_inline_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
                     data.inner = s;
                 }
                 _ => {
-                    println!("inline_cmd: {:?} {}", child.kind(), s);
                     unreachable!();
                 }
             },
@@ -881,7 +903,7 @@ fn format_inline_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!();
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -963,7 +985,7 @@ fn format_block_text<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!();
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -1000,7 +1022,7 @@ fn format_inline_text_bullet_list<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!();
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -1027,7 +1049,7 @@ fn format_inline_text_bullet_item<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!();
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -1047,7 +1069,8 @@ fn format_math_text<'a>(data: &mut Formatter<'a>, node: &Node) {
                     data.inner = s;
                 }
                 _ => {
-                    unreachable!();
+                    data.inner = data.node_to_text_trim(&child);
+                    // unreachable!();
                 }
             },
             _ => {
@@ -1055,7 +1078,7 @@ fn format_math_text<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!();
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -1094,7 +1117,7 @@ fn format_vertical<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!();
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     // data.depth -= 1;
     data.inner = output;
@@ -1109,10 +1132,10 @@ fn format_block_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
                 // format_block_cmd_name(data, &child);
             }
             Token::cmd_expr_arg => {
-                todo!()
+                format_cmd_expr_arg(data, &child);
             }
             Token::cmd_expr_option => {
-                todo!()
+                format_cmd_expr_option(data, &child);
             }
             Token::cmd_text_arg => {
                 output += " ";
@@ -1122,12 +1145,15 @@ fn format_block_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
             Token::comment => {
                 format_comment(data, &child);
             }
+            Token::other(s) => {
+                data.inner = s;
+            }
             _ => {
                 println!("vertical: {:?}", child.kind());
                 unreachable!();
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -1139,9 +1165,9 @@ fn format_cmd_expr_arg<'a>(data: &mut Formatter<'a>, node: &Node) {
             token if LIST_EXPR.contains(&token) => {
                 expr::format_expr(data, &child);
             }
-            // Token::list => {
-            //     format_ignore(data, &child);
-            // }
+            token if LIST_LITERAL.contains(&token) => {
+                format_literal(data, &child);
+            }
             Token::other(s) => match s.as_str() {
                 "(" => {
                     data.depth += 1;
@@ -1153,12 +1179,40 @@ fn format_cmd_expr_arg<'a>(data: &mut Formatter<'a>, node: &Node) {
                 }
                 _ => unreachable!(),
             },
+            Token::literal_string => {
+                format_literal(data, &child);
+            }
             _ => {
+                eprintln!("cmd_expr_arg: {:?}", child.kind());
+                unreachable!();
+            }
+        }
+        output.add_word(&data.inner);
+    }
+}
+
+fn format_cmd_expr_option<'a>(data: &mut Formatter<'a>, node: &Node) {
+    let mut output = String::new();
+    for child in node.children(&mut node.walk()) {
+        match child.kind().into() {
+            Token::label_name => format_label_name(data, node),
+            token if LIST_EXPR.contains(&token) => {
+                expr::format_expr(data, &child);
+            }
+            token if LIST_LITERAL.contains(&token) => {
+                format_literal(data, &child);
+            }
+            Token::other(s) => {
+                data.inner = s;
+            }
+            _ => {
+                eprintln!("cmd_expr_option: {:?}", child.kind());
                 unreachable!();
             }
         }
         output += &data.inner;
     }
+    data.inner = output;
 }
 
 fn format_cmd_text_arg<'a>(data: &mut Formatter<'a>, node: &Node) {
@@ -1200,12 +1254,15 @@ fn format_cmd_text_arg<'a>(data: &mut Formatter<'a>, node: &Node) {
             Token::comment => {
                 format_comment(data, &child);
             }
+            Token::block_text => {
+                format_block_text(data, &child);
+            }
             _ => {
                 println!("token: {}", child.kind());
                 unreachable!();
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -1232,7 +1289,7 @@ fn format_math<'a>(data: &mut Formatter<'a>, node: &Node) {
         {
             output += " ";
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
         last_token = data.inner.clone();
     }
     data.inner = output.trim().to_string();
@@ -1273,7 +1330,7 @@ fn format_math_cmd<'a>(data: &mut Formatter<'a>, node: &Node) {
                 unreachable!();
             }
         }
-        output += &data.inner;
+        output.add_word(&data.inner);
     }
     data.inner = output;
 }
@@ -1292,7 +1349,6 @@ fn format_label_name<'a>(data: &mut Formatter<'a>, node: &Node) {
     let text = data.node_to_text_trim(node);
     data.inner = text;
 }
-
 
 fn format_ignore<'a>(data: &mut Formatter<'a>, node: &Node) {
     data.inner = "".to_string();
