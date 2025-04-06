@@ -61,10 +61,12 @@ end = struct
                 c = (fun it -> nc (inline-fil ++ read-inline ctx it ++ inline-fil));
                 m = (fun i j it -> mc i j (inline-fil ++ read-inline ctx it ++ inline-fil));
                 e = EmptyCell;
-            |) in tabular cellss decof
+            |) in
+        tabular cellss decof
 
     let-inline ctx \tabular =
-        let pads = (2pt, 2pt, 2pt, 2pt) in table-scheme ctx pads
+        let pads = (2pt, 2pt, 2pt, 2pt) in
+        table-scheme ctx pads
 end
 "#;
     test_tmpl(&input, expect)
