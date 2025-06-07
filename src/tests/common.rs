@@ -305,3 +305,21 @@ let z = y in
 "#;
     test_tmpl(text, expect);
 }
+
+#[test]
+fn test16() {
+    let text = r#"let f x =
+let y = x in
+let z = y in
+ z
+
+let a = 1
+let b = 2
+"#;
+    let expect = r#"let f x =
+    let y = x in
+    let z = y in
+    z
+"#;
+    test_tmpl(text, expect);
+}
