@@ -85,7 +85,8 @@ document(|title = {hello}|)'<
 let-mutable x <- 0
 let () = while (!x < 2) do x <- !x + 1
 let-inline \inline =
-    let text = embed-string (arabic !x) in { #text; }
+    let text = embed-string (arabic !x) in
+    { #text; }
 in
 
 document(|title = { hello }|)'<

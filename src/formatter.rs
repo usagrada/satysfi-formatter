@@ -687,20 +687,12 @@ impl<'a> Formatter<'a> {
                                 | Rule::let_mutable_stmt
                                 | Rule::open_stmt => {
                                     if index == 0 {
-                                        current + &s + " " + RESERVED_WORD.in_stmt
+                                        current + &s + " " + RESERVED_WORD.in_stmt + &newline
                                     } else {
-                                        current + &newline + &s + " " + RESERVED_WORD.in_stmt
+                                        current + &newline + &s + " " + RESERVED_WORD.in_stmt + &newline
                                     }
                                 }
                                 Rule::expr => {
-                                    let current =
-                                        if index > 0 && csts[index - 1].rule == Rule::comments {
-                                            current
-                                        } else if s.starts_with("let") || s.contains('\n') {
-                                            current + &newline
-                                        } else {
-                                            current + " "
-                                        };
                                     if s.starts_with("let") {
                                         current + s.trim_start()
                                     } else if s.contains('\n') {

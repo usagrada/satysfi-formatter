@@ -283,3 +283,25 @@ document(|title = {}|)'<
 "#;
     test_tmpl(text, expect);
 }
+
+#[test]
+fn test14() {
+    let text = r#"let f x = z"#;
+    let expect = r#"let f x = z
+"#;
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn test15() {
+    let text = r#"let f x =
+let y = x in
+let z = y in
+ z"#;
+    let expect = r#"let f x =
+    let y = x in
+    let z = y in
+    z
+"#;
+    test_tmpl(text, expect);
+}
