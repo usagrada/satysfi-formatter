@@ -47,7 +47,7 @@ pub(crate) fn parse(input: &str) -> Result<CstText, FormatError> {
 ///
 /// 入出力 (ファイルの読み書きや設定ファイルの探索) は行わない。
 /// 設定は [`resolve_config`] などで作って渡す。
-/// コメントによる整形の制御 (`% satysfi-fmt: skip` など) に対応している。
+/// コメントによる整形の制御 (`% satysfi-fmt: off` / `on`) に対応している。
 pub fn format(input: &str, config: &FormatConfig) -> Result<String, FormatError> {
     let csttext = parse(input)?;
     Ok(printer::Printer::new(&csttext, config).print())

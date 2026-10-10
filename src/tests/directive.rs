@@ -1,4 +1,4 @@
-//! `% satysfi-fmt: skip / off / on` による整形の制御
+//! `% satysfi-fmt: off / on` による整形の制御
 use super::{test_tmpl, test_width};
 
 #[test]
@@ -32,65 +32,52 @@ fn unknown_directive_is_just_a_comment() {
 
 #[test]
 fn directive_without_spaces_is_recognized() {
-    let text = "%satysfi-fmt:skip\nlet   x   =   1\nlet   y   =   1\n";
-    let expect = "% satysfi-fmt:skip\nlet   x   =   1\nlet y = 1\n";
+    let text = "%satysfi-fmt:off\nlet   x   =   1\n%satysfi-fmt:on\nlet   y   =   1\n";
+    let expect = "% satysfi-fmt:off\nlet   x   =   1\n% satysfi-fmt:on\nlet y = 1\n";
     test_tmpl(text, expect);
 }
 
 #[test]
-fn skip_affects_only_the_next_node() {
-    let text = "let a = 1\n% satysfi-fmt: skip\nlet   b   =   [1;2]\nlet   c   =   [1;2]\n";
-    let expect = "let a = 1\n% satysfi-fmt: skip\nlet   b   =   [1;2]\nlet c = [1; 2]\n";
+fn skip_is_not_supported_and_is_just_a_comment() {
+    let text = "% satysfi-fmt: skip\nlet   x   =   [1;2] % satysfi-fmt: skip\nlet   y   =   1\n";
+    let expect = "% satysfi-fmt: skip\nlet x = [1; 2] % satysfi-fmt: skip\nlet y = 1\n";
     test_tmpl(text, expect);
 }
 
 #[test]
-fn skip_a_record_field() {
-    let text =
-        "let r = (|\n  a = 1;\n  % satysfi-fmt: skip\n  b   =   [1;2];\n  c   =   [1;2]\n|)\n";
-    let expect = "let r = (|\n    a = 1;\n    % satysfi-fmt: skip\n    b   =   [1;2];\n    c = [1; 2];\n|)\n";
+fn off_and_on_in_a_record() {
+    let text = "let r = (|\n  a = 1;\n  % satysfi-fmt: off\n  b   =   [1;2];\n  % satysfi-fmt: on\n  c   =   [1;2]\n|)\n";
+    let expect = "let r = (|\n    a = 1;\n    % satysfi-fmt: off\n    b   =   [1;2];\n    % satysfi-fmt: on\n    c = [1; 2];\n|)\n";
+    test_tmpl(text, expect);
+}
+
+
+#[test]
+fn unformatted_multiline_text_keeps_its_own_indentation() {
+    let text = "let t = 1\n% satysfi-fmt: off\nlet m = [\n      1;   2;\n   3 ]\n";
+    let expect = "let t = 1\n% satysfi-fmt: off\nlet m = [\n      1;   2;\n   3 ]\n";
     test_tmpl(text, expect);
 }
 
 #[test]
-fn skip_an_expression_keeps_the_layout_of_its_neighbours() {
-    let text = "let x =\n  % satysfi-fmt: skip\n  f   a    b\n";
-    let expect = "let x =\n    % satysfi-fmt: skip\n    f   a    b\n";
-    test_tmpl(text, expect);
-}
-
-#[test]
-fn skipped_multiline_text_keeps_its_own_indentation() {
-    let text = "let t = 1\n% satysfi-fmt: skip\nlet m = [\n      1;   2;\n   3 ]\n";
-    let expect = "let t = 1\n% satysfi-fmt: skip\nlet m = [\n      1;   2;\n   3 ]\n";
-    test_tmpl(text, expect);
-}
-
-#[test]
-fn skipped_node_is_not_wrapped_by_the_line_width() {
-    let text = "% satysfi-fmt: skip\nlet x = [aaaaaaaa;   bbbbbbbb;   cccccccc]\nlet y = [aaaaaaaa; bbbbbbbb; cccccccc]\n";
-    let expect = "% satysfi-fmt: skip\nlet x = [aaaaaaaa;   bbbbbbbb;   cccccccc]\nlet y = [\n    aaaaaaaa;\n    bbbbbbbb;\n    cccccccc;\n]\n";
+fn unformatted_node_is_not_wrapped_by_the_line_width() {
+    let text = "% satysfi-fmt: off\nlet x = [aaaaaaaa;   bbbbbbbb;   cccccccc]\n% satysfi-fmt: on\nlet y = [aaaaaaaa; bbbbbbbb; cccccccc]\n";
+    let expect = "% satysfi-fmt: off\nlet x = [aaaaaaaa;   bbbbbbbb;   cccccccc]\n% satysfi-fmt: on\nlet y = [\n    aaaaaaaa;\n    bbbbbbbb;\n    cccccccc;\n]\n";
     test_width(text, 20, expect);
 }
 
+
 #[test]
-fn trailing_skip_applies_to_the_node_on_the_same_line() {
-    let text = "let   x   =   1 % satysfi-fmt: skip\nlet   y   =   1\n";
-    let expect = "let   x   =   1 % satysfi-fmt: skip\nlet y = 1\n";
+fn off_and_on_in_horizontal_mode() {
+    let text = "document(||)'<\n  +p {\n    x\n    % satysfi-fmt: off\n    \\emph  {  y  }\n    % satysfi-fmt: on\n    \\emph  {  z  }\n  }\n>\n";
+    let expect = "document (||) '<\n    +p {\n        x\n        % satysfi-fmt: off\n        \\emph  {  y  }\n        % satysfi-fmt: on\n        \\emph { z }\n    }\n>\n";
     test_tmpl(text, expect);
 }
 
 #[test]
-fn skip_in_vertical_and_horizontal_modes() {
-    let text = "document(||)'<\n  % satysfi-fmt: skip\n  +p   {  a   b  }\n  +p   {  a   b  }\n  +p {\n    x\n    % satysfi-fmt: skip\n    \\emph  {  y  }\n    \\emph  {  z  }\n  }\n>\n";
-    let expect = "document (||) '<\n    % satysfi-fmt: skip\n    +p   {  a   b  }\n    +p { a b }\n    +p {\n        x\n        % satysfi-fmt: skip\n        \\emph  {  y  }\n        \\emph { z }\n    }\n>\n";
-    test_tmpl(text, expect);
-}
-
-#[test]
-fn skip_a_header_line() {
-    let text = "@require: a\n% satysfi-fmt: skip\n@import:   spaced\ndocument(||)'<>\n";
-    let expect = "@require: a\n% satysfi-fmt: skip\n@import:   spaced\n\ndocument (||) '<>\n";
+fn off_and_on_around_a_header_line() {
+    let text = "@require: a\n% satysfi-fmt: off\n@import:   spaced\n% satysfi-fmt: on\n@import:   b\ndocument(||)'<>\n";
+    let expect = "@require: a\n% satysfi-fmt: off\n@import:   spaced\n% satysfi-fmt: on\n@import: b\n\ndocument (||) '<>\n";
     test_tmpl(text, expect);
 }
 
@@ -101,20 +88,7 @@ fn off_covers_blocks_in_a_vertical_area() {
     test_tmpl(text, expect);
 }
 
-#[test]
-fn skip_before_a_bracketed_value_stays_on_its_own_line() {
-    // `=` の行末に移ると、次の整形で「直前のノードの skip」になってしまう
-    let text = "let x =\n  % satysfi-fmt: skip\n  [1;   2]\n";
-    let expect = "let x =\n    % satysfi-fmt: skip\n    [1;   2]\n";
-    test_tmpl(text, expect);
-}
 
-#[test]
-fn trailing_skip_on_the_last_statement_skips_only_that_statement() {
-    let text = "let x = [1;   2]\nlet y = (a ,  b) % satysfi-fmt: skip\nin\ndocument (||) '<>\n";
-    let expect = "let x = [1; 2]\nlet y = (a ,  b) % satysfi-fmt: skip\nin\n\ndocument (||) '<>\n";
-    test_tmpl(text, expect);
-}
 
 #[test]
 fn off_in_the_preamble_does_not_reach_the_document_body() {

@@ -46,10 +46,10 @@ fn tabs_keep_verbatim_lines() {
         ..Default::default()
     };
     // 整形しないノードの 2 行目以降は元の空白のまま
-    let input = "document(||)'<\n    % satysfi-fmt: skip\n    +p{\n        a\n    }\n>\n";
+    let input = "document(||)'<\n    % satysfi-fmt: off\n    +p{\n        a\n    }\n>\n";
     assert_eq!(
         format(input, &tabs),
-        "document (||) '<\n\t% satysfi-fmt: skip\n\t+p{\n        a\n    }\n>\n"
+        "document (||) '<\n\t% satysfi-fmt: off\n\t+p{\n        a\n    }\n>\n"
     );
 }
 

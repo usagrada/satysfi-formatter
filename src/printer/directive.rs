@@ -1,6 +1,5 @@
 //! コメントによる整形の制御。
 //!
-//! * `% satysfi-fmt: skip` : 直後のノードを整形しない。行末に書いた場合は直前のノード。
 //! * `% satysfi-fmt: off` / `% satysfi-fmt: on` : 間にあるノードを整形しない。
 //!   `on` がなければ、同じ親の中の最後のノードまで。
 //!
@@ -12,7 +11,6 @@ use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Directive {
-    Skip,
     Off,
     On,
 }
@@ -21,7 +19,6 @@ pub enum Directive {
 pub fn parse(comment: &str) -> Option<Directive> {
     let body = comment.trim_start_matches('%').trim();
     match body.strip_prefix("satysfi-fmt:")?.trim() {
-        "skip" => Some(Directive::Skip),
         "off" => Some(Directive::Off),
         "on" => Some(Directive::On),
         _ => None,
@@ -29,39 +26,29 @@ pub fn parse(comment: &str) -> Option<Directive> {
 }
 
 /// 整形しないノードの span (start, end) の集合を求める。
-pub fn collect_skip_spans(csttext: &CstText) -> HashSet<(usize, usize)> {
-    let mut skip = HashSet::new();
-    walk(csttext, &csttext.cst, &mut skip, false, false);
-    skip
+pub fn collect_off_spans(csttext: &CstText) -> HashSet<(usize, usize)> {
+    let mut spans = HashSet::new();
+    walk(csttext, &csttext.cst, &mut spans, false);
+    spans
 }
 
 /// 文や header の並びを束ねるだけのノード。
-/// 直前の directive は、このノードではなく中の最初の要素にかかる。
+/// 直前の directive は、このノードではなく中の要素にかかる。
 fn is_container(node: &Cst) -> bool {
     matches!(node.rule, Rule::preamble | Rule::headers)
 }
 
-/// `off` / `skip_next` は親から引き継ぐ状態。
-/// (最後の `off` の状態, 最後の子) を返す。
+/// `inherited_off` は親から引き継ぐ状態。最後の `off` の状態を返す。
 fn walk(
     csttext: &CstText,
     node: &Cst,
-    skip: &mut HashSet<(usize, usize)>,
+    spans: &mut HashSet<(usize, usize)>,
     inherited_off: bool,
-    inherited_skip_next: bool,
-) -> (bool, Option<(usize, usize)>) {
+) -> bool {
     let mut off = inherited_off;
-    let mut skip_next = inherited_skip_next;
-    let mut prev: Option<(usize, usize)> = None;
     for item in csttext.items(node) {
         match item {
-            Item::Comment { span, own_line } => match parse(csttext.get_text_from_span(span)) {
-                Some(Directive::Skip) if own_line => skip_next = true,
-                Some(Directive::Skip) => {
-                    if let Some(prev) = prev {
-                        skip.insert(prev);
-                    }
-                }
+            Item::Comment { span, .. } => match parse(csttext.get_text_from_span(span)) {
                 Some(Directive::Off) => off = true,
                 Some(Directive::On) => off = false,
                 None => {}
@@ -71,34 +58,25 @@ fn walk(
                 // 水平モードの空白だけの文字列は、directive の対象にならない
                 let blank_text =
                     child.rule == Rule::regular_text && csttext.get_text(child).trim().is_empty();
-                if blank_text {
-                    continue;
-                }
-                if key.0 == key.1 {
-                    // 空のノード (header がない場合の headers など)
+                if blank_text || key.0 == key.1 {
+                    // 空のノード (header がない場合の headers など) も対象にならない
                 } else if is_container(child) {
-                    let (inner_off, last) = walk(csttext, child, skip, off, skip_next);
+                    let inner_off = walk(csttext, child, spans, off);
                     // 外から引き継いだ `off` は中の `on` で終わる。
                     // 中で書いた `off` は、その外 (`in` の後の本体など) には及ばない。
                     if off {
                         off = inner_off;
                     }
-                    skip_next = false;
-                    // 直後の行末の skip は、中の最後の要素 (その行の文) にかける
-                    prev = last.or(Some(key));
-                    continue;
-                } else if (off || skip_next) && key.0 < key.1 {
-                    skip.insert(key);
-                    skip_next = false;
+                } else if off {
+                    spans.insert(key);
                 } else {
-                    walk(csttext, child, skip, false, false);
+                    walk(csttext, child, spans, false);
                 }
-                prev = Some(key);
             }
             Item::BlankLines(_) => {}
         }
     }
-    (off, prev)
+    off
 }
 
 /// 元の文字列を壊さずに出力するための目印。
@@ -144,7 +122,8 @@ mod tests {
 
     #[test]
     fn parse_directive() {
-        assert_eq!(parse("% satysfi-fmt: skip"), Some(Directive::Skip));
+        // skip は対応していない (普通のコメント)
+        assert_eq!(parse("% satysfi-fmt: skip"), None);
         assert_eq!(parse("%satysfi-fmt:off"), Some(Directive::Off));
         assert_eq!(parse("%%  satysfi-fmt:  on  "), Some(Directive::On));
         assert_eq!(parse("% satysfi-fmt: unknown"), None);

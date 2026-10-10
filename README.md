@@ -91,22 +91,17 @@ let new_text = satysfi_formatter::format(&text, &file.or(request).build())?;
 コメントで、整形しない範囲を指定できる。整形しないノードは元の文字列のまま出力される (ノード間の空白や改行は通常どおり整形される)。
 
 ```satysfi
-% satysfi-fmt: skip
+% satysfi-fmt: off
 let table = [
   [1;   0;   0];
   [0;   1;   0];
 ]
-
-let x = [1;   2]   % satysfi-fmt: skip
-
-% satysfi-fmt: off
-let a   =   1
-let b   =   2
 % satysfi-fmt: on
+
+let x = [1;   2]
 ```
 
-* `% satysfi-fmt: skip` : 直後のノードを整形しない。行末に書いた場合は、その行のノード。
-  ヘッダ行、文、`+p` などのブロック、リストの要素、`\emph{...}` などのインラインコマンドに使える。
 * `% satysfi-fmt: off` / `% satysfi-fmt: on` : 間にあるノードを整形しない。`on` がなければ、同じ階層の最後のノードまで。
+  ヘッダ行、文、`+p` などのブロック、リストやレコードの要素、`\emph{...}` などのインラインコマンドの並びに使える。
 
 @monaqa さんの [satysfi-parser](https://github.com/monaqa/satysfi-parser) を元にformatを行っている

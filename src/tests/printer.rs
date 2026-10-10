@@ -213,20 +213,7 @@ fn own_line_comment_in_list() {
     assert_eq!(fmt(input, 80), expect);
 }
 
-#[test]
-fn skip_next_node() {
-    let input = "% satysfi-fmt: skip\nlet   x   =   [1;2]\nlet   y   =   [1;2]\n";
-    let expect = "let   x   =   [1;2]\nlet y = [1; 2]\n";
-    // コメント自体は残る
-    assert_eq!(fmt(input, 80), format!("% satysfi-fmt: skip\n{expect}"));
-}
 
-#[test]
-fn skip_with_trailing_comment() {
-    let input = "let   x   =   [1;2] % satysfi-fmt: skip\nlet   y   =   [1;2]\n";
-    let expect = "let   x   =   [1;2] % satysfi-fmt: skip\nlet y = [1; 2]\n";
-    assert_eq!(fmt(input, 80), expect);
-}
 
 #[test]
 fn off_and_on() {
@@ -235,17 +222,11 @@ fn off_and_on() {
     assert_eq!(fmt(input, 80), expect);
 }
 
-#[test]
-fn skip_keeps_multiline_text_as_is() {
-    let input = "let a = 1\n% satysfi-fmt: skip\nlet m = [\n      1;   2;\n   3 ]\nlet b = 2\n";
-    let expect = "let a = 1\n% satysfi-fmt: skip\nlet m = [\n      1;   2;\n   3 ]\nlet b = 2\n";
-    assert_eq!(fmt(input, 80), expect);
-}
 
 #[test]
-fn skip_inside_a_list_element() {
-    let input = "let x = [\n  a;\n  % satysfi-fmt: skip\n  f   b   c;\n  d\n]\n";
-    let expect = "let x = [\n    a;\n    % satysfi-fmt: skip\n    f   b   c;\n    d;\n]\n";
+fn off_and_on_inside_a_list() {
+    let input = "let x = [\n  a;\n  % satysfi-fmt: off\n  f   b   c;\n  % satysfi-fmt: on\n  d\n]\n";
+    let expect = "let x = [\n    a;\n    % satysfi-fmt: off\n    f   b   c;\n    % satysfi-fmt: on\n    d;\n]\n";
     assert_eq!(fmt(input, 80), expect);
 }
 
@@ -262,38 +243,9 @@ fn blank_lines_between_statements_are_kept_up_to_one() {
     assert_eq!(fmt(input, 80), "let a = 1\n\nlet b = 2\nlet c = 3\n");
 }
 
-#[test]
-fn skip_applies_to_first_statement() {
-    // 先頭の文の直前の directive も、その文だけにかかる
-    let input = "% satysfi-fmt: skip\nlet   x   =   [1;2]\nlet   y   =   [1;2]\n";
-    assert_eq!(
-        fmt(input, 80),
-        "% satysfi-fmt: skip\nlet   x   =   [1;2]\nlet y = [1; 2]\n"
-    );
-}
 
-#[test]
-fn skip_a_header_line() {
-    let input = "@require: a\n% satysfi-fmt: skip\n@import:   spaced\ndocument(||)'<>";
-    let expect = "@require: a\n% satysfi-fmt: skip\n@import:   spaced\n\ndocument (||) '<>\n";
-    assert_eq!(fmt(input, 80), expect);
-}
 
-#[test]
-fn skip_in_horizontal_and_vertical() {
-    let input = "document(||)'<\n  % satysfi-fmt: skip\n  +p   {  a   b  }\n  +p   {  a   b  }\n  +p {\n    x\n    % satysfi-fmt: skip\n    \\emph  {  y  }\n    \\emph  {  z  }\n  }\n>";
-    let expect = "document (||) '<\n    % satysfi-fmt: skip\n    +p   {  a   b  }\n    +p { a b }\n    +p {\n        x\n        % satysfi-fmt: skip\n        \\emph  {  y  }\n        \\emph { z }\n    }\n>\n";
-    assert_eq!(fmt(input, 80), expect);
-}
 
-#[test]
-fn skip_in_struct() {
-    let input =
-        "module M = struct\n  % satysfi-fmt: skip\n  let   x   =   1\n  let   y   =   2\nend\n";
-    let expect =
-        "module M = struct\n    % satysfi-fmt: skip\n    let   x   =   1\n    let y = 2\nend\n";
-    assert_eq!(fmt(input, 80), expect);
-}
 
 #[test]
 fn multiline_string_literal_is_not_reindented() {

@@ -5,7 +5,7 @@
 //! * 行幅に収まれば 1 行、収まらなければ縦に展開する (`group`)。
 //! * コメントと空行は `CstText::items` で子ノードの隙間から取り出す。
 //!   行コメントは行末まで続くので、後ろには必ず改行を置く (`hardline`)。
-//! * `% satysfi-fmt: skip` などのコメントで、ノードを元の文字列のまま出力できる。
+//! * `% satysfi-fmt: off` / `on` のコメントで、ノードを元の文字列のまま出力できる。
 //!   → [`directive`]
 
 pub mod directive;
@@ -28,7 +28,8 @@ pub struct Printer<'a> {
     final_newline: bool,
     use_tabs: bool,
     command_space: bool,
-    skip: HashSet<(usize, usize)>,
+    /// 整形しない (`satysfi-fmt: off` の範囲にある) ノードの span
+    off_spans: HashSet<(usize, usize)>,
     width: usize,
     indent: isize,
     /// `token_multiline` / `math_multiline` の結果
@@ -92,7 +93,7 @@ impl<'a> Printer<'a> {
     pub fn new(csttext: &'a CstText, config: &FormatConfig) -> Self {
         Self {
             csttext,
-            skip: directive::collect_skip_spans(csttext),
+            off_spans: directive::collect_off_spans(csttext),
             width: config.line_width.max(1),
             indent: config.indent_width.max(1) as isize,
             final_newline: config.final_newline,
@@ -267,7 +268,7 @@ impl<'a> Printer<'a> {
     /// cst を Doc に変換する。
     pub(self) fn node(&self, cst: &Cst) -> Doc {
         // `satysfi-fmt` directive で整形しないと指定されたノード
-        if self.skip.contains(&(cst.span.start, cst.span.end)) {
+        if self.off_spans.contains(&(cst.span.start, cst.span.end)) {
             return lines(&directive::verbatim(self.text_of(cst)));
         }
         match cst.rule {
@@ -470,7 +471,7 @@ impl<'a> Printer<'a> {
     }
 
     fn header(&self, cst: &Cst) -> Doc {
-        if self.skip.contains(&(cst.span.start, cst.span.end)) {
+        if self.off_spans.contains(&(cst.span.start, cst.span.end)) {
             return lines(&directive::verbatim(self.text_of(cst)));
         }
         let keyword = match cst.rule {
