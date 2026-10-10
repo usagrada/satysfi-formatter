@@ -155,7 +155,10 @@ fn finds_config_file_through_parent_references() {
     fs::write(root.join(".satysfi-fmt.toml"), "line_width = 100\n").unwrap();
 
     let file = b.join("..").join("main.saty");
-    assert_eq!(find_config_file(&file), Some(root.join(".satysfi-fmt.toml")));
+    assert_eq!(
+        find_config_file(&file),
+        Some(root.join(".satysfi-fmt.toml"))
+    );
 
     fs::remove_dir_all(&root).unwrap();
 }
@@ -187,7 +190,10 @@ fn format_uses_config() {
 #[test]
 fn format_reports_parse_error() {
     let err = format("let x = = 1\n", &FormatConfig::default()).unwrap_err();
-    assert_eq!(err.line, 0);
+    assert!(
+        matches!(err, crate::FormatError::Parse { line: 0, .. }),
+        "{err:?}"
+    );
 }
 
 /// language server での使い方: 設定ファイルを `FormattingOptions` より優先する

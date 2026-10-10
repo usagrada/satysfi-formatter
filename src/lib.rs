@@ -14,29 +14,39 @@ use satysfi_parser::{grammar, CstText};
 use std::fmt;
 pub use visualize::*;
 
-/// 構文エラーで整形できなかったことを表す。位置は 0 始まり。
+/// 整形できなかった理由。位置は 0 始まり。
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FormatError {
-    pub line: usize,
-    pub column: usize,
-    pub expected: Vec<&'static str>,
+pub enum FormatError {
+    /// 構文エラー
+    Parse {
+        line: usize,
+        column: usize,
+        expected: Vec<&'static str>,
+    },
+    /// `% satysfi-fmt: off` から `on` までを、整形前の文字列に戻せなかった。
+    /// `line` はその `off` コメントの行
+    FormatOff { line: usize },
 }
 
 impl fmt::Display for FormatError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "parse error at line {}, column {}",
-            self.line + 1,
-            self.column + 1
-        )
+        match self {
+            FormatError::Parse { line, column, .. } => {
+                write!(f, "parse error at line {}, column {}", line + 1, column + 1)
+            }
+            FormatError::FormatOff { line } => write!(
+                f,
+                "cannot keep the region after `satysfi-fmt: off` at line {} unformatted",
+                line + 1
+            ),
+        }
     }
 }
 
 impl std::error::Error for FormatError {}
 
 pub(crate) fn parse(input: &str) -> Result<CstText, FormatError> {
-    CstText::parse(input, grammar::program).map_err(|(pos, expected)| FormatError {
+    CstText::parse(input, grammar::program).map_err(|(pos, expected)| FormatError::Parse {
         line: pos.line,
         column: pos.column,
         expected,
@@ -50,5 +60,12 @@ pub(crate) fn parse(input: &str) -> Result<CstText, FormatError> {
 /// コメントによる整形の制御 (`% satysfi-fmt: off` / `on`) に対応している。
 pub fn format(input: &str, config: &FormatConfig) -> Result<String, FormatError> {
     let csttext = parse(input)?;
-    Ok(printer::Printer::new(&csttext, config).print())
+    let output = printer::Printer::new(&csttext, config).print();
+    let mut output = printer::directive::restore_off_regions(&csttext, &output)
+        .map_err(|line| FormatError::FormatOff { line })?;
+    // `on` のない `off` で、ファイルの最後まで元のままのとき
+    if config.final_newline && !output.ends_with('\n') {
+        output.push('\n');
+    }
+    Ok(output)
 }

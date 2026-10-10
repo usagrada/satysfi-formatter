@@ -45,11 +45,11 @@ fn tabs_keep_verbatim_lines() {
         use_tabs: true,
         ..Default::default()
     };
-    // 整形しないノードの 2 行目以降は元の空白のまま
-    let input = "document(||)'<\n    % satysfi-fmt: off\n    +p{\n        a\n    }\n>\n";
+    // off から on までは元の空白のまま。off / on のコメント自体はタブで字下げする
+    let input = "document(||)'<\n    % satysfi-fmt: off\n    +p{\n        a\n    }\n    % satysfi-fmt: on\n    +p{b}\n>\n";
     assert_eq!(
         format(input, &tabs),
-        "document (||) '<\n\t% satysfi-fmt: off\n\t+p{\n        a\n    }\n>\n"
+        "document (||) '<\n\t% satysfi-fmt: off\n    +p{\n        a\n    }\n\t% satysfi-fmt: on\n\t+p { b }\n>\n"
     );
 }
 

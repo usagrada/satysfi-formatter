@@ -88,20 +88,42 @@ let new_text = satysfi_formatter::format(&text, &file.or(request).build())?;
 
 ## 整形の制御
 
-コメントで、整形しない範囲を指定できる。整形しないノードは元の文字列のまま出力される (ノード間の空白や改行は通常どおり整形される)。
+clang-format の `// clang-format off` / `// clang-format on` と同じように、コメントで整形しない範囲を指定できる。
+
+整形前:
 
 ```satysfi
+let x = [1;   2]
 % satysfi-fmt: off
 let table = [
   [1;   0;   0];
   [0;   1;   0];
 ]
 % satysfi-fmt: on
-
-let x = [1;   2]
+let y = [1;   2]
 ```
 
-* `% satysfi-fmt: off` / `% satysfi-fmt: on` : 間にあるノードを整形しない。`on` がなければ、同じ階層の最後のノードまで。
-  ヘッダ行、文、`+p` などのブロック、リストやレコードの要素、`\emph{...}` などのインラインコマンドの並びに使える。
+整形後:
+
+```satysfi
+let x = [1; 2]
+% satysfi-fmt: off
+let table = [
+  [1;   0;   0];
+  [0;   1;   0];
+]
+% satysfi-fmt: on
+let y = [1; 2]
+```
+
+* `% satysfi-fmt: off` から `% satysfi-fmt: on` までは、空白・改行・字下げ・コメントも含めて元のまま出力する。
+* `off` / `on` のコメント自体は、通常どおり字下げされる。
+* 文の間だけでなく、リストやレコードの要素の間、`+p { ... }` の中など、式やブロックの途中にも書ける。
+* 行末に書いた `off` はその次の行から、行末に書いた `on` はその次の行から整形を再開する
+  (行末の `on` より前は元のまま)。
+* `on` がなければ、ファイルの最後まで整形しない。
+* `% satysfi-fmt: off: 表を揃えるため` のように、`:` の後ろに理由を書ける。
+* 構文の途中 (`let-rec` と関数名の間など) に書くと、整形でコメントの位置が変わり、範囲を元に戻せないことがある。
+  その場合は整形せずにエラーになる (CLI は終了コード 1)。
 
 @monaqa さんの [satysfi-parser](https://github.com/monaqa/satysfi-parser) を元にformatを行っている

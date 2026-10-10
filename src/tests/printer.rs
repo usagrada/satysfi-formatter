@@ -4,7 +4,7 @@ fn fmt(input: &str, width: usize) -> String {
     format(input, &config_with_width(width))
 }
 
-use super::{check_comment_insertion, check_invariants};
+use super::{check_comment_insertion, check_invariants, check_off_on_insertion, Placement};
 
 // 構文を一通り含む入力
 const REC: &str = r##"@require: stdjareport
@@ -213,8 +213,6 @@ fn own_line_comment_in_list() {
     assert_eq!(fmt(input, 80), expect);
 }
 
-
-
 #[test]
 fn off_and_on() {
     let input = "let a = [1;2]\n% satysfi-fmt: off\nlet   b   =   [1;2]\nlet   c   =   [1;2]\n% satysfi-fmt: on\nlet d = [1;2]\n";
@@ -222,11 +220,11 @@ fn off_and_on() {
     assert_eq!(fmt(input, 80), expect);
 }
 
-
 #[test]
 fn off_and_on_inside_a_list() {
-    let input = "let x = [\n  a;\n  % satysfi-fmt: off\n  f   b   c;\n  % satysfi-fmt: on\n  d\n]\n";
-    let expect = "let x = [\n    a;\n    % satysfi-fmt: off\n    f   b   c;\n    % satysfi-fmt: on\n    d;\n]\n";
+    let input =
+        "let x = [\n  a;\n  % satysfi-fmt: off\n  f   b   c;\n  % satysfi-fmt: on\n  d\n]\n";
+    let expect = "let x = [\n    a;\n    % satysfi-fmt: off\n  f   b   c;\n    % satysfi-fmt: on\n    d;\n]\n";
     assert_eq!(fmt(input, 80), expect);
 }
 
@@ -242,10 +240,6 @@ fn blank_lines_between_statements_are_kept_up_to_one() {
     let input = "let a = 1\n\n\n\nlet b = 2\nlet c = 3\n";
     assert_eq!(fmt(input, 80), "let a = 1\n\nlet b = 2\nlet c = 3\n");
 }
-
-
-
-
 
 #[test]
 fn multiline_string_literal_is_not_reindented() {
@@ -335,20 +329,47 @@ document (| title = {a} |) '<
 >
 "##;
 
+const SAMPLES: [(&str, &str); 5] = [
+    ("rec", REC),
+    ("modes", MODES),
+    ("comments", COMMENTS),
+    ("exprs", EXPRS),
+    ("texts", TEXTS),
+];
+
 #[test]
 fn comments_survive_insertion_at_any_position() {
-    let samples = [
-        ("rec", REC),
-        ("modes", MODES),
-        ("comments", COMMENTS),
-        ("exprs", EXPRS),
-        ("texts", TEXTS),
-    ];
-    for (name, src) in samples {
+    for (name, src) in SAMPLES {
         let checked = check_comment_insertion(name, src);
         assert!(
             checked > 50,
             "{name}: only {checked} positions were checked"
         );
+    }
+}
+
+#[test]
+fn off_and_on_on_their_own_lines_keep_the_region_as_is() {
+    for (name, src) in SAMPLES {
+        let (checked, _) = check_off_on_insertion(name, src, Placement::OwnLine);
+        assert!(checked > 20, "{name}: only {checked} pairs were checked");
+    }
+}
+
+#[test]
+fn off_and_on_at_line_ends_keep_the_region_as_is() {
+    for (name, src) in SAMPLES {
+        let (checked, _) = check_off_on_insertion(name, src, Placement::LineEnd);
+        assert!(checked > 20, "{name}: only {checked} pairs were checked");
+    }
+}
+
+#[test]
+fn off_and_on_at_any_position_never_break_the_code() {
+    // 構文の途中ではエラーになることがあるが、壊れた出力は返さない
+    for (name, src) in SAMPLES {
+        let (checked, errors) = check_off_on_insertion(name, src, Placement::Anywhere);
+        assert!(checked > 50, "{name}: only {checked} pairs were checked");
+        eprintln!("{name}: {errors} of {checked} pairs could not be kept unformatted");
     }
 }

@@ -189,6 +189,192 @@ pub(crate) fn check_comment_insertion(name: &str, src: &str) -> usize {
     checked
 }
 
+/// コメントを挿入できる位置 (文字列とコメントの外にある空白の位置)。
+fn insertion_points(src: &str) -> Vec<usize> {
+    let mut points = vec![];
+    let mut in_string = false;
+    for (i, ch) in src.char_indices() {
+        if ch == '`' {
+            in_string = !in_string;
+        }
+        if in_string || !(ch == ' ' || ch == '\n') {
+            continue;
+        }
+        let line_start = src[..i].rfind('\n').map_or(0, |k| k + 1);
+        if !src[line_start..i].contains('%') {
+            points.push(i);
+        }
+    }
+    points
+}
+
+/// 行頭の位置 (文字列の外)。
+fn line_starts(src: &str) -> Vec<usize> {
+    let mut points = vec![0];
+    let mut in_string = false;
+    for (i, ch) in src.char_indices() {
+        if ch == '`' {
+            in_string = !in_string;
+        }
+        if ch == '\n' && !in_string && i + 1 < src.len() {
+            points.push(i + 1);
+        }
+    }
+    points
+}
+
+/// `check_off_on_insertion` で off / on を置く位置。
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Placement {
+    /// 行頭に単独行のコメントとして置く (普通の書き方)。必ず整形できること
+    OwnLine,
+    /// 空白のあるあらゆる位置に行末のコメントとして置く。
+    /// 構文の途中では整形でコメントの位置が変わり、範囲を戻せずにエラーになることがある
+    Anywhere,
+    /// 既存の行の末尾に置く (普通の書き方)。必ず整形できること
+    LineEnd,
+}
+
+/// `% satysfi-fmt: off` / `on` の組をいろいろな位置に挿入して整形し、次を確認する。
+/// * off と on の間の文字列が元のまま残る
+/// * 整形結果が冪等で、トークン列とコメントが変わらない
+/// * `Placement::Anywhere` 以外では、範囲を戻せないエラーにならない
+///
+/// 挿入によってパースできなくなる組は飛ばす。(確認した組の数, エラーになった組の数) を返す。
+pub(crate) fn check_off_on_insertion(
+    name: &str,
+    src: &str,
+    placement: Placement,
+) -> (usize, usize) {
+    use satysfi_parser::{grammar, CstText};
+    let config = FormatConfig::default();
+    let (points, off_text, on_text) = match placement {
+        Placement::OwnLine => (line_starts(src), "% satysfi-fmt: off", "% satysfi-fmt: on"),
+        Placement::Anywhere => (
+            insertion_points(src),
+            "%satysfi-fmt:off",
+            "% satysfi-fmt: on",
+        ),
+        Placement::LineEnd => (
+            insertion_points(src)
+                .into_iter()
+                .filter(|&i| src[i..].starts_with('\n'))
+                .collect(),
+            " % satysfi-fmt: off",
+            " % satysfi-fmt: on",
+        ),
+    };
+    let mut checked = 0;
+    let mut errors = 0;
+    let mut failures = vec![];
+    for (n, &i) in points.iter().enumerate() {
+        // `Anywhere` は位置が多いので、off は 1 つおきに置く
+        if placement == Placement::Anywhere && n % 2 == 1 {
+            continue;
+        }
+        // on は off の 1・4・16 個先の位置に置く。最後の組は on を置かない (ファイルの最後まで)。
+        // `Anywhere` は位置が多いので 1・16 個先だけ
+        let distances: &[usize] = if placement == Placement::Anywhere {
+            &[1, 16]
+        } else {
+            &[1, 4, 16]
+        };
+        let ons = distances
+            .iter()
+            .map(|k| points.get(n + k).copied())
+            .collect::<Vec<_>>();
+        for on in ons {
+            let modified = match on {
+                Some(j) => format!(
+                    "{}{off_text}\n{}{on_text}\n{}",
+                    &src[..i],
+                    &src[i..j],
+                    &src[j..]
+                ),
+                None => format!("{}{off_text}\n{}", &src[..i], &src[i..]),
+            };
+            let csttext = match CstText::parse(&modified, grammar::program) {
+                Ok(csttext) => csttext,
+                Err(_) => continue,
+            };
+            // ヘッダのパッケージ名の直後などでは、コメントにならない
+            let starts: Vec<usize> = crate::printer::directive::comment_spans(&csttext)
+                .iter()
+                .map(|span| span.start)
+                .collect();
+            let indent = |text: &str| text.len() - text.trim_start().len();
+            let off_start = i + indent(off_text);
+            let on_start = on.map(|j| j + off_text.len() + 1 + indent(on_text));
+            if !starts.contains(&off_start) || on_start.map_or(false, |k| !starts.contains(&k)) {
+                continue;
+            }
+            checked += 1;
+            // 元のまま残るべき範囲: off コメントの直後から、on コメントの前の空白の手前まで
+            let region_start = i + off_text.len();
+            let region = match on_start {
+                Some(k) => modified[region_start..k].trim_end_matches([' ', '\t']),
+                None => &modified[region_start..],
+            };
+            let problem = match crate::format(&modified, &config) {
+                Err(crate::FormatError::FormatOff { .. }) if placement == Placement::Anywhere => {
+                    errors += 1;
+                    None
+                }
+                Err(err) => Some(err.to_string()),
+                Ok(output) => {
+                    let mut expected_comments = comments(&modified);
+                    expected_comments.sort();
+                    let mut actual_comments = comments(&output);
+                    actual_comments.sort();
+                    if !output.contains(region.trim_end_matches('\n')) {
+                        Some("region changed".to_string())
+                    } else if actual_comments != expected_comments {
+                        Some("comments changed".to_string())
+                    } else if crate::format(&output, &config).as_ref() != Ok(&output) {
+                        Some("not idempotent".to_string())
+                    } else if tokens(&output) != tokens(&modified) {
+                        Some("tokens changed".to_string())
+                    } else {
+                        None
+                    }
+                }
+            };
+            if let Some(problem) = problem {
+                let around = |k: usize| {
+                    let from = modified[..k]
+                        .char_indices()
+                        .rev()
+                        .nth(16)
+                        .map_or(0, |(p, _)| p);
+                    let to = modified[k..]
+                        .char_indices()
+                        .nth(40)
+                        .map_or(modified.len(), |(p, _)| k + p);
+                    format!("{:?}", &modified[from..to])
+                };
+                let on_context = on_start.map_or("(none)".to_string(), around);
+                failures.push(format!(
+                    "{name}: {problem}\n  off: {}\n  on:  {on_context}\n--- input\n{modified}",
+                    around(i)
+                ));
+            }
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "{} of {} cases failed.\n{}\nfirst:\n{}",
+        failures.len(),
+        checked,
+        failures
+            .iter()
+            .map(|f| f.lines().take(3).collect::<Vec<_>>().join("\n"))
+            .collect::<Vec<_>>()
+            .join("\n"),
+        failures.first().unwrap()
+    );
+    (checked, errors)
+}
+
 #[test]
 fn test_unicode() {
     let text = r#"

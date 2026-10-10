@@ -5,8 +5,7 @@
 //! * 行幅に収まれば 1 行、収まらなければ縦に展開する (`group`)。
 //! * コメントと空行は `CstText::items` で子ノードの隙間から取り出す。
 //!   行コメントは行末まで続くので、後ろには必ず改行を置く (`hardline`)。
-//! * `% satysfi-fmt: off` / `on` のコメントで、ノードを元の文字列のまま出力できる。
-//!   → [`directive`]
+//! * `% satysfi-fmt: off` から `on` までは整形せず、元の文字列に戻す。→ [`directive`]
 
 pub mod directive;
 mod expr;
@@ -19,7 +18,7 @@ use crate::config::FormatConfig;
 use pretty::RcDoc;
 use satysfi_parser::{Cst, CstText, Item, Rule, Span};
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 pub(self) type Doc = RcDoc<'static, ()>;
 
@@ -28,8 +27,6 @@ pub struct Printer<'a> {
     final_newline: bool,
     use_tabs: bool,
     command_space: bool,
-    /// 整形しない (`satysfi-fmt: off` の範囲にある) ノードの span
-    off_spans: HashSet<(usize, usize)>,
     width: usize,
     indent: isize,
     /// `token_multiline` / `math_multiline` の結果
@@ -93,7 +90,6 @@ impl<'a> Printer<'a> {
     pub fn new(csttext: &'a CstText, config: &FormatConfig) -> Self {
         Self {
             csttext,
-            off_spans: directive::collect_off_spans(csttext),
             width: config.line_width.max(1),
             indent: config.indent_width.max(1) as isize,
             final_newline: config.final_newline,
@@ -267,10 +263,6 @@ impl<'a> Printer<'a> {
 
     /// cst を Doc に変換する。
     pub(self) fn node(&self, cst: &Cst) -> Doc {
-        // `satysfi-fmt` directive で整形しないと指定されたノード
-        if self.off_spans.contains(&(cst.span.start, cst.span.end)) {
-            return lines(&directive::verbatim(self.text_of(cst)));
-        }
         match cst.rule {
             Rule::program_saty | Rule::program_satyh => self.program(cst),
             Rule::stage => Doc::text(format!("@stage: {}", self.text_of(cst).trim())),
@@ -471,9 +463,6 @@ impl<'a> Printer<'a> {
     }
 
     fn header(&self, cst: &Cst) -> Doc {
-        if self.off_spans.contains(&(cst.span.start, cst.span.end)) {
-            return lines(&directive::verbatim(self.text_of(cst)));
-        }
         let keyword = match cst.rule {
             Rule::header_require => "@require:",
             Rule::header_import => "@import:",
