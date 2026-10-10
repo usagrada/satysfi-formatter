@@ -213,6 +213,7 @@ impl<'a> Printer<'a> {
             carry.extend(c.trailing);
             head_items.push(Kid {
                 cst: c.cst,
+                commented: !leading.is_empty(),
                 doc: with_leading(leading, self.node(c.cst)),
             });
         }
@@ -301,6 +302,7 @@ impl<'a> Printer<'a> {
                     _ => {
                         synonym = Some(Kid {
                             cst: child.cst,
+                            commented: !child.leading.is_empty(),
                             doc: kid_doc,
                         })
                     }

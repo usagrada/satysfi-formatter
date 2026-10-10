@@ -111,6 +111,11 @@ pub fn verbatim(text: &str) -> String {
         .join("\n")
 }
 
+/// `verbatim` の 2 行目以降か。この行の目印より前のインデントは `strip_markers` で取り除かれる。
+pub fn is_verbatim_continuation(line: &str) -> bool {
+    line.contains(CONT)
+}
+
 /// `verbatim` の目印を取り除く。2 行目以降は、Doc が付けたインデントも取り除く。
 pub fn strip_markers(output: &str) -> String {
     output

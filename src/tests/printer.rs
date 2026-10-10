@@ -1,20 +1,7 @@
-use crate::format;
-use lspower::lsp::{FormattingOptions, FormattingProperty};
+use super::{config_with_width, format};
 
-fn option_with_width(width: i32) -> FormattingOptions {
-    let mut option = FormattingOptions {
-        tab_size: 4,
-        insert_spaces: true,
-        ..Default::default()
-    };
-    option
-        .properties
-        .insert("lineWidth".to_string(), FormattingProperty::Number(width));
-    option
-}
-
-fn fmt(input: &str, width: i32) -> String {
-    format(input, option_with_width(width))
+fn fmt(input: &str, width: usize) -> String {
+    format(input, &config_with_width(width))
 }
 
 use super::{check_comment_insertion, check_invariants};

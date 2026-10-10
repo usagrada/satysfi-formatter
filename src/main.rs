@@ -1,7 +1,6 @@
 use clap::Parser;
-use lspower::lsp::{FormattingOptions, FormattingProperty};
-use satysfi_formatter::format;
-use std::{fs, path::PathBuf};
+use satysfi_formatter::{format, resolve_config, PartialConfig};
+use std::{fs, path::PathBuf, process};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -15,29 +14,60 @@ struct Cli {
     /// output file
     #[clap(short, long)]
     output: Option<PathBuf>,
-    /// indent size
-    #[clap(short, long, default_value_t = 4)]
-    indent_space: usize,
-    /// maximum line width
-    #[clap(long, default_value_t = 80)]
-    line_width: usize,
-    /// Add space before arguments in command
+    /// indent size [default: 4]
+    #[clap(short, long)]
+    indent_space: Option<usize>,
+    /// maximum line width [default: 80]
     #[clap(long)]
-    cspace: bool,
+    line_width: Option<usize>,
+    /// config file (searched from the directory of FILE upward if omitted)
+    #[clap(long, parse(from_os_str), value_name = "PATH")]
+    config: Option<PathBuf>,
+    /// indent with tabs (`--use-tabs=false` to disable) [default: false]
+    #[clap(
+        long,
+        value_name = "BOOL",
+        min_values = 0,
+        require_equals = true,
+        default_missing_value = "true"
+    )]
+    use_tabs: Option<bool>,
+    /// add space before text arguments of commands (`--cspace=false` to disable) [default: true]
+    #[clap(
+        long,
+        value_name = "BOOL",
+        min_values = 0,
+        require_equals = true,
+        default_missing_value = "true"
+    )]
+    cspace: Option<bool>,
 }
 
 fn main() {
     let cli = Cli::parse();
     let code = fs::read_to_string(&cli.file).expect("Failed to read file");
-    let mut option = FormattingOptions {
-        tab_size: cli.indent_space as u32,
-        ..Default::default()
+
+    let file_config = match &cli.config {
+        Some(path) => PartialConfig::from_file(path),
+        None => resolve_config(&cli.file),
+    }
+    .unwrap_or_else(|err| {
+        eprintln!("{}", err);
+        process::exit(2);
+    });
+    let cli_config = PartialConfig {
+        line_width: cli.line_width.filter(|n| *n > 0),
+        indent_width: cli.indent_space.filter(|n| *n > 0),
+        use_tabs: cli.use_tabs,
+        final_newline: None,
+        command_space: cli.cspace,
     };
-    option.properties.insert(
-        "lineWidth".to_string(),
-        FormattingProperty::Number(cli.line_width as i32),
-    );
-    let output = format(&code, option);
+    let config = cli_config.or(file_config).build();
+
+    let output = format(&code, &config).unwrap_or_else(|err| {
+        eprintln!("{}: {}", cli.file.display(), err);
+        process::exit(1);
+    });
 
     match (cli.output, cli.write) {
         (Some(path), _) => fs::write(path, &output).expect("Failed to write file"),

@@ -1,14 +1,16 @@
-use crate::format;
-use lspower::lsp::FormattingOptions;
+use crate::FormatConfig;
 
 mod comment;
 mod comment_position;
 mod common;
+mod config;
 mod ctrl_stmt;
 mod directive;
 mod exprs;
 mod horizontal_single;
 mod let_block;
+#[cfg(feature = "lsp")]
+mod lsp_api;
 mod math;
 mod math_mode;
 mod module;
@@ -21,36 +23,37 @@ mod syntax;
 mod text_mode;
 mod types;
 
-/// 行幅を指定して整形し、期待する出力と一致し、冪等であることを確認する。
-fn test_width(input: &str, width: i32, expect: &str) {
-    let mut option = FormattingOptions {
-        tab_size: 4,
-        insert_spaces: true,
+/// 行幅を指定した設定
+pub(crate) fn config_with_width(width: usize) -> FormatConfig {
+    FormatConfig {
+        line_width: width,
         ..Default::default()
-    };
-    option.properties.insert(
-        "lineWidth".to_string(),
-        lspower::lsp::FormattingProperty::Number(width),
-    );
-    let output = format(input, option.clone());
+    }
+}
+
+/// 整形する。構文エラーのときは入力をそのまま返す。
+pub(crate) fn format(input: &str, config: &FormatConfig) -> String {
+    crate::format(input, config).unwrap_or_else(|_| input.to_string())
+}
+
+/// 行幅を指定して整形し、期待する出力と一致し、冪等であることを確認する。
+fn test_width(input: &str, width: usize, expect: &str) {
+    let config = config_with_width(width);
+    let output = format(input, &config);
     assert_eq!(output, expect, "width = {width}");
     assert_eq!(
-        format(&output, option),
+        format(&output, &config),
         output,
         "not idempotent (width = {width})"
     );
 }
 
 fn test_tmpl(input: &str, expect: &str) {
-    let option = FormattingOptions {
-        tab_size: 4,
-        insert_spaces: true,
-        ..Default::default()
-    };
-    let output = format(input, option.clone());
+    let config = FormatConfig::default();
+    let output = format(input, &config);
     assert_eq!(output, expect);
     // 冪等性: 整形結果をもう一度整形しても変わらない
-    assert_eq!(format(&output, option), output, "not idempotent");
+    assert_eq!(format(&output, &config), output, "not idempotent");
 }
 
 /// `%` から行末までのコメントの開始位置 (文字列やエスケープの中の `%` は除く)
@@ -97,19 +100,11 @@ fn comments(text: &str) -> Vec<String> {
 /// * コメントが増減しない
 pub(crate) fn check_invariants(name: &str, input: &str) {
     for width in [20, 40, 80, 200] {
-        let mut option = FormattingOptions {
-            tab_size: 4,
-            insert_spaces: true,
-            ..Default::default()
-        };
-        option.properties.insert(
-            "lineWidth".to_string(),
-            lspower::lsp::FormattingProperty::Number(width),
-        );
-        let output = format(input, option.clone());
+        let config = config_with_width(width);
+        let output = format(input, &config);
         assert_eq!(
             output,
-            format(&output, option),
+            format(&output, &config),
             "{name}@{width}: not idempotent"
         );
         assert_eq!(
@@ -130,11 +125,7 @@ pub(crate) fn check_invariants(name: &str, input: &str) {
 /// 挿入によってパースできなくなる位置は飛ばす。確認した位置の数を返す。
 pub(crate) fn check_comment_insertion(name: &str, src: &str) -> usize {
     use satysfi_parser::{grammar, CstText};
-    let option = FormattingOptions {
-        tab_size: 4,
-        insert_spaces: true,
-        ..Default::default()
-    };
+    let config = FormatConfig::default();
     let mut checked = 0;
     let mut failures = vec![];
     let mut in_string = false;
@@ -155,14 +146,14 @@ pub(crate) fn check_comment_insertion(name: &str, src: &str) -> usize {
             continue;
         }
         checked += 1;
-        let output = format(&modified, option.clone());
+        let output = format(&modified, &config);
         let mut expected_comments = comments(&modified);
         expected_comments.sort();
         let mut actual_comments = comments(&output);
         actual_comments.sort();
         let problem = if actual_comments != expected_comments {
             Some("comments changed")
-        } else if format(&output, option.clone()) != output {
+        } else if format(&output, &config) != output {
             Some("not idempotent")
         } else if tokens(&output) != tokens(&modified) {
             Some("tokens changed")

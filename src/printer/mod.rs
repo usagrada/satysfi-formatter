@@ -15,19 +15,18 @@ mod stmt;
 mod text;
 mod types;
 
-use lspower::lsp::{FormattingOptions, FormattingProperty};
+use crate::config::FormatConfig;
 use pretty::RcDoc;
 use satysfi_parser::{Cst, CstText, Item, Rule, Span};
 use std::collections::HashSet;
 
 pub(self) type Doc = RcDoc<'static, ()>;
 
-/// 行幅の既定値。`FormattingOptions::properties["lineWidth"]` で変更できる。
-pub const DEFAULT_LINE_WIDTH: usize = 80;
-
 pub struct Printer<'a> {
     csttext: &'a CstText,
-    option: FormattingOptions,
+    final_newline: bool,
+    use_tabs: bool,
+    command_space: bool,
     skip: HashSet<(usize, usize)>,
     width: usize,
     indent: isize,
@@ -54,6 +53,8 @@ pub(self) struct Children<'c> {
 pub(self) struct Kid<'c> {
     pub cst: &'c Cst,
     pub doc: Doc,
+    /// 前にコメントがあるか (`doc` はコメントで始まる)
+    pub commented: bool,
 }
 
 pub(self) struct Kids<'c> {
@@ -80,18 +81,15 @@ impl<'c> Kids<'c> {
 }
 
 impl<'a> Printer<'a> {
-    pub fn new(csttext: &'a CstText, option: FormattingOptions) -> Self {
-        let width = match option.properties.get("lineWidth") {
-            Some(FormattingProperty::Number(n)) if *n > 0 => *n as usize,
-            _ => DEFAULT_LINE_WIDTH,
-        };
-        let indent = (option.tab_size as isize).max(1);
+    pub fn new(csttext: &'a CstText, config: &FormatConfig) -> Self {
         Self {
             csttext,
             skip: directive::collect_skip_spans(csttext),
-            width,
-            indent,
-            option,
+            width: config.line_width.max(1),
+            indent: config.indent_width.max(1) as isize,
+            final_newline: config.final_newline,
+            use_tabs: config.use_tabs,
+            command_space: config.command_space,
         }
     }
 
@@ -103,14 +101,38 @@ impl<'a> Printer<'a> {
         // 行末の空白を除く (整形しないノードは目印があるので残る)
         let output = output
             .split('\n')
-            .map(|line| line.trim_end())
+            .map(|line| {
+                let line = line.trim_end();
+                if self.use_tabs {
+                    self.indent_with_tabs(line)
+                } else {
+                    line.to_string()
+                }
+            })
             .collect::<Vec<_>>()
             .join("\n");
         let mut output = directive::strip_markers(&output);
-        if self.option.insert_final_newline.unwrap_or(true) && !output.ends_with('\n') {
+        if self.final_newline && !output.ends_with('\n') {
             output.push('\n');
         }
         output
+    }
+
+    /// 行頭のインデント (空白) をタブにする。インデント幅に満たない端数は空白のまま残す。
+    /// 整形しない文字列の 2 行目以降は、元のインデントを残すので変えない。
+    fn indent_with_tabs(&self, line: &str) -> String {
+        if directive::is_verbatim_continuation(line) {
+            return line.to_string();
+        }
+        let body = line.trim_start_matches(' ');
+        let spaces = line.len() - body.len();
+        let indent = self.indent as usize;
+        format!(
+            "{}{}{}",
+            "\t".repeat(spaces / indent),
+            " ".repeat(spaces % indent),
+            body
+        )
     }
 
     // ---- 基本の部品 ----
@@ -182,6 +204,7 @@ impl<'a> Printer<'a> {
             carry.extend(child.trailing);
             items.push(Kid {
                 cst: child.cst,
+                commented: !leading.is_empty(),
                 doc: with_leading(leading, self.node(child.cst)),
             });
         }

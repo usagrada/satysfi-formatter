@@ -1,53 +1,54 @@
+pub mod config;
+#[cfg(feature = "lsp")]
+mod lsp;
 mod printer;
 #[cfg(test)]
 mod tests;
 mod visualize;
 
-use lspower::lsp::{FormattingOptions, TextEdit};
+pub use config::{resolve_config, ConfigError, FormatConfig, PartialConfig};
+#[cfg(feature = "lsp")]
+#[allow(deprecated)]
+pub use lsp::formatting;
 use satysfi_parser::{grammar, CstText};
+use std::fmt;
 pub use visualize::*;
 
-/// satysfi のコードを format する。
-///
-/// 行幅は `option.properties["lineWidth"]` (既定は 80) で指定できる。
-/// コメントによる整形の制御 (`% satysfi-fmt: skip` など) に対応している。
-pub fn format(input: &str, option: FormattingOptions) -> String {
-    let csttext = match CstText::parse(input, grammar::program) {
-        Ok(csttext) => csttext,
-        Err(err) => {
-            eprintln!(
-                "disable to format\n[parse error] line: {}, column: {}",
-                err.0.line, err.0.column
-            );
-            return input.to_string();
-        }
-    };
-    printer::Printer::new(&csttext, option).print()
+/// 構文エラーで整形できなかったことを表す。位置は 0 始まり。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FormatError {
+    pub line: usize,
+    pub column: usize,
+    pub expected: Vec<&'static str>,
 }
 
-pub fn formatting(input: &str, option: FormattingOptions) -> Vec<TextEdit> {
-    let csttext = match CstText::parse(input, grammar::program) {
-        Ok(csttext) => csttext,
-        Err(err) => {
-            eprintln!(
-                "disable to format\n[parse error] line: {}, column: {}",
-                err.0.line, err.0.column
-            );
-            return Vec::new();
-        }
-    };
-    let output = printer::Printer::new(&csttext, option).print();
-    vec![TextEdit {
-        range: lspower::lsp::Range {
-            start: lspower::lsp::Position {
-                line: 0,
-                character: 0,
-            },
-            end: lspower::lsp::Position {
-                line: csttext.lines.len() as u32,
-                character: csttext.text.split('\n').last().unwrap().len() as u32,
-            },
-        },
-        new_text: output,
-    }]
+impl fmt::Display for FormatError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "parse error at line {}, column {}",
+            self.line + 1,
+            self.column + 1
+        )
+    }
+}
+
+impl std::error::Error for FormatError {}
+
+pub(crate) fn parse(input: &str) -> Result<CstText, FormatError> {
+    CstText::parse(input, grammar::program).map_err(|(pos, expected)| FormatError {
+        line: pos.line,
+        column: pos.column,
+        expected,
+    })
+}
+
+/// satysfi のコードを `config` に従って整形する。
+///
+/// 入出力 (ファイルの読み書きや設定ファイルの探索) は行わない。
+/// 設定は [`resolve_config`] などで作って渡す。
+/// コメントによる整形の制御 (`% satysfi-fmt: skip` など) に対応している。
+pub fn format(input: &str, config: &FormatConfig) -> Result<String, FormatError> {
+    let csttext = parse(input)?;
+    Ok(printer::Printer::new(&csttext, config).print())
 }

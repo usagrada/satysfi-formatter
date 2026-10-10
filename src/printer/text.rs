@@ -458,7 +458,13 @@ impl<'a> Printer<'a> {
                 });
             if is_text || hugging || seen_tail {
                 seen_tail = true;
-                tail = tail.append(s(" ")).append(kid.doc.clone());
+                // `command_space` が偽なら、テキスト引数の前の空白を省く。
+                // 間にコメントがあるときは省かない。
+                let space = !is_text || self.command_space || kid.commented;
+                if space {
+                    tail = tail.append(s(" "));
+                }
+                tail = tail.append(kid.doc.clone());
             } else {
                 broken = broken.append(Doc::line()).append(kid.doc.clone());
             }

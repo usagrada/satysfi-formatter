@@ -12,8 +12,15 @@ repository = "https://github.com/usagrada/"
 satysfi-parser = { git = "https://github.com/usagrada/satysfi-parser.git", rev = "9a064ad23eeb41edf9262ae0ea60a39b6f4fcb39" }
 clap = { version = "3", features = ["derive"] }
 dirs = "*"
-lspower = "1.4.0"
+lspower = { version = "1.4.0", optional = true }
 pretty = "0.12"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+[features]
+default = ["lsp"]
+# language server 向けの API (`format` / `formatting`)。LSP の型 (lspower) を使う
+lsp = ["dep:lspower"]
 
 [[bin]]
 name = "satysfi-fmt"
