@@ -163,7 +163,10 @@ fn list_breaks_when_too_long() {
 
 #[test]
 fn empty_list_and_record() {
-    assert_eq!(fmt("let x = [ ]\nlet y = (| |)\n", 80), "let x = []\nlet y = (||)\n");
+    assert_eq!(
+        fmt("let x = [ ]\nlet y = (| |)\n", 80),
+        "let x = []\nlet y = (||)\n"
+    );
 }
 
 #[test]
@@ -298,8 +301,10 @@ fn skip_in_horizontal_and_vertical() {
 
 #[test]
 fn skip_in_struct() {
-    let input = "module M = struct\n  % satysfi-fmt: skip\n  let   x   =   1\n  let   y   =   2\nend\n";
-    let expect = "module M = struct\n    % satysfi-fmt: skip\n    let   x   =   1\n    let y = 2\nend\n";
+    let input =
+        "module M = struct\n  % satysfi-fmt: skip\n  let   x   =   1\n  let   y   =   2\nend\n";
+    let expect =
+        "module M = struct\n    % satysfi-fmt: skip\n    let   x   =   1\n    let y = 2\nend\n";
     assert_eq!(fmt(input, 80), expect);
 }
 
@@ -318,6 +323,7 @@ fn horizontal_text_keeps_adjacency() {
     let expect = "document (||) '<\n    +p { a\\emph { b }c \\emph { d } e }\n>\n";
     assert_eq!(fmt(input, 80), expect);
     // 長くても 1 行の文章は途中で折り返さない
-    let long = "document(||)'<+p{aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff}>";
+    let long =
+        "document(||)'<+p{aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff}>";
     assert_eq!(fmt(long, 20).lines().count(), 3);
 }

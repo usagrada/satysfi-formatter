@@ -56,7 +56,6 @@ fn comments(text: &str) -> Vec<String> {
     result
 }
 
-
 /// どんな行幅で整形しても成り立つ性質を確認する。
 /// * 整形結果をもう一度整形しても変わらない
 /// * 空白と `;` を除いたトークン列が変わらない
@@ -78,7 +77,11 @@ pub(crate) fn check_invariants(name: &str, input: &str) {
             format(&output, option),
             "{name}@{width}: not idempotent"
         );
-        assert_eq!(tokens(&output), tokens(input), "{name}@{width}: tokens changed");
+        assert_eq!(
+            tokens(&output),
+            tokens(input),
+            "{name}@{width}: tokens changed"
+        );
         assert_eq!(
             comments(&output),
             comments(input),

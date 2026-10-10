@@ -54,24 +54,22 @@ fn walk(
     let mut prev: Option<(usize, usize)> = None;
     for item in csttext.items(node) {
         match item {
-            Item::Comment { span, own_line } => {
-                match parse(csttext.get_text_from_span(span)) {
-                    Some(Directive::Skip) if own_line => skip_next = true,
-                    Some(Directive::Skip) => {
-                        if let Some(prev) = prev {
-                            skip.insert(prev);
-                        }
+            Item::Comment { span, own_line } => match parse(csttext.get_text_from_span(span)) {
+                Some(Directive::Skip) if own_line => skip_next = true,
+                Some(Directive::Skip) => {
+                    if let Some(prev) = prev {
+                        skip.insert(prev);
                     }
-                    Some(Directive::Off) => off = true,
-                    Some(Directive::On) => off = false,
-                    None => {}
                 }
-            }
+                Some(Directive::Off) => off = true,
+                Some(Directive::On) => off = false,
+                None => {}
+            },
             Item::Node(child) => {
                 let key = (child.span.start, child.span.end);
                 // 水平モードの空白だけの文字列は、directive の対象にならない
-                let blank_text = child.rule == Rule::regular_text
-                    && csttext.get_text(child).trim().is_empty();
+                let blank_text =
+                    child.rule == Rule::regular_text && csttext.get_text(child).trim().is_empty();
                 if blank_text {
                     continue;
                 }

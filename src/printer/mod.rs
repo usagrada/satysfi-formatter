@@ -71,7 +71,9 @@ impl<'c> Kids<'c> {
     pub fn finish(&self, doc: Doc) -> Doc {
         let mut doc = doc;
         for comment in &self.dangling {
-            doc = doc.append(Doc::hardline()).append(Doc::text(comment.clone()));
+            doc = doc
+                .append(Doc::hardline())
+                .append(Doc::text(comment.clone()));
         }
         doc
     }
@@ -151,7 +153,9 @@ impl<'a> Printer<'a> {
                 Item::Comment { span, own_line } => {
                     let comment = self.comment(span);
                     match items.last_mut() {
-                        Some(last) if !own_line && last.trailing.is_none() && pending.is_empty() => {
+                        Some(last)
+                            if !own_line && last.trailing.is_none() && pending.is_empty() =>
+                        {
                             last.trailing = Some(comment)
                         }
                         _ => pending.push(comment),

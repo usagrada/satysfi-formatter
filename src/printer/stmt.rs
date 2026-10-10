@@ -97,9 +97,7 @@ impl<'a> Printer<'a> {
                 let mut constraints = Doc::nil();
                 for kid in &kids.items {
                     if kid.cst.rule == Rule::constraint {
-                        constraints = constraints
-                            .append(Doc::hardline())
-                            .append(kid.doc.clone());
+                        constraints = constraints.append(Doc::hardline()).append(kid.doc.clone());
                     } else {
                         doc = doc.append(s(" ")).append(kid.doc.clone());
                     }
@@ -114,9 +112,7 @@ impl<'a> Printer<'a> {
                     "direct "
                 };
                 let name = match kids.items[0].cst.rule {
-                    Rule::bin_operator => {
-                        s("(").append(kids.items[0].doc.clone()).append(s(")"))
-                    }
+                    Rule::bin_operator => s("(").append(kids.items[0].doc.clone()).append(s(")")),
                     _ => kids.items[0].doc.clone(),
                 };
                 let mut doc = s(keyword)
@@ -181,10 +177,7 @@ impl<'a> Printer<'a> {
             return self.raw(cst);
         }
         let first = children.items.remove(0);
-        let mut doc = with_leading(
-            first.leading,
-            s(keyword).append(self.node(first.cst)),
-        );
+        let mut doc = with_leading(first.leading, s(keyword).append(self.node(first.cst)));
         if let Some(comment) = first.trailing {
             doc = doc.append(s(" ")).append(Doc::text(comment));
         }
@@ -197,10 +190,7 @@ impl<'a> Printer<'a> {
 
     fn let_rec_inner(&self, cst: &Cst) -> Doc {
         let children = self.children(cst);
-        let value_index = children
-            .items
-            .iter()
-            .position(|c| c.cst.rule == Rule::expr);
+        let value_index = children.items.iter().position(|c| c.cst.rule == Rule::expr);
         // 腕 (`| args = expr`) より前の部分と、腕に分ける
         let head_end = value_index.map_or(1, |i| i + 1);
         let mut items = children.items;
@@ -295,7 +285,11 @@ impl<'a> Printer<'a> {
             return s(&format!("{keyword} end"));
         }
         s(keyword)
-            .append(Doc::hardline().append(self.stmt_list(cst)).nest(self.indent))
+            .append(
+                Doc::hardline()
+                    .append(self.stmt_list(cst))
+                    .nest(self.indent),
+            )
             .append(Doc::hardline())
             .append(s("end"))
     }

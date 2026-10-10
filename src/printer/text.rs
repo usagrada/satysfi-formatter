@@ -51,13 +51,15 @@ impl<'a> Printer<'a> {
                     None => return self.raw(cst),
                     Some(inner) => {
                         // マクロの先行引数 `~(expr)`
-                        let tilde = self.csttext.text[cst.span.start..inner.cst.span.start]
-                            .contains('~');
+                        let tilde =
+                            self.csttext.text[cst.span.start..inner.cst.span.start].contains('~');
                         let body = match inner.cst.rule {
                             Rule::expr => self.paren(inner),
                             _ => inner.doc.clone(),
                         };
-                        s(prefix).append(s(if tilde { "~" } else { "" })).append(body)
+                        s(prefix)
+                            .append(s(if tilde { "~" } else { "" }))
+                            .append(body)
                     }
                 };
                 kids.finish(doc)
@@ -255,11 +257,9 @@ impl<'a> Printer<'a> {
     /// 中身が空なら None。
     fn horizontal_body(&self, cst: &Cst) -> (Option<Doc>, bool) {
         let multiline_of = |c: &Cst| self.token_multiline(c);
-        let (pieces, multiline) = self.horizontal_pieces(cst, &|c| {
-            Tok {
-                doc: self.node(c),
-                multiline: multiline_of(c),
-            }
+        let (pieces, multiline) = self.horizontal_pieces(cst, &|c| Tok {
+            doc: self.node(c),
+            multiline: multiline_of(c),
         });
         if pieces.is_empty() {
             return (None, false);

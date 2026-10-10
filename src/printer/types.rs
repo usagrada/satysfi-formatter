@@ -17,7 +17,9 @@ impl<'a> Printer<'a> {
                 };
                 let mut rest = Doc::nil();
                 for (i, kid) in iter {
-                    rest = rest.append(Doc::line()).append(self.arrow(kid, i + 1 < count));
+                    rest = rest
+                        .append(Doc::line())
+                        .append(self.arrow(kid, i + 1 < count));
                 }
                 kids.finish(first.append(rest.nest(self.indent)).group())
             }

@@ -17,11 +17,7 @@ impl<'a> Printer<'a> {
             Rule::pat_cons => {
                 let kids = self.kids(cst);
                 let doc = match kids.items.as_slice() {
-                    [head, tail] => head
-                        .doc
-                        .clone()
-                        .append(s(" :: "))
-                        .append(tail.doc.clone()),
+                    [head, tail] => head.doc.clone().append(s(" :: ")).append(tail.doc.clone()),
                     [only] => only.doc.clone(),
                     _ => self.raw(cst),
                 };
