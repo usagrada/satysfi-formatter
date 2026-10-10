@@ -408,19 +408,23 @@ impl<'a> Printer<'a> {
             return self.raw(cst);
         }
         let func = kids.items[0].doc.clone();
-        // 括弧で包まれた引数 (リスト・レコード・ブロックなど) は直前の引数と同じ行に置き、
-        // 中身を自分で折り返す。それ以外の引数は、収まらなければ 1 引数ずつ改行する。
+        // 末尾に連続する、括弧で包まれた引数 (リスト・レコード・ブロックなど) は
+        // 直前の引数と同じ行に置き、中身を自分で折り返す。
+        // それ以外の引数は、収まらなければ 1 引数ずつ改行する。
+        let args = &kids.items[1..];
+        let hugged_from = args
+            .iter()
+            .rposition(|arg| {
+                !arg.cst
+                    .inner
+                    .first()
+                    .map_or(false, |inner| self.is_hugging(inner))
+            })
+            .map_or(0, |i| i + 1);
         let mut broken = Doc::nil();
         let mut hugged = Doc::nil();
-        let mut seen_hugged = false;
-        for arg in &kids.items[1..] {
-            let hugging = arg
-                .cst
-                .inner
-                .first()
-                .map_or(false, |inner| self.is_hugging(inner));
-            if hugging || seen_hugged {
-                seen_hugged = true;
+        for (i, arg) in args.iter().enumerate() {
+            if i >= hugged_from {
                 hugged = hugged.append(s(" ")).append(arg.doc.clone());
             } else {
                 broken = broken.append(Doc::line()).append(arg.doc.clone());

@@ -368,3 +368,27 @@ fn blank_lines_at_end_are_removed() {
 "##;
     test_tmpl(text, expect);
 }
+
+#[test]
+fn long_function_header_fills_arguments() {
+    // 入るだけ引数を詰め、続きは本体より 1 段深く字下げする。パターンは分解しない
+    let text = r##"let arrow-scheme strokef color lenL ((x1, y1) as pt1) ((x2, y2) as pt2) =
+  Geom.atan2-point pt2 pt1
+"##;
+    let expect = r##"let arrow-scheme strokef color lenL ((x1, y1) as pt1)
+        ((x2, y2) as pt2) =
+    Geom.atan2-point pt2 pt1
+"##;
+    test_width(text, 60, expect);
+}
+
+#[test]
+fn long_command_header_fills_arguments() {
+    let text = r##"let-block ctx +theorem ?:wordopt ?:labelopt inner-block-text = inner
+"##;
+    let expect = r##"let-block ctx +theorem ?:wordopt ?:labelopt
+        inner-block-text =
+    inner
+"##;
+    test_width(text, 50, expect);
+}

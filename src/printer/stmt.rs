@@ -10,9 +10,7 @@ impl<'a> Printer<'a> {
                 let kids = self.kids(cst);
                 match kids.items.split_last() {
                     Some((value, head)) => {
-                        let doc = s("let ")
-                            .append(self.bind_head(head))
-                            .append(self.after_op(" =", value));
+                        let doc = self.definition(s("let ").append(self.bind_head(head)), value);
                         kids.finish(doc)
                     }
                     None => self.raw(cst),
@@ -157,7 +155,7 @@ impl<'a> Printer<'a> {
                         doc = doc.append(s(" |"));
                         bar = true;
                     }
-                    doc = doc.append(s(" ")).append(kid.doc.clone());
+                    doc = doc.append(self.param(kid));
                 }
                 _ => {
                     if i > 0 {
@@ -168,6 +166,17 @@ impl<'a> Printer<'a> {
             }
         }
         doc
+    }
+
+    /// 関数定義の引数 1 つ。収まる限り前の引数と同じ行に詰め、収まらなければ改行する。
+    /// 続きの行は本体と見分けられるよう、本体より 1 段深く字下げする
+    /// (ocamlformat や clang-format の ContinuationIndentWidth と同じ考え方)。
+    /// パターンの中身はなるべく分解せず、引数ごと次の行に送る。
+    fn param(&self, kid: &Kid) -> Doc {
+        Doc::line()
+            .append(kid.doc.clone())
+            .nest(self.indent * 2)
+            .group()
     }
 
     /// `keyword a and b and c`。2 つ目以降は改行して `and` を付ける。
@@ -213,9 +222,7 @@ impl<'a> Printer<'a> {
         };
         let mut doc = match value_index {
             // let-rec f x = expr (| args = expr)*
-            Some(i) => self
-                .bind_head(&head_kids.items[..i])
-                .append(self.after_op(" =", &head_kids.items[i])),
+            Some(i) => self.definition(self.bind_head(&head_kids.items[..i]), &head_kids.items[i]),
             // let-rec f (| args = expr)+
             None => head_kids.items[0].doc.clone(),
         };
@@ -236,9 +243,24 @@ impl<'a> Printer<'a> {
         let (value, head) = kids.items.split_last().unwrap();
         let mut doc = s(keyword);
         for kid in head {
-            doc = doc.append(s(" ")).append(kid.doc.clone());
+            doc = match kid.cst.rule {
+                Rule::arg => doc.append(self.param(kid)),
+                _ => doc.append(s(" ")).append(kid.doc.clone()),
+            };
         }
-        kids.finish(doc.append(self.after_op(" =", value)))
+        kids.finish(self.definition(doc, value))
+    }
+
+    /// `head = value`。ヘッダを折り返したときは、本体を必ず次の行に送る。
+    /// 括弧で始まる本体 (`= [` や `= (fun x ->`) は `=` の行末に置く。
+    fn definition(&self, head: Doc, value: &Kid) -> Doc {
+        if self.is_hugging(value.cst) {
+            head.append(self.after_op(" =", value))
+        } else {
+            head.append(s(" ="))
+                .append(Doc::line().append(value.doc.clone()).nest(self.indent))
+                .group()
+        }
     }
 
     fn type_inner(&self, cst: &Cst) -> Doc {
