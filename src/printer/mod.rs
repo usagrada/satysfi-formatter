@@ -45,6 +45,8 @@ pub(self) struct Child<'c> {
     pub trailing: Option<String>,
     /// 子の前 (leading があればその前) に空行があるか
     pub blank_before: bool,
+    /// leading の各コメントの前に空行があるか (最初のコメントの前は `blank_before`)
+    pub leading_blanks: Vec<bool>,
     /// leading と子の間に空行があるか
     pub blank_after_leading: bool,
 }
@@ -171,6 +173,8 @@ impl<'a> Printer<'a> {
         let mut blank = false;
         // pending の最初のコメントの前に空行があったか
         let mut blank_before_pending = false;
+        // pending の各コメントの前に空行があったか (最初は常に false)
+        let mut pending_blanks: Vec<bool> = vec![];
         for item in self.csttext.items(cst) {
             match item {
                 Item::Node(child) => {
@@ -182,6 +186,7 @@ impl<'a> Printer<'a> {
                     items.push(Child {
                         cst: child,
                         leading: std::mem::take(&mut pending),
+                        leading_blanks: std::mem::take(&mut pending_blanks),
                         trailing: None,
                         blank_before,
                         blank_after_leading,
@@ -199,8 +204,11 @@ impl<'a> Printer<'a> {
                         _ => {
                             if pending.is_empty() {
                                 blank_before_pending = blank;
-                                blank = false;
+                                pending_blanks.push(false);
+                            } else {
+                                pending_blanks.push(blank);
                             }
+                            blank = false;
                             pending.push(comment)
                         }
                     }
@@ -489,8 +497,7 @@ impl<'a> Printer<'a> {
                 }
             }
             prev_is_module = child.cst.rule == Rule::module_stmt;
-            let mut stmt = with_leading(child.leading, blank_line_if(child.blank_after_leading))
-                .append(self.node(child.cst));
+            let mut stmt = leading_lines(&child).append(self.node(child.cst));
             if let Some(comment) = child.trailing {
                 stmt = stmt.append(Doc::text(" ")).append(Doc::text(comment));
             }
@@ -542,14 +549,22 @@ pub(self) fn with_leading(comments: Vec<String>, doc: Doc) -> Doc {
     result.append(doc)
 }
 
-/// `blank` なら空行 (改行 1 つ)、そうでなければ何もしない Doc。
-/// `with_leading` の後ろに付けると、コメントと次の要素の間の空行になる。
-pub(self) fn blank_line_if(blank: bool) -> Doc {
-    if blank {
-        Doc::hardline()
-    } else {
-        Doc::nil()
+/// 子の前の単独行のコメントを 1 行ずつ並べる。
+/// コメントの間と、コメントと子の間にあった空行は 1 行だけ残す。
+pub(self) fn leading_lines(child: &Child) -> Doc {
+    let mut doc = Doc::nil();
+    for (comment, blank) in child.leading.iter().zip(&child.leading_blanks) {
+        if *blank {
+            doc = doc.append(Doc::hardline());
+        }
+        doc = doc
+            .append(Doc::text(comment.clone()))
+            .append(Doc::hardline());
     }
+    if child.blank_after_leading {
+        doc = doc.append(Doc::hardline());
+    }
+    doc
 }
 
 /// 文字列 s を Doc にする。

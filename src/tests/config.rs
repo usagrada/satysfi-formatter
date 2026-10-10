@@ -4,13 +4,13 @@ use crate::{format, FormatConfig};
 use std::fs;
 use std::path::PathBuf;
 
-/// テストごとの一時ディレクトリ
+/// テストごとの一時ディレクトリ。設定ファイルの探索はパスを正規化するので、正規化して返す
 fn temp_dir(name: &str) -> PathBuf {
     let dir =
         std::env::temp_dir().join(format!("satysfi-fmt-test-{}-{}", std::process::id(), name));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
-    dir
+    dir.canonicalize().unwrap()
 }
 
 #[test]
@@ -139,6 +139,23 @@ fn finds_config_file_in_ancestors() {
     fs::write(sub.join(".satysfi-fmt.toml"), "line_width = 60\n").unwrap();
     assert_eq!(find_config_file(&file), Some(sub.join(".satysfi-fmt.toml")));
     assert_eq!(resolve_config(&file).unwrap().line_width, Some(60));
+
+    fs::remove_dir_all(&root).unwrap();
+}
+
+#[test]
+fn finds_config_file_through_parent_references() {
+    // `b/..` の親は `a` であって `b` ではない
+    let root = temp_dir("dotdot");
+    let a = root.join("a");
+    let b = a.join("b");
+    fs::create_dir_all(&b).unwrap();
+    fs::write(a.join("main.saty"), "").unwrap();
+    fs::write(b.join(".satysfi-fmt.toml"), "line_width = 60\n").unwrap();
+    fs::write(root.join(".satysfi-fmt.toml"), "line_width = 100\n").unwrap();
+
+    let file = b.join("..").join("main.saty");
+    assert_eq!(find_config_file(&file), Some(root.join(".satysfi-fmt.toml")));
 
     fs::remove_dir_all(&root).unwrap();
 }

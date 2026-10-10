@@ -151,8 +151,19 @@ impl PartialConfig {
 }
 
 /// `path` (ファイルまたはディレクトリ) から親へ向かって設定ファイルを探す。
+///
+/// 相対パスでも、カレントディレクトリより上まで探す。
 pub fn find_config_file(path: &Path) -> Option<PathBuf> {
-    let start = if path.is_dir() { path } else { path.parent()? };
+    // `..` を含むパスで親をたどり違えないよう、存在するなら正規化する
+    let path = path
+        .canonicalize()
+        .or_else(|_| std::path::absolute(path))
+        .ok()?;
+    let start = if path.is_dir() {
+        path.as_path()
+    } else {
+        path.parent()?
+    };
     start
         .ancestors()
         .map(|dir| dir.join(CONFIG_FILE_NAME))

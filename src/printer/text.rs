@@ -4,7 +4,7 @@
 //! 空白の連続は「空白 1 つ」または「改行 1 つ」に正規化する (改行があれば改行を残す)。
 //! `{` の直後と `}` の直前の空白は無視される。コメントはその後ろの空白も読み飛ばす。
 
-use super::{blank_line_if, s, with_leading, Doc, Printer};
+use super::{leading_lines, s, with_leading, Doc, Printer};
 use satysfi_parser::{Cst, Rule};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -443,11 +443,8 @@ impl<'a> Printer<'a> {
                     body = body.append(Doc::hardline());
                 }
             }
-            for comment in child.leading {
-                body = body.append(Doc::text(comment)).append(Doc::hardline());
-            }
             body = body
-                .append(blank_line_if(child.blank_after_leading))
+                .append(leading_lines(&child))
                 .append(self.node(child.cst));
             if let Some(comment) = child.trailing {
                 body = body.append(s(" ")).append(Doc::text(comment));

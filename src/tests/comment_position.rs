@@ -644,3 +644,33 @@ fn blank_line_between_comment_and_block_is_kept_in_place() {
 "##;
     test_tmpl(text, text);
 }
+
+#[test]
+fn blank_lines_between_comments_are_kept_in_place() {
+    let text = r##"let a = 1
+% section header
+
+% note about x
+let x = 1
+
+% section header
+
+% note about y
+
+let y = 2
+"##;
+    test_tmpl(text, text);
+}
+
+#[test]
+fn blank_lines_between_comments_in_a_vertical_area_are_kept_in_place() {
+    let text = r##"document (||) '<
+    +p { a }
+    % section header
+
+    % note about b
+    +p { b }
+>
+"##;
+    test_tmpl(text, text);
+}
