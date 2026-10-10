@@ -13,7 +13,7 @@ document(|title = {hello}|)'<+p{% comment
 @require: local
 
 % comment
-document(|title = { hello }|)'<
+document (|title = { hello }|) '<
     +p {
         % comment
     }
@@ -35,7 +35,7 @@ document(|title = {hello}|)'<+p{hello% comment
 @require: local
 
 % comment
-document(|title = { hello }|)'<
+document (|title = { hello }|) '<
     +p {
         hello
         % comment
@@ -63,7 +63,7 @@ document(|title = {hello}|)'<+p{hello% comment
 @require: local
 
 % comment
-document(|title = { hello }|)'<
+document (|title = { hello }|) '<
     +p {
         hello
         % comment
@@ -95,7 +95,7 @@ document(|title = { hello }|)'<+p{% comment
 @require: local
 
 % comment
-document(|title = { hello }|)'<
+document (|title = { hello }|) '<
     +p {
         % comment
         \listing {
@@ -122,7 +122,7 @@ document(|title = {hello}|)'<+p% comment
     let expect = r#"@import: hello
 @require: local %comment
 
-document(|title = { hello }|)'<
+document (|title = { hello }|) '<
     +p % comment
     { hello }
 >
@@ -144,7 +144,7 @@ document(|title = {hello}|)'<+p% comment
     let expect = r#"@import: hello
 @require: local %comment
 
-document(|title = { hello }|)'<
+document (|title = { hello }|) '<
     +p % comment
     {
         hello
@@ -170,7 +170,7 @@ document(|title = {hello}|)'<
     let expect = r#"@import: hello
 @require: local %comment
 
-document(|title = { hello }|)'<
+document (|title = { hello }|) '<
     % comment
     +p { hello }
     % comment
@@ -195,7 +195,7 @@ document(|title = {hello}|)'<
     let expect = r#"@import: hello
 @require: local %comment
 
-document(|title = { hello }|)'<
+document (|title = { hello }|) '<
     +section { hello } <%
         +p { hello }
     >%

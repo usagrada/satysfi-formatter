@@ -5,32 +5,46 @@
 //!
 //! 移行中は、まだ Doc 化していない rule を旧 `Formatter` に委譲する
 //! (`Printer::legacy`)。rule ごとに Doc 化を進め、委譲を減らしていく。
+//! 旧 `Formatter` の出力と一致させる必要はない。
+
+pub mod directive;
+mod expr;
 
 use crate::comment::{get_comments, subtree_with_comments, to_comment_string, Comment};
 use crate::formatter::Formatter;
-use lspower::lsp::FormattingOptions;
+use lspower::lsp::{FormattingOptions, FormattingProperty};
 use pretty::RcDoc;
 use satysfi_parser::{Cst, CstText, Item, Rule};
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 type Doc = RcDoc<'static, ()>;
 
-/// 描画時の行幅。折り返しを行う group を導入するまでは実質使われない。
-const LINE_WIDTH: usize = 100;
+/// 行幅の既定値。`FormattingOptions::properties["lineWidth"]` で変更できる。
+pub const DEFAULT_LINE_WIDTH: usize = 80;
+/// インデント幅の既定値以外は `FormattingOptions::tab_size` に従う。
+const INDENT: isize = 4;
 
 pub struct Printer<'a> {
     csttext: &'a CstText,
     option: FormattingOptions,
     comments: VecDeque<Comment>,
     legacy: Formatter<'a>,
+    skip: HashSet<(usize, usize)>,
+    width: usize,
 }
 
 impl<'a> Printer<'a> {
     pub fn new(csttext: &'a CstText, option: FormattingOptions) -> Self {
+        let width = match option.properties.get("lineWidth") {
+            Some(FormattingProperty::Number(n)) if *n > 0 => *n as usize,
+            _ => DEFAULT_LINE_WIDTH,
+        };
         Self {
             csttext,
             comments: get_comments(csttext),
             legacy: Formatter::new(csttext, option.clone()),
+            skip: directive::collect_skip_spans(csttext),
+            width,
             option,
         }
     }
@@ -38,9 +52,18 @@ impl<'a> Printer<'a> {
     pub fn print(&self) -> String {
         let doc = self.node(&self.csttext.cst);
         let mut buf = Vec::new();
-        doc.render(LINE_WIDTH, &mut buf).expect("render to memory");
+        doc.render(self.width, &mut buf).expect("render to memory");
         let output = String::from_utf8(buf).expect("doc is valid utf-8");
         self.legacy.finish(output)
+    }
+
+    /// cst の子の隙間 (cst 自身が持つ記号の周り) にコメントがあるか。
+    /// 子の内部にあるコメントは、その子が責任を持つので含めない。
+    fn has_comment(&self, cst: &Cst) -> bool {
+        self.csttext
+            .items(cst)
+            .iter()
+            .any(|item| matches!(item, Item::Comment { .. }))
     }
 
     fn text_of(&self, cst: &Cst) -> &'a str {
@@ -49,12 +72,16 @@ impl<'a> Printer<'a> {
 
     /// cst を Doc に変換する。
     fn node(&self, cst: &Cst) -> Doc {
+        // `satysfi-fmt` directive で整形しないと指定されたノード
+        if self.skip.contains(&(cst.span.start, cst.span.end)) {
+            return lines(&directive::verbatim(self.text_of(cst)));
+        }
         match cst.rule {
             Rule::program_saty | Rule::program_satyh => self.program(cst),
             Rule::stage => Doc::text(format!("@stage: {}", self.text_of(cst))),
             Rule::headers => self.headers(cst),
             Rule::preamble => self.preamble(cst),
-            _ => self.legacy(cst),
+            _ => self.expr_node(cst),
         }
     }
 
@@ -149,22 +176,25 @@ impl<'a> Printer<'a> {
         Doc::text(format!("{keyword} {pkgname}"))
     }
 
-    /// 前処理部の文の並び。`module` の前だけ空行を入れる。
+    /// 前処理部の文の並び。元の空行は 1 行まで残し、`module` の前には必ず空行を入れる。
     fn preamble(&self, cst: &Cst) -> Doc {
         // (空行を前に置くか, Doc)
         let mut stmts: Vec<(bool, Doc)> = vec![];
         let mut pending: Vec<String> = vec![];
+        // 次の要素の前に空行があったか
+        let mut blank = false;
         for item in self.csttext.items(cst) {
             match item {
                 Item::Node(child) => {
                     let doc = leading_comments(&mut pending, self.node(child));
-                    stmts.push((child.rule == Rule::module_stmt, doc));
+                    stmts.push((blank || child.rule == Rule::module_stmt, doc));
+                    blank = false;
                 }
                 Item::Comment { span, own_line } => {
                     let comment = self.comment(span);
                     match stmts.pop() {
-                        Some((blank, last)) if !own_line && pending.is_empty() => stmts.push((
-                            blank,
+                        Some((b, last)) if !own_line && pending.is_empty() => stmts.push((
+                            b,
                             last.append(Doc::text(" ")).append(Doc::text(comment)),
                         )),
                         Some(last) => {
@@ -174,7 +204,7 @@ impl<'a> Printer<'a> {
                         None => pending.push(comment),
                     }
                 }
-                Item::BlankLines(_) => {}
+                Item::BlankLines(_) => blank = true,
             }
         }
         let mut doc = Doc::nil();
@@ -202,19 +232,19 @@ impl<'a> Printer<'a> {
 
 /// 複数行の文字列を、行ごとに hardline で繋いだ Doc にする。
 /// 行頭の空白はそのまま残る (旧 Formatter の相対インデントを保つ)。
-fn lines(text: &str) -> Doc {
+pub(self) fn lines(text: &str) -> Doc {
     join(
         text.split('\n').map(|line| Doc::text(line.to_string())),
         Doc::hardline(),
     )
 }
 
-fn join(docs: impl IntoIterator<Item = Doc>, sep: Doc) -> Doc {
+pub(self) fn join(docs: impl IntoIterator<Item = Doc>, sep: Doc) -> Doc {
     Doc::intersperse(docs, sep)
 }
 
 /// 溜まっているコメントを doc の前に 1 行ずつ置く。
-fn leading_comments(pending: &mut Vec<String>, doc: Doc) -> Doc {
+pub(self) fn leading_comments(pending: &mut Vec<String>, doc: Doc) -> Doc {
     let mut result = Doc::nil();
     for comment in pending.drain(..) {
         result = result.append(Doc::text(comment)).append(Doc::hardline());

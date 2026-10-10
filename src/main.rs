@@ -1,5 +1,5 @@
 use clap::Parser;
-use lspower::lsp::FormattingOptions;
+use lspower::lsp::{FormattingOptions, FormattingProperty};
 use satysfi_formatter::format;
 use std::{fs, path::PathBuf};
 
@@ -18,6 +18,9 @@ struct Cli {
     /// indent size
     #[clap(short, long, default_value_t = 4)]
     indent_space: usize,
+    /// maximum line width
+    #[clap(long, default_value_t = 80)]
+    line_width: usize,
     /// Add space before arguments in command
     #[clap(long)]
     cspace: bool,
@@ -26,10 +29,14 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
     let code = fs::read_to_string(&cli.file).expect("Failed to read file");
-    let option = FormattingOptions {
+    let mut option = FormattingOptions {
         tab_size: cli.indent_space as u32,
         ..Default::default()
     };
+    option.properties.insert(
+        "lineWidth".to_string(),
+        FormattingProperty::Number(cli.line_width as i32),
+    );
     let output = format(&code, option);
 
     match (cli.output, cli.write) {

@@ -23,7 +23,7 @@ let () =
         x <- 2
 in
 
-document(|title = { hello }|)'<>
+document (|title = { hello }|) '<>
 "#;
 
     test_tmpl(text, expect)
@@ -56,7 +56,7 @@ let () =
         x <- 2
 in
 
-document(|title = { hello }|)'<>
+document (|title = { hello }|) '<>
 "#;
 
     test_tmpl(text, expect)
@@ -89,7 +89,7 @@ let-inline \inline =
     { #text; }
 in
 
-document(|title = { hello }|)'<
+document (|title = { hello }|) '<
     +p { \inline; }
 >
 "#;

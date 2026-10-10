@@ -8,7 +8,7 @@ fn test_const_string_sequently1() {
 >
 "#;
 
-    let expect = r#"document(||)'<
+    let expect = r#"document (||) '<
     +p { `ok` `no` }
 >
 "#;
@@ -24,7 +24,7 @@ fn test_const_string_sequently2() {
 >
 "#;
 
-    let expect = r#"document(||)'<
+    let expect = r#"document (||) '<
     +p {
         `ok`
         `no`

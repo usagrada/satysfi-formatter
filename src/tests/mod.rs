@@ -1,4 +1,4 @@
-use crate::{format, format_pretty};
+use crate::format;
 use lspower::lsp::FormattingOptions;
 
 mod comment;
@@ -20,9 +20,8 @@ fn test_tmpl(input: &str, expect: &str) {
     };
     let output = format(input, option.clone());
     assert_eq!(output, expect);
-    // 新しい printer も同じ出力になること
-    let output = format_pretty(input, option);
-    assert_eq!(output, expect, "format_pretty");
+    // 冪等性: 整形結果をもう一度整形しても変わらない
+    assert_eq!(format(&output, option), output, "not idempotent");
 }
 
 #[test]
@@ -34,7 +33,7 @@ document(||)'<
 +p {日本語}
 >>"#;
 
-    let expect = r#"document(||)'<
+    let expect = r#"document (||) '<
     +section { section } <
         +p { 日本語 }
     >

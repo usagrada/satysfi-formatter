@@ -16,7 +16,7 @@ document(||)'<
 
     let expect = r#"@require: stdja
 
-document(||)'<
+document (||) '<
     +p { ${\lim_{n \to \infty} a_n = a} }
 >
 "#;

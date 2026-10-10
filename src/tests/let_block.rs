@@ -21,7 +21,7 @@ document(||)'<
 let-block ctx +newpage = clear-page
 in
 
-document(||)'<
+document (||) '<
     +newpage;
 
     +p { hello }
@@ -55,7 +55,7 @@ let-block ctx +newcmd arg = '<
 >
 in
 
-document(||)'<
+document (||) '<
     +newpage;
 
     +p { hello }
@@ -92,7 +92,7 @@ let a = '<
 >
 in
 
-document(||)'<
+document (||) '<
     +newpage;
 
     +p { hello }
@@ -122,7 +122,7 @@ document(||)'<
 let a = Some x#a
 in
 
-document(||)'<
+document (||) '<
     +newpage;
 
     +p { hello }

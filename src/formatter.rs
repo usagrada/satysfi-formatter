@@ -2,12 +2,14 @@ use crate::comment::{get_comments, to_comment_string, Comment};
 use crate::reserved_words::*;
 use lspower::lsp::FormattingOptions;
 use satysfi_parser::{Cst, CstText};
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 pub struct Formatter<'a> {
     pub text: &'a str,
     pub lines: &'a Vec<usize>,
     pub comments: VecDeque<Comment>,
+    /// `satysfi-fmt` directive により整形しないノードの span
+    skip: HashSet<(usize, usize)>,
     pub depth: usize,
     pub output: String,
     option: FormattingOptions,
@@ -20,6 +22,7 @@ impl<'a> Formatter<'a> {
             text: &csttext.text,
             lines: &csttext.lines,
             comments,
+            skip: crate::printer::directive::collect_skip_spans(csttext),
             depth: 0,
             output: String::new(),
             option,
@@ -41,6 +44,9 @@ impl<'a> Formatter<'a> {
             .map(|line| line.trim_end())
             .collect::<Vec<_>>()
             .join("\n");
+
+        // 整形しないノードの目印を取り除く
+        output = crate::printer::directive::strip_markers(&output);
 
         // 末尾に改行がない場合、改行を挿入して終了
         if self.option.insert_final_newline.unwrap_or(true) && !output.ends_with('\n') {
@@ -1047,6 +1053,10 @@ impl<'a> Formatter<'a> {
 
     /// cst を文字列にするための関数
     pub(crate) fn to_string_cst(&self, text: &str, cst: &Cst, depth: usize) -> String {
+        // directive で整形しないと指定されたノードは元の文字列を返す
+        if self.skip.contains(&(cst.span.start, cst.span.end)) {
+            return crate::printer::directive::verbatim(&text[cst.span.start..cst.span.end]);
+        }
         // インデントを制御するための変数
         let new_depth = match cst.rule {
             Rule::block_text | Rule::cmd_text_arg | Rule::record | Rule::type_record => depth + 1,

@@ -6,7 +6,7 @@ fn test_space1() {
     hello\bold{abc}def
 }>"#;
 
-    let expect = r#"document(|title = { hello }|)'<
+    let expect = r#"document (|title = { hello }|) '<
     +p % comment
     { hello\bold { abc }def }
 >
@@ -21,7 +21,7 @@ fn test_space2() {
     hello\bold{abc}def 
 }>"#;
 
-    let expect = r#"document(|title = { hello }|)'<
+    let expect = r#"document (|title = { hello }|) '<
     +p % comment
     { hello\bold { abc }def }
 >
@@ -40,7 +40,7 @@ fn test_space3() {
   [${}; ${\paren{1 + a} \paren{1 + a^2} \paren{1 + a^{2^2}}}];
 ];
 >"#;
-    let expect = r#"document(|title = { hello }|)'<
+    let expect = r#"document (|title = { hello }|) '<
     +p % comment
     { hello\bold { abc }def }
     +align [
