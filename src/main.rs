@@ -42,6 +42,6 @@ fn main() {
     match (cli.output, cli.write) {
         (Some(path), _) => fs::write(path, &output).expect("Failed to write file"),
         (None, true) => fs::write(&cli.file, &output).expect("Failed to write file"),
-        (None, false) => println!("{}", output),
+        (None, false) => print!("{}", output),
     }
 }

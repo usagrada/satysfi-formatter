@@ -281,3 +281,43 @@ fn skip_applies_to_first_statement() {
         "% satysfi-fmt: skip\nlet   x   =   [1;2]\nlet y = [1; 2]\n"
     );
 }
+
+#[test]
+fn skip_a_header_line() {
+    let input = "@require: a\n% satysfi-fmt: skip\n@import:   spaced\ndocument(||)'<>";
+    let expect = "@require: a\n% satysfi-fmt: skip\n@import:   spaced\n\ndocument (||) '<>\n";
+    assert_eq!(fmt(input, 80), expect);
+}
+
+#[test]
+fn skip_in_horizontal_and_vertical() {
+    let input = "document(||)'<\n  % satysfi-fmt: skip\n  +p   {  a   b  }\n  +p   {  a   b  }\n  +p {\n    x\n    % satysfi-fmt: skip\n    \\emph  {  y  }\n    \\emph  {  z  }\n  }\n>";
+    let expect = "document (||) '<\n    % satysfi-fmt: skip\n    +p   {  a   b  }\n    +p { a b }\n    +p {\n        x\n        % satysfi-fmt: skip\n        \\emph  {  y  }\n        \\emph { z }\n    }\n>\n";
+    assert_eq!(fmt(input, 80), expect);
+}
+
+#[test]
+fn skip_in_struct() {
+    let input = "module M = struct\n  % satysfi-fmt: skip\n  let   x   =   1\n  let   y   =   2\nend\n";
+    let expect = "module M = struct\n    % satysfi-fmt: skip\n    let   x   =   1\n    let y = 2\nend\n";
+    assert_eq!(fmt(input, 80), expect);
+}
+
+#[test]
+fn multiline_string_literal_is_not_reindented() {
+    let input = "let s = `\n  a\n    b\n`\nlet t = [`x\n  y`; 1]\n";
+    let output = fmt(input, 80);
+    assert!(output.contains("`\n  a\n    b\n`"), "{output}");
+    assert!(output.contains("`x\n  y`"), "{output}");
+    assert_eq!(output, fmt(&output, 80));
+}
+
+#[test]
+fn horizontal_text_keeps_adjacency() {
+    let input = "document(||)'<+p{a\\emph{b}c \\emph{d} e}>";
+    let expect = "document (||) '<\n    +p { a\\emph { b }c \\emph { d } e }\n>\n";
+    assert_eq!(fmt(input, 80), expect);
+    // 長くても 1 行の文章は途中で折り返さない
+    let long = "document(||)'<+p{aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff}>";
+    assert_eq!(fmt(long, 20).lines().count(), 3);
+}

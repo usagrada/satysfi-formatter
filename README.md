@@ -45,6 +45,7 @@ let b   =   2
 ```
 
 * `% satysfi-fmt: skip` : 直後のノードを整形しない。行末に書いた場合は、その行のノード。
+  ヘッダ行、文、`+p` などのブロック、リストの要素、`\emph{...}` などのインラインコマンドに使える。
 * `% satysfi-fmt: off` / `% satysfi-fmt: on` : 間にあるノードを整形しない。`on` がなければ、同じ階層の最後のノードまで。
 
 @monaqa さんの [satysfi-parser](https://github.com/monaqa/satysfi-parser) を元にformatを行っている

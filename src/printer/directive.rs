@@ -69,6 +69,12 @@ fn walk(
             }
             Item::Node(child) => {
                 let key = (child.span.start, child.span.end);
+                // 水平モードの空白だけの文字列は、directive の対象にならない
+                let blank_text = child.rule == Rule::regular_text
+                    && csttext.get_text(child).trim().is_empty();
+                if blank_text {
+                    continue;
+                }
                 if key.0 == key.1 {
                     // 空のノード (header がない場合の headers など)
                 } else if is_container(child) {

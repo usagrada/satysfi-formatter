@@ -351,6 +351,9 @@ impl<'a> Printer<'a> {
     }
 
     fn header(&self, cst: &Cst) -> Doc {
+        if self.skip.contains(&(cst.span.start, cst.span.end)) {
+            return lines(&directive::verbatim(self.text_of(cst)));
+        }
         let keyword = match cst.rule {
             Rule::header_require => "@require:",
             Rule::header_import => "@import:",
