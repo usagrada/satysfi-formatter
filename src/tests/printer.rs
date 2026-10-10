@@ -17,7 +17,7 @@ fn fmt(input: &str, width: i32) -> String {
     format(input, option_with_width(width))
 }
 
-use super::check_invariants;
+use super::{check_comment_insertion, check_invariants};
 
 // 構文を一通り含む入力
 const REC: &str = r##"@require: stdjareport
@@ -326,4 +326,90 @@ fn horizontal_text_keeps_adjacency() {
     let long =
         "document(||)'<+p{aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff}>";
     assert_eq!(fmt(long, 20).lines().count(), 3);
+}
+
+// 式・パターン・型・文の各構文を含む入力
+const EXPRS: &str = r##"@require: stdjareport
+
+let f (a, b) [c; d] (x :: xs) (Some y as z) _ = a
+let g = fun x y -> x + y
+let h = (fun x -> x) 1
+let i = if a then b else if c then d else e
+let j = while a do b <- 1
+let k = a <- 1 before b <- 2
+let l = match x with
+  | A -> 1
+  | B y when y > 0 -> 2
+  | _ -> 3
+let m = (1, 2, 3)
+let n = [1; 2; 3]
+let o = (| a = 1; b = 2 |)
+let p = (| r with a = 1 |)
+let q = f ?:x ?* y
+let r = Some(1)
+let s = M.(f 1)
+let t = !x ^ &y
+let u = -x
+let v = r#field
+let w = (f x) (g y)
+let x = 1 |> f |> g
+let y = command \foo
+let z = <[ (0pt, 0pt) -- (1pt, 1pt) .. controls (1pt, 0pt) and (0pt, 1pt) .. (2pt, 2pt) -- cycle ]>
+let-rec aa x = x
+and bb y = y
+let-rec cc
+  | 0 = 1
+  | n = n
+type 'a dd = A of 'a | B constraint 'a :: (| x : int |)
+and ee = int * string -> (int -> int) ?-> 'a list
+open Foo
+in
+let a = 1 in
+let-mutable b <- 2 in
+let-rec c d = d in
+document (| title = {a}; author = {b} |) '<>
+"##;
+
+// 水平・垂直・数式モードとコマンドを含む入力
+const TEXTS: &str = r##"@require: stdjareport
+
+document (| title = {a} |) '<
+  +p {
+    hello \emph{world}text ${x^2 + y_i} #embed; `code` \%
+    \f?:(1) ?* (2){x}{y}
+  }
+  +section{Sec}<
+    +p{ a }
+    #blk;
+  >
+  +listing{
+    * item1
+      ** sub
+    * item2
+  }
+  +tab{| a | b |
+    | c | d |}
+  +math (${x}) ?:(1) ?*;
+  +m{${\frac{a}{b} \f!{t}!<+p{x}>!(1)![1;2]!(|a=1|) \g?:{x}{y}}}
+  +m{${| a | b + c |}}
+  +newpage;
+>
+"##;
+
+#[test]
+fn comments_survive_insertion_at_any_position() {
+    let samples = [
+        ("rec", REC),
+        ("modes", MODES),
+        ("comments", COMMENTS),
+        ("exprs", EXPRS),
+        ("texts", TEXTS),
+    ];
+    for (name, src) in samples {
+        let checked = check_comment_insertion(name, src);
+        assert!(
+            checked > 50,
+            "{name}: only {checked} positions were checked"
+        );
+    }
 }
