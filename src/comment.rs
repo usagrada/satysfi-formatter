@@ -107,6 +107,19 @@ fn cst_insert_comment(cst: &mut Cst, comments: &mut VecDeque<Comment>) {
     }
 }
 
+/// `cst` の部分木だけを取り出し、その範囲内のコメントを挿入した木を返す。
+/// `comments` は `get_comments` の結果 (全コメント) を渡す。
+pub fn subtree_with_comments(cst: &Cst, comments: &VecDeque<Comment>) -> Cst {
+    let mut inner_comments: VecDeque<Comment> = comments
+        .iter()
+        .filter(|comment| cst.span.contains(&comment.span))
+        .cloned()
+        .collect();
+    let mut cst = cst.clone();
+    cst_insert_comment(&mut cst, &mut inner_comments);
+    cst
+}
+
 /// コメントを文字列化する関数
 pub fn to_comment_string(text: String) -> String {
     let index = text.find('%').unwrap();

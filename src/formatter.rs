@@ -29,7 +29,12 @@ impl<'a> Formatter<'a> {
     /// 文字列を format して出力する
     /// 前処理後処理もここで行う
     pub fn format(&self, input: &str, cst: &Cst, depth: usize) -> String {
-        let mut output = self.to_string_cst(input, cst, depth);
+        let output = self.to_string_cst(input, cst, depth);
+        self.finish(output)
+    }
+
+    /// 整形後の文字列に対する後処理 (末尾スペースの除去と最終改行)
+    pub(crate) fn finish(&self, mut output: String) -> String {
         // 末尾スペースを全て除去
         output = output
             .split('\n')
@@ -1041,7 +1046,7 @@ impl<'a> Formatter<'a> {
     }
 
     /// cst を文字列にするための関数
-    fn to_string_cst(&self, text: &str, cst: &Cst, depth: usize) -> String {
+    pub(crate) fn to_string_cst(&self, text: &str, cst: &Cst, depth: usize) -> String {
         // インデントを制御するための変数
         let new_depth = match cst.rule {
             Rule::block_text | Rule::cmd_text_arg | Rule::record | Rule::type_record => depth + 1,

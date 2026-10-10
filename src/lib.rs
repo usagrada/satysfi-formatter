@@ -1,6 +1,7 @@
 mod comment;
 mod formatter;
 mod helper;
+mod printer;
 mod reserved_words;
 #[cfg(test)]
 mod tests;
@@ -45,6 +46,21 @@ pub fn format(input: &str, option: FormattingOptions) -> String {
     
 
     formatter.format(input, &csttext.cst, depth)
+}
+
+/// `pretty` ベースの新しい整形。移行が完了するまで `format` と並存させる。
+pub fn format_pretty(input: &str, option: FormattingOptions) -> String {
+    let csttext = match CstText::parse(input, grammar::program) {
+        Ok(csttext) => csttext,
+        Err(err) => {
+            eprintln!(
+                "disable to format\n[parse error] line: {}, column: {}",
+                err.0.line, err.0.column
+            );
+            return input.to_string();
+        }
+    };
+    printer::Printer::new(&csttext, option).print()
 }
 
 pub fn formatting(input: &str, option: FormattingOptions) -> Vec<TextEdit> {

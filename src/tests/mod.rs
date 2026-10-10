@@ -1,4 +1,4 @@
-use crate::format;
+use crate::{format, format_pretty};
 use lspower::lsp::FormattingOptions;
 
 mod comment;
@@ -8,6 +8,7 @@ mod horizontal_single;
 mod let_block;
 mod math;
 mod module;
+mod printer;
 mod space;
 mod syntax;
 
@@ -17,8 +18,11 @@ fn test_tmpl(input: &str, expect: &str) {
         insert_spaces: true,
         ..Default::default()
     };
-    let output = format(input, option);
+    let output = format(input, option.clone());
     assert_eq!(output, expect);
+    // 新しい printer も同じ出力になること
+    let output = format_pretty(input, option);
+    assert_eq!(output, expect, "format_pretty");
 }
 
 #[test]
