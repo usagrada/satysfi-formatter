@@ -41,14 +41,15 @@ fn is_container(node: &Cst) -> bool {
     matches!(node.rule, Rule::preamble | Rule::headers)
 }
 
-/// `off` / `skip_next` は親から引き継ぐ状態。最後の `off` の状態を返す。
+/// `off` / `skip_next` は親から引き継ぐ状態。
+/// (最後の `off` の状態, 最後の子) を返す。
 fn walk(
     csttext: &CstText,
     node: &Cst,
     skip: &mut HashSet<(usize, usize)>,
     inherited_off: bool,
     inherited_skip_next: bool,
-) -> bool {
+) -> (bool, Option<(usize, usize)>) {
     let mut off = inherited_off;
     let mut skip_next = inherited_skip_next;
     let mut prev: Option<(usize, usize)> = None;
@@ -76,8 +77,16 @@ fn walk(
                 if key.0 == key.1 {
                     // 空のノード (header がない場合の headers など)
                 } else if is_container(child) {
-                    off = walk(csttext, child, skip, off, skip_next);
+                    let (inner_off, last) = walk(csttext, child, skip, off, skip_next);
+                    // 外から引き継いだ `off` は中の `on` で終わる。
+                    // 中で書いた `off` は、その外 (`in` の後の本体など) には及ばない。
+                    if off {
+                        off = inner_off;
+                    }
                     skip_next = false;
+                    // 直後の行末の skip は、中の最後の要素 (その行の文) にかける
+                    prev = last.or(Some(key));
+                    continue;
                 } else if (off || skip_next) && key.0 < key.1 {
                     skip.insert(key);
                     skip_next = false;
@@ -89,7 +98,7 @@ fn walk(
             Item::BlankLines(_) => {}
         }
     }
-    off
+    (off, prev)
 }
 
 /// 元の文字列を壊さずに出力するための目印。

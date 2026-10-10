@@ -124,19 +124,48 @@ impl<'a> Printer<'a> {
                 doc = doc.append(constraints.nest(self.indent));
                 kids.finish(doc)
             }
-            Rule::bind_stmt => {
-                // `let ... in` の後に本体を同じインデントで続ける
-                let kids = self.kids(cst);
-                let doc = kids.items[0]
-                    .doc
-                    .clone()
-                    .append(s(" in"))
-                    .append(Doc::hardline())
-                    .append(kids.items[1].doc.clone());
-                kids.finish(doc)
-            }
+            Rule::bind_stmt => self.bind_stmt(cst),
             _ => self.raw(cst),
         }
+    }
+
+    /// `let ... in body`。本体は `in` の次の行に、同じインデントで続ける。
+    /// 定義と本体の間のコメントは、元の位置に合わせて `in` の前後に置く。
+    fn bind_stmt(&self, cst: &Cst) -> Doc {
+        let mut children = self.children(cst);
+        if children.items.len() != 2 {
+            return self.raw(cst);
+        }
+        let body = children.items.pop().unwrap();
+        let def = children.items.pop().unwrap();
+        let (before, after) = self.comments_around_in(cst, def.cst);
+        let mut doc = with_leading(def.leading, self.node(def.cst));
+        for (comment, own_line) in &before {
+            doc = doc
+                .append(if *own_line { Doc::hardline() } else { s(" ") })
+                .append(Doc::text(comment.clone()));
+        }
+        // コメントの後ろでは `in` を次の行に置く
+        doc = doc.append(if before.is_empty() {
+            s(" in")
+        } else {
+            Doc::hardline().append(s("in"))
+        });
+        let mut after = after.into_iter().peekable();
+        if let Some((comment, _)) = after.next_if(|(_, own_line)| !own_line) {
+            doc = doc.append(s(" ")).append(Doc::text(comment));
+        }
+        let leading = after.map(|(c, _)| c).collect();
+        doc = doc
+            .append(Doc::hardline())
+            .append(with_leading(leading, self.node(body.cst)));
+        if let Some(comment) = body.trailing {
+            doc = doc.append(s(" ")).append(Doc::text(comment));
+        }
+        for comment in children.dangling {
+            doc = doc.append(Doc::hardline()).append(Doc::text(comment));
+        }
+        doc
     }
 
     /// `pattern [: type] [| ]args` の部分。
@@ -255,7 +284,7 @@ impl<'a> Printer<'a> {
     /// `head = value`。ヘッダを折り返したときは、本体を必ず次の行に送る。
     /// 括弧で始まる本体 (`= [` や `= (fun x ->`) は `=` の行末に置く。
     fn definition(&self, head: Doc, value: &Kid) -> Doc {
-        if self.is_hugging(value.cst) {
+        if self.hugs(value) {
             head.append(self.after_op(" =", value))
         } else {
             head.append(s(" ="))

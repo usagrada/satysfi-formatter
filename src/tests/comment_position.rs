@@ -292,15 +292,38 @@ end % c3
 }
 
 #[test]
-fn comment_before_in_moves_after_it() {
+fn comments_around_in_stay_on_their_side() {
     let text = r##"let x = 1 % c
-in
+% own line before in
+in % after in
+% own line after in
 document(||)'<>
 "##;
-    let expect = r##"let x = 1
-in % c
+    let expect = r##"let x = 1 % c
+% own line before in
+in % after in
 
+% own line after in
 document (||) '<>
+"##;
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn comments_around_in_of_let_expression_stay_on_their_side() {
+    let text = r##"let f =
+  let x = 1 % c
+  % own line before in
+  in % after in
+  % own line after in
+  x
+"##;
+    let expect = r##"let f =
+    let x = 1 % c
+    % own line before in
+    in % after in
+    % own line after in
+    x
 "##;
     test_tmpl(text, expect);
 }
@@ -575,4 +598,49 @@ fn comment_between_star_and_text() {
 >
 "##;
     test_tmpl(text, expect);
+}
+
+#[test]
+fn own_line_comment_before_a_bracketed_value() {
+    let text = r##"let g x =
+  % note
+  (a, b)
+let f x = match x with
+  | A -> % c
+    [1; 2]
+  | B -> 2
+"##;
+    let expect = r##"let g x =
+    % note
+    (a, b)
+let f x =
+    match x with
+    | A ->
+        % c
+        [1; 2]
+    | B -> 2
+"##;
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn blank_line_between_comment_and_statement_is_kept_in_place() {
+    let text = r##"let x = 1
+% about x
+
+let y = 2
+"##;
+    test_tmpl(text, text);
+}
+
+#[test]
+fn blank_line_between_comment_and_block_is_kept_in_place() {
+    let text = r##"document (||) '<
+    +p { a }
+    % about p
+
+    +p { b }
+>
+"##;
+    test_tmpl(text, text);
 }

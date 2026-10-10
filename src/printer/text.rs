@@ -4,8 +4,10 @@
 //! 空白の連続は「空白 1 つ」または「改行 1 つ」に正規化する (改行があれば改行を残す)。
 //! `{` の直後と `}` の直前の空白は無視される。コメントはその後ろの空白も読み飛ばす。
 
-use super::{s, with_leading, Doc, Printer};
+use super::{blank_line_if, s, with_leading, Doc, Printer};
 use satysfi_parser::{Cst, Rule};
+use std::cell::RefCell;
+use std::collections::HashMap;
 
 /// 水平モードの要素。
 enum Piece {
@@ -134,6 +136,12 @@ impl<'a> Printer<'a> {
     /// 整形後に必ず改行を含むか。元の文字列の改行ではなく、整形後の構造だけで決める
     /// (整形の前後で結果が変わらないようにするため)。
     fn token_multiline(&self, cst: &Cst) -> bool {
+        self.cached(&self.token_multiline_cache, cst, |cst| {
+            self.token_multiline_uncached(cst)
+        })
+    }
+
+    fn token_multiline_uncached(&self, cst: &Cst) -> bool {
         match cst.rule {
             Rule::inline_cmd | Rule::cmd_text_arg | Rule::horizontal_text => {
                 cst.inner.iter().any(|c| self.token_multiline(c))
@@ -167,6 +175,28 @@ impl<'a> Printer<'a> {
 
     /// 数式が整形後に複数行になるか。`math_body` が改行を残す条件と同じ。
     fn math_multiline(&self, cst: &Cst) -> bool {
+        self.cached(&self.math_multiline_cache, cst, |cst| {
+            self.math_multiline_uncached(cst)
+        })
+    }
+
+    /// 結果を node ごとに覚えておく。入れ子の各階層から同じ部分木を何度も調べるため。
+    fn cached(
+        &self,
+        cache: &RefCell<HashMap<(usize, usize, Rule), bool>>,
+        cst: &Cst,
+        compute: impl FnOnce(&Cst) -> bool,
+    ) -> bool {
+        let key = (cst.span.start, cst.span.end, cst.rule);
+        if let Some(&v) = cache.borrow().get(&key) {
+            return v;
+        }
+        let v = compute(cst);
+        cache.borrow_mut().insert(key, v);
+        v
+    }
+
+    fn math_multiline_uncached(&self, cst: &Cst) -> bool {
         if self.has_gap_comment(cst) {
             return true;
         }
@@ -416,7 +446,9 @@ impl<'a> Printer<'a> {
             for comment in child.leading {
                 body = body.append(Doc::text(comment)).append(Doc::hardline());
             }
-            body = body.append(self.node(child.cst));
+            body = body
+                .append(blank_line_if(child.blank_after_leading))
+                .append(self.node(child.cst));
             if let Some(comment) = child.trailing {
                 body = body.append(s(" ")).append(Doc::text(comment));
             }

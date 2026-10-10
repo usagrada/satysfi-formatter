@@ -18,7 +18,8 @@ mod types;
 use crate::config::FormatConfig;
 use pretty::RcDoc;
 use satysfi_parser::{Cst, CstText, Item, Rule, Span};
-use std::collections::HashSet;
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 
 pub(self) type Doc = RcDoc<'static, ()>;
 
@@ -30,6 +31,9 @@ pub struct Printer<'a> {
     skip: HashSet<(usize, usize)>,
     width: usize,
     indent: isize,
+    /// `token_multiline` / `math_multiline` の結果
+    token_multiline_cache: RefCell<HashMap<(usize, usize, Rule), bool>>,
+    math_multiline_cache: RefCell<HashMap<(usize, usize, Rule), bool>>,
 }
 
 /// 子ノードと、その前後にあるコメント。
@@ -39,8 +43,10 @@ pub(self) struct Child<'c> {
     pub leading: Vec<String>,
     /// 子と同じ行の末尾にあるコメント
     pub trailing: Option<String>,
-    /// 子の前に空行があるか
+    /// 子の前 (leading があればその前) に空行があるか
     pub blank_before: bool,
+    /// leading と子の間に空行があるか
+    pub blank_after_leading: bool,
 }
 
 pub(self) struct Children<'c> {
@@ -90,6 +96,8 @@ impl<'a> Printer<'a> {
             final_newline: config.final_newline,
             use_tabs: config.use_tabs,
             command_space: config.command_space,
+            token_multiline_cache: RefCell::default(),
+            math_multiline_cache: RefCell::default(),
         }
     }
 
@@ -161,14 +169,22 @@ impl<'a> Printer<'a> {
         let mut items: Vec<Child<'c>> = vec![];
         let mut pending: Vec<String> = vec![];
         let mut blank = false;
+        // pending の最初のコメントの前に空行があったか
+        let mut blank_before_pending = false;
         for item in self.csttext.items(cst) {
             match item {
                 Item::Node(child) => {
+                    let (blank_before, blank_after_leading) = if pending.is_empty() {
+                        (blank, false)
+                    } else {
+                        (blank_before_pending, blank)
+                    };
                     items.push(Child {
                         cst: child,
                         leading: std::mem::take(&mut pending),
                         trailing: None,
-                        blank_before: blank,
+                        blank_before,
+                        blank_after_leading,
                     });
                     blank = false;
                 }
@@ -180,7 +196,13 @@ impl<'a> Printer<'a> {
                         {
                             last.trailing = Some(comment)
                         }
-                        _ => pending.push(comment),
+                        _ => {
+                            if pending.is_empty() {
+                                blank_before_pending = blank;
+                                blank = false;
+                            }
+                            pending.push(comment)
+                        }
                     }
                 }
                 Item::BlankLines(_) => blank = true,
@@ -335,28 +357,90 @@ impl<'a> Printer<'a> {
         let mut blocks: Vec<Doc> = vec![];
         // 次のブロックの前に置く、単独行のコメント
         let mut pending: Vec<String> = vec![];
+        // `in` の後ろにあった単独行のコメント。本体の前に置く
+        // (children では preamble の行末コメントと本体の前のコメントに分かれてしまうので、置き換える)
+        let mut after_in: Option<Vec<String>> = None;
 
         for child in children.items {
             if child.cst.rule == Rule::headers && child.cst.inner.is_empty() {
                 pending.extend(child.leading);
                 continue;
             }
-            pending.extend(child.leading);
+            match after_in.take() {
+                Some(comments) => pending.extend(comments),
+                None => pending.extend(child.leading),
+            }
             let mut doc = self.node(child.cst);
+            let mut trailing = child.trailing;
             if child.cst.rule == Rule::preamble && is_saty {
-                doc = doc.append(Doc::hardline()).append(Doc::text("in"));
+                // preamble と本体の間のコメントは、元の位置に合わせて `in` の前後に置く
+                let (before, after) = self.comments_around_in(cst, child.cst);
+                for (comment, own_line) in before {
+                    doc = doc
+                        .append(if own_line { Doc::hardline() } else { s(" ") })
+                        .append(Doc::text(comment));
+                }
+                doc = doc.append(Doc::hardline()).append(s("in"));
+                let mut after = after.into_iter().peekable();
+                trailing = after.next_if(|(_, own_line)| !own_line).map(|(c, _)| c);
+                after_in = Some(after.map(|(c, _)| c).collect());
             }
             let mut doc = with_leading(std::mem::take(&mut pending), doc);
-            if let Some(comment) = child.trailing {
+            if let Some(comment) = trailing {
                 doc = doc.append(Doc::text(" ")).append(Doc::text(comment));
             }
             blocks.push(doc);
         }
+        pending.extend(after_in.unwrap_or_default());
         pending.extend(children.dangling);
         if !pending.is_empty() {
             blocks.push(join(pending.into_iter().map(Doc::text), Doc::hardline()));
         }
         join(blocks, Doc::hardline().append(Doc::hardline()))
+    }
+
+    /// `parent` の子 `def` (preamble や `let` の定義) と、次の子 (本体) の間にあるコメントを、
+    /// `in` の前と後ろに分ける。それぞれ (コメント, 単独行か) の並び。
+    pub(self) fn comments_around_in(
+        &self,
+        parent: &Cst,
+        def: &Cst,
+    ) -> (Vec<(String, bool)>, Vec<(String, bool)>) {
+        let in_pos = self.in_keyword_pos(def.span.end);
+        let mut before = vec![];
+        let mut after = vec![];
+        let items = self.csttext.items(parent);
+        let gap = items
+            .iter()
+            .skip_while(|item| !matches!(item, Item::Node(n) if std::ptr::eq(*n, def)))
+            .skip(1)
+            .take_while(|item| !matches!(item, Item::Node(_)));
+        for item in gap {
+            if let Item::Comment { span, own_line } = item {
+                let comment = (self.comment(*span), *own_line);
+                if span.start < in_pos {
+                    before.push(comment);
+                } else {
+                    after.push(comment);
+                }
+            }
+        }
+        (before, after)
+    }
+
+    /// `from` 以降で、空白とコメントを読み飛ばした最初の位置 (定義の後ろの `in`)。
+    fn in_keyword_pos(&self, from: usize) -> usize {
+        let text = &self.csttext.text;
+        let mut pos = from;
+        loop {
+            let rest = &text[pos..];
+            let trimmed = rest.trim_start();
+            pos += rest.len() - trimmed.len();
+            if !trimmed.starts_with('%') {
+                return pos;
+            }
+            pos += trimmed.find('\n').unwrap_or(trimmed.len());
+        }
     }
 
     /// `@require:` / `@import:` の並び。
@@ -405,7 +489,8 @@ impl<'a> Printer<'a> {
                 }
             }
             prev_is_module = child.cst.rule == Rule::module_stmt;
-            let mut stmt = with_leading(child.leading, self.node(child.cst));
+            let mut stmt = with_leading(child.leading, blank_line_if(child.blank_after_leading))
+                .append(self.node(child.cst));
             if let Some(comment) = child.trailing {
                 stmt = stmt.append(Doc::text(" ")).append(Doc::text(comment));
             }
@@ -455,6 +540,16 @@ pub(self) fn with_leading(comments: Vec<String>, doc: Doc) -> Doc {
         result = result.append(Doc::text(comment)).append(Doc::hardline());
     }
     result.append(doc)
+}
+
+/// `blank` なら空行 (改行 1 つ)、そうでなければ何もしない Doc。
+/// `with_leading` の後ろに付けると、コメントと次の要素の間の空行になる。
+pub(self) fn blank_line_if(blank: bool) -> Doc {
+    if blank {
+        Doc::hardline()
+    } else {
+        Doc::nil()
+    }
 }
 
 /// 文字列 s を Doc にする。

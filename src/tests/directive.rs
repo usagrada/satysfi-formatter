@@ -100,3 +100,25 @@ fn off_covers_blocks_in_a_vertical_area() {
     let expect = "document (||) '<\n    +p { a }\n    % satysfi-fmt: off\n    +p   {  b  }\n    +p   {  c  }\n    % satysfi-fmt: on\n    +p { d }\n>\n";
     test_tmpl(text, expect);
 }
+
+#[test]
+fn skip_before_a_bracketed_value_stays_on_its_own_line() {
+    // `=` の行末に移ると、次の整形で「直前のノードの skip」になってしまう
+    let text = "let x =\n  % satysfi-fmt: skip\n  [1;   2]\n";
+    let expect = "let x =\n    % satysfi-fmt: skip\n    [1;   2]\n";
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn trailing_skip_on_the_last_statement_skips_only_that_statement() {
+    let text = "let x = [1;   2]\nlet y = (a ,  b) % satysfi-fmt: skip\nin\ndocument (||) '<>\n";
+    let expect = "let x = [1; 2]\nlet y = (a ,  b) % satysfi-fmt: skip\nin\n\ndocument (||) '<>\n";
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn off_in_the_preamble_does_not_reach_the_document_body() {
+    let text = "let x = [1;   2]\n% satysfi-fmt: off\nlet y = [1;   2]\nin\ndocument (||) '<\n  +p{   abc }\n>\n";
+    let expect = "let x = [1; 2]\n% satysfi-fmt: off\nlet y = [1;   2]\nin\n\ndocument (||) '<\n    +p { abc }\n>\n";
+    test_tmpl(text, expect);
+}

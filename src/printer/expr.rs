@@ -189,9 +189,15 @@ impl<'a> Printer<'a> {
         }
     }
 
+    /// `op value` の value を `op` の行末に置けるか。
+    /// 前に単独行のコメントがあるときは、コメントが `op` の行末に移ってしまうので置かない。
+    pub(super) fn hugs(&self, value: &Kid) -> bool {
+        !value.commented && self.is_hugging(value.cst)
+    }
+
     /// `op value`。括弧で始まる式は行末に置き、それ以外は収まらなければ次の行に送る。
     pub(super) fn after_op(&self, op: &str, value: &Kid) -> Doc {
-        if self.is_hugging(value.cst) {
+        if self.hugs(value) {
             s(op).append(s(" ")).append(value.doc.clone())
         } else {
             s(op).append(
@@ -415,10 +421,12 @@ impl<'a> Printer<'a> {
         let hugged_from = args
             .iter()
             .rposition(|arg| {
-                !arg.cst
-                    .inner
-                    .first()
-                    .map_or(false, |inner| self.is_hugging(inner))
+                arg.commented
+                    || !arg
+                        .cst
+                        .inner
+                        .first()
+                        .map_or(false, |inner| self.is_hugging(inner))
             })
             .map_or(0, |i| i + 1);
         let mut broken = Doc::nil();
