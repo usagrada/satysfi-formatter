@@ -63,6 +63,7 @@ impl<'a> Formatter<'a> {
             // Rule::type_application => " ".to_string(),
             Rule::type_prod => " * ".to_string(),
             Rule::dyadic_expr | Rule::match_expr | Rule::unary_operator_expr => " ".to_string(),
+            Rule::sequential_expr => " before ".to_string(),
             Rule::vertical | Rule::horizontal_bullet_list => newline.clone(),
             Rule::horizontal_list => format!("{newline}|"),
             Rule::unary => "#".to_string(),
@@ -1321,6 +1322,13 @@ impl<'a> Formatter<'a> {
             Rule::lambda => output,              // TODO
             Rule::assignment => output,          // TODO
             Rule::dyadic_expr => output,         // TODO
+            Rule::sequential_expr => output,
+            // path 式は暫定的に元の文字列をそのまま出力する
+            Rule::path
+            | Rule::path_line
+            | Rule::path_curve
+            | Rule::path_line_cycle
+            | Rule::path_curve_cycle => self_text,
             Rule::unary_operator_expr => output, // TODO
             Rule::unary_operator => self_text,
             // application

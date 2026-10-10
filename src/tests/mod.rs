@@ -9,6 +9,7 @@ mod let_block;
 mod math;
 mod module;
 mod space;
+mod syntax;
 
 fn test_tmpl(input: &str, expect: &str) {
     let option = FormattingOptions {
