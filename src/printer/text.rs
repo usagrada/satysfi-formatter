@@ -4,7 +4,7 @@
 //! 空白の連続は「空白 1 つ」または「改行 1 つ」に正規化する (改行があれば改行を残す)。
 //! `{` の直後と `}` の直前の空白は無視される。コメントはその後ろの空白も読み飛ばす。
 
-use super::{s, Doc, Printer};
+use super::{s, with_leading, Doc, Printer};
 use satysfi_parser::{Cst, Rule};
 
 /// 水平モードの要素。
@@ -26,11 +26,10 @@ impl<'a> Printer<'a> {
                 let kids = self.kids(cst);
                 kids.finish(kids.items[0].doc.clone())
             }
-            Rule::math_text => {
-                let kids = self.kids(cst);
-                let (body, multiline) = self.math_body(&kids.items[0]);
-                kids.finish(self.wrap_math("${", body, multiline))
-            }
+            Rule::math_text => match cst.inner.first() {
+                Some(math) => self.math_braces("${", cst, math),
+                None => s("${}"),
+            },
             Rule::vertical => self.vertical(cst),
             Rule::horizontal_single => {
                 let (body, multiline) = self.horizontal_body(cst);
@@ -81,23 +80,14 @@ impl<'a> Printer<'a> {
                 };
                 let inner = &kids.items[0];
                 let body = match inner.cst.rule {
-                    Rule::math_single | Rule::math_list => {
-                        let (body, multiline) = self.math_body(inner);
-                        self.wrap_math("{", body, multiline)
-                    }
+                    Rule::math_single | Rule::math_list => self.math_braces("{", cst, inner.cst),
                     Rule::expr => s("!").append(self.paren(inner)),
                     // 水平モード `!{ ... }`、垂直モード `!<...>`、`![...]`、`!(|...|)`
                     _ => s("!").append(inner.doc.clone()),
                 };
                 kids.finish(s(prefix).append(body))
             }
-            Rule::math_single | Rule::math_list => {
-                let kid = super::Kid {
-                    cst,
-                    doc: Doc::nil(),
-                };
-                self.math_body(&kid).0
-            }
+            Rule::math_single | Rule::math_list => self.math_body(cst).0,
             Rule::math_token => {
                 let kids = self.kids(cst);
                 let mut doc = Doc::nil();
@@ -111,10 +101,7 @@ impl<'a> Printer<'a> {
                 let prefix = if cst.rule == Rule::math_sup { "^" } else { "_" };
                 let inner = &kids.items[0];
                 let body = match inner.cst.rule {
-                    Rule::math_single => {
-                        let (body, multiline) = self.math_body(inner);
-                        self.wrap_math("{", body, multiline)
-                    }
+                    Rule::math_single => self.math_braces("{", cst, inner.cst),
                     _ => inner.doc.clone(),
                 };
                 kids.finish(s(prefix).append(body))
@@ -162,14 +149,27 @@ impl<'a> Printer<'a> {
             Rule::horizontal_bullet_list | Rule::vertical | Rule::block_text => {
                 !cst.inner.is_empty()
             }
-            Rule::math_text => cst.inner.iter().any(|c| self.math_multiline(c)),
+            Rule::math_text => {
+                self.has_gap_comment(cst) || cst.inner.iter().any(|c| self.math_multiline(c))
+            }
             Rule::const_string => self.text_of(cst).contains('\n'),
             _ => false,
         }
     }
 
+    /// cst 自身の子の隙間にコメントがあるか。
+    fn has_gap_comment(&self, cst: &Cst) -> bool {
+        self.csttext
+            .items(cst)
+            .iter()
+            .any(|item| matches!(item, satysfi_parser::Item::Comment { .. }))
+    }
+
     /// 数式が整形後に複数行になるか。`math_body` が改行を残す条件と同じ。
     fn math_multiline(&self, cst: &Cst) -> bool {
+        if self.has_gap_comment(cst) {
+            return true;
+        }
         match cst.rule {
             Rule::math_single => {
                 let children = self.children(cst);
@@ -256,14 +256,21 @@ impl<'a> Printer<'a> {
     /// horizontal_single の中身。(Doc, 複数行になるか)
     /// 中身が空なら None。
     fn horizontal_body(&self, cst: &Cst) -> (Option<Doc>, bool) {
+        let (doc, multiline, _) = self.horizontal_body_ext(cst);
+        (doc, multiline)
+    }
+
+    /// `horizontal_body` に加えて、最後がコメントで終わるかも返す。
+    fn horizontal_body_ext(&self, cst: &Cst) -> (Option<Doc>, bool, bool) {
         let multiline_of = |c: &Cst| self.token_multiline(c);
         let (pieces, multiline) = self.horizontal_pieces(cst, &|c| Tok {
             doc: self.node(c),
             multiline: multiline_of(c),
         });
         if pieces.is_empty() {
-            return (None, false);
+            return (None, false, false);
         }
+        let ends_with_comment = matches!(pieces.last(), Some(Piece::Comment(_)));
         let count = pieces.len();
         // 後ろに続くものがないコメントは、直前の文字との間に空白を入れても意味が変わらない
         let only_comments_follow: Vec<bool> = {
@@ -300,21 +307,47 @@ impl<'a> Printer<'a> {
             };
             prev_is_token = is_token;
         }
-        (Some(doc), multiline)
+        (Some(doc), multiline, ends_with_comment)
     }
 
-    /// `{ | a | b | }`
+    /// `{ | a | b | }`。セルの間のコメントは、次のセルの前の単独行のコメントとして扱う。
+    /// セルがコメントで終わるときは、その後ろで必ず改行する。
     fn horizontal_list(&self, cst: &Cst) -> Doc {
         let children = self.children(cst);
         let mut body = Doc::nil();
+        let mut carry: Vec<String> = vec![];
+        // 直前のセルがコメントで終わっていたか
+        let mut must_break = false;
         for child in &children.items {
-            let (cell, _) = self.horizontal_body(child.cst);
-            body = body
-                .append(Doc::line())
-                .append(s("| "))
-                .append(cell.unwrap_or_else(Doc::nil));
+            let (cell, _, ends_with_comment) = self.horizontal_body_ext(child.cst);
+            body = body.append(if must_break {
+                Doc::hardline()
+            } else {
+                Doc::line()
+            });
+            for comment in carry.drain(..).chain(child.leading.iter().cloned()) {
+                body = body.append(Doc::text(comment)).append(Doc::hardline());
+            }
+            body = body.append(match cell {
+                Some(cell) => s("| ").append(cell),
+                // 空のセルは `|` だけ
+                None => s("|"),
+            });
+            must_break = ends_with_comment;
+            carry.extend(child.trailing.clone());
+            // 行末のコメントの後ろも必ず改行する
+            must_break |= !carry.is_empty();
         }
-        body = body.append(Doc::line()).append(s("|"));
+        for comment in carry.into_iter().chain(children.dangling) {
+            body = body.append(Doc::hardline()).append(Doc::text(comment));
+            must_break = true;
+        }
+        body = body.append(if must_break {
+            Doc::hardline()
+        } else {
+            Doc::line()
+        });
+        body = body.append(s("|"));
         s("{")
             .append(body.nest(self.indent))
             .append(Doc::line())
@@ -327,29 +360,42 @@ impl<'a> Printer<'a> {
         let children = self.children(cst);
         let mut body = Doc::nil();
         for child in &children.items {
-            let bullet = child.cst;
-            let star = bullet
-                .inner
-                .iter()
-                .find(|c| c.rule == Rule::horizontal_bullet_star)
-                .map_or("*", |c| self.text_of(c).trim());
-            let single = bullet
-                .inner
-                .iter()
-                .find(|c| c.rule == Rule::horizontal_single);
-            let content = single
-                .and_then(|single| self.horizontal_body(single).0)
-                .unwrap_or_else(Doc::nil);
-            body = body
-                .append(Doc::hardline())
-                .append(s(star))
-                .append(s(" "))
-                .append(content);
+            body = body.append(Doc::hardline());
+            for comment in &child.leading {
+                body = body
+                    .append(Doc::text(comment.clone()))
+                    .append(Doc::hardline());
+            }
+            body = body.append(self.horizontal_bullet(child.cst));
+            if let Some(comment) = &child.trailing {
+                body = body.append(s(" ")).append(Doc::text(comment.clone()));
+            }
+        }
+        for comment in children.dangling {
+            body = body.append(Doc::hardline()).append(Doc::text(comment));
         }
         s("{")
             .append(body.nest(self.indent))
             .append(Doc::hardline())
             .append(s("}"))
+    }
+
+    /// `* item`。星と本文の間のコメントは、項目の前に出す。
+    fn horizontal_bullet(&self, bullet: &Cst) -> Doc {
+        let children = self.children(bullet);
+        let mut comments: Vec<String> = vec![];
+        let mut star = "*";
+        let mut content = Doc::nil();
+        for child in children.items {
+            comments.extend(child.leading);
+            match child.cst.rule {
+                Rule::horizontal_bullet_star => star = self.text_of(child.cst).trim(),
+                _ => content = self.horizontal_body(child.cst).0.unwrap_or_else(Doc::nil),
+            }
+            comments.extend(child.trailing);
+        }
+        comments.extend(children.dangling);
+        with_leading(comments, s(star).append(s(" ")).append(content))
     }
 
     /// `<+p { a } +p { b }>`。要素ごとに改行する。
@@ -390,14 +436,39 @@ impl<'a> Printer<'a> {
     }
 
     /// `\name(arg){ text }` / `+name(arg){ text }`。テキスト引数がなければ `;` で終える。
+    /// 式の引数は、収まらなければ 1 引数ずつ改行する。ただし括弧で包まれた引数
+    /// (リストなど) は直前と同じ行に置き、中身を自分で折り返す。テキスト引数は最後の行に続ける。
     fn command(&self, cst: &Cst) -> Doc {
         let kids = self.kids(cst);
-        let mut doc = kids.items[0].doc.clone();
+        let mut broken = Doc::nil();
+        let mut tail = Doc::nil();
+        let mut seen_tail = false;
         let mut has_text = false;
         for kid in &kids.items[1..] {
-            has_text |= kid.cst.rule == Rule::cmd_text_arg;
-            doc = doc.append(s(" ")).append(kid.doc.clone());
+            let is_text = kid.cst.rule == Rule::cmd_text_arg;
+            has_text |= is_text;
+            let hugging = kid
+                .cst
+                .inner
+                .first()
+                .map_or(false, |inner| match inner.rule {
+                    Rule::list | Rule::record => true,
+                    Rule::expr => self.is_hugging(inner),
+                    _ => false,
+                });
+            if is_text || hugging || seen_tail {
+                seen_tail = true;
+                tail = tail.append(s(" ")).append(kid.doc.clone());
+            } else {
+                broken = broken.append(Doc::line()).append(kid.doc.clone());
+            }
         }
+        let mut doc = kids.items[0]
+            .doc
+            .clone()
+            .append(broken.nest(self.indent))
+            .group()
+            .append(tail);
         if !has_text {
             doc = doc.append(s(";"));
         }
@@ -405,6 +476,34 @@ impl<'a> Printer<'a> {
     }
 
     // ---- 数式 ----
+
+    /// `parent` の子 `math` (数式) を `open` ... `}` で囲む。
+    /// `math` の前後にあるコメントは中に取り込み、その場合は必ず複数行にする。
+    fn math_braces(&self, open: &str, parent: &Cst, math: &Cst) -> Doc {
+        let children = self.children(parent);
+        let mut before: Vec<String> = vec![];
+        let mut after: Vec<String> = vec![];
+        for child in children.items {
+            if std::ptr::eq(child.cst, math) {
+                before.extend(child.leading);
+                after.extend(child.trailing);
+            }
+        }
+        after.extend(children.dangling);
+        let (body, multiline) = self.math_body(math);
+        if before.is_empty() && after.is_empty() {
+            return self.wrap_math(open, body, multiline);
+        }
+        let mut doc = Doc::nil();
+        for comment in before {
+            doc = doc.append(Doc::text(comment)).append(Doc::hardline());
+        }
+        doc = doc.append(body);
+        for comment in after {
+            doc = doc.append(Doc::hardline()).append(Doc::text(comment));
+        }
+        self.wrap_math(open, doc, true)
+    }
 
     /// `${ ... }` / `{ ... }` で囲む。複数行なら中身を字下げして囲み記号を単独行に置く。
     fn wrap_math(&self, open: &str, body: Doc, multiline: bool) -> Doc {
@@ -420,8 +519,7 @@ impl<'a> Printer<'a> {
 
     /// math_single / math_list の中身。(Doc, 複数行か)
     /// 空白は、元の文字列で空白があったかどうかを保つ。
-    fn math_body(&self, kid: &super::Kid) -> (Doc, bool) {
-        let cst = kid.cst;
+    fn math_body(&self, cst: &Cst) -> (Doc, bool) {
         let children = self.children(cst);
         let mut doc = Doc::nil();
         let mut multiline = false;
@@ -440,11 +538,12 @@ impl<'a> Printer<'a> {
             }
             if is_list {
                 // `| a | b |`
-                doc = doc.append(s(if first { "| " } else { " | " }));
-                let (cell, cell_multiline) = self.math_body(&super::Kid {
-                    cst: child.cst,
-                    doc: Doc::nil(),
-                });
+                doc = doc.append(s(if first || prev_end.is_none() {
+                    "| "
+                } else {
+                    " | "
+                }));
+                let (cell, cell_multiline) = self.math_body(child.cst);
                 multiline |= cell_multiline;
                 doc = doc.append(cell);
             } else {

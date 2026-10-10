@@ -5,6 +5,15 @@
 use super::{join, s, with_leading, Doc, Kid, Kids, Printer};
 use satysfi_parser::{Cst, Rule};
 
+/// `a |> b |> c` の 1 項
+struct ChainPart {
+    /// この項の前の演算子
+    op: Option<String>,
+    /// 演算子の前にあったコメント
+    comments: Vec<String>,
+    operand: Doc,
+}
+
 impl<'a> Printer<'a> {
     pub(super) fn expr_node(&self, cst: &Cst) -> Doc {
         match cst.rule {
@@ -90,7 +99,16 @@ impl<'a> Printer<'a> {
                     .append(kids.items[2].doc.clone());
                 kids.finish(doc)
             }
-            Rule::path_line_cycle => s("-- cycle"),
+            Rule::path_line_cycle => {
+                // `--` と `cycle` の間のコメントは前に出す
+                let children = self.children(cst);
+                let comments = children
+                    .items
+                    .into_iter()
+                    .flat_map(|c| c.leading.into_iter().chain(c.trailing))
+                    .chain(children.dangling);
+                with_leading(comments.collect(), s("-- cycle"))
+            }
             Rule::path_curve_cycle => {
                 let kids = self.kids(cst);
                 let doc = s(".. controls ")
@@ -295,31 +313,38 @@ impl<'a> Printer<'a> {
     /// `a |> b |> c` や `a before b before c` のような、右に入れ子になった並び。
     /// 収まらなければ 1 項ずつ改行する。
     fn chain(&self, cst: &Cst, chain_rule: Rule) -> Doc {
-        // (直前の演算子, 項)
-        let mut parts: Vec<(Option<String>, Doc)> = vec![];
+        let mut parts: Vec<ChainPart> = vec![];
         let mut carry: Vec<String> = vec![];
         self.collect_chain(cst, chain_rule, &mut parts, &mut carry);
         let is_seq = chain_rule == Rule::sequential_expr;
 
         let mut iter = parts.into_iter();
-        let (_, first) = iter.next().unwrap();
+        let first = iter.next().unwrap();
         let doc = if is_seq {
             // `a before` の後で改行する。インデントは変えない。
-            let mut doc = first;
-            for (_, operand) in iter {
-                doc = doc.append(s(" before")).append(Doc::line()).append(operand);
+            let mut doc = first.operand;
+            for part in iter {
+                doc = doc
+                    .append(s(" before"))
+                    .append(Doc::line())
+                    .append(part.operand);
             }
             doc.group()
         } else {
             let mut rest = Doc::nil();
-            for (op, operand) in iter {
+            for part in iter {
+                // 演算子の前にあったコメントは、演算子の行の前に置く
+                let mut line = Doc::line();
+                for comment in part.comments {
+                    line = line.append(Doc::text(comment)).append(Doc::hardline());
+                }
                 rest = rest
-                    .append(Doc::line())
-                    .append(s(&op.unwrap_or_default()))
+                    .append(line)
+                    .append(s(&part.op.unwrap_or_default()))
                     .append(s(" "))
-                    .append(operand);
+                    .append(part.operand);
             }
-            first.append(rest.nest(self.indent)).group()
+            first.operand.append(rest.nest(self.indent)).group()
         };
         carry.into_iter().fold(doc, |doc, comment| {
             doc.append(Doc::hardline()).append(Doc::text(comment))
@@ -330,11 +355,13 @@ impl<'a> Printer<'a> {
         &self,
         cst: &Cst,
         chain_rule: Rule,
-        parts: &mut Vec<(Option<String>, Doc)>,
+        parts: &mut Vec<ChainPart>,
         carry: &mut Vec<String>,
     ) {
         let children = self.children(cst);
+        // 直前の演算子と、その前にあったコメント
         let mut op: Option<String> = None;
+        let mut op_comments: Vec<String> = vec![];
         for child in children.items {
             let mut leading = std::mem::take(carry);
             leading.extend(child.leading);
@@ -342,22 +369,33 @@ impl<'a> Printer<'a> {
             match child.cst.rule {
                 Rule::bin_operator => {
                     op = Some(self.text_of(child.cst).to_string());
-                    // 演算子の前のコメントは、次の項の前に置く
-                    carry.splice(0..0, leading);
+                    op_comments = leading;
                 }
                 rule if rule == chain_rule => {
-                    carry.splice(0..0, leading);
-                    let mut inner_carry = std::mem::take(carry);
-                    // 入れ子の並びの先頭の演算子は、ここで拾った演算子
+                    // 入れ子の並びの先頭の項に、ここで拾った演算子を渡す
                     let before = parts.len();
+                    let mut inner_carry = leading;
                     self.collect_chain(child.cst, chain_rule, parts, &mut inner_carry);
                     if let Some(first) = parts.get_mut(before) {
-                        first.0 = op.take();
+                        first.op = op.take();
+                        let mut comments = std::mem::take(&mut op_comments);
+                        comments.append(&mut first.comments);
+                        first.comments = comments;
                     }
                     *carry = inner_carry;
                 }
                 _ => {
-                    parts.push((op.take(), with_leading(leading, self.node(child.cst))));
+                    // 演算子がない先頭の項のコメントは、項の前に置く
+                    let (comments, leading) = if op.is_some() {
+                        (std::mem::take(&mut op_comments), leading)
+                    } else {
+                        (vec![], leading)
+                    };
+                    parts.push(ChainPart {
+                        op: op.take(),
+                        comments,
+                        operand: with_leading(leading, self.node(child.cst)),
+                    });
                 }
             }
         }
@@ -424,7 +462,13 @@ impl<'a> Printer<'a> {
         for k in &kids.items[1..] {
             rest = rest.append(Doc::line()).append(k.doc.clone());
         }
-        let doc = s("<[")
+        // 最後のコメントは閉じ記号の前に置く (整形後も同じ階層のコメントになる)
+        for comment in &kids.dangling {
+            rest = rest
+                .append(Doc::hardline())
+                .append(Doc::text(comment.clone()));
+        }
+        s("<[")
             .append(
                 Doc::line()
                     .append(kids.items[0].doc.clone())
@@ -433,22 +477,26 @@ impl<'a> Printer<'a> {
             )
             .append(Doc::line())
             .append(s("]>"))
-            .group();
-        kids.finish(doc)
+            .group()
     }
 
     /// `(a, b, c)`。収まらなければ 1 要素ずつ改行する。
     pub(super) fn tuple_doc(&self, kids: Kids) -> Doc {
-        let elems = join(
+        let mut elems = join(
             kids.items.iter().map(|k| k.doc.clone()),
             s(",").append(Doc::line()),
         );
-        let doc = s("(")
+        // 最後のコメントは閉じ記号の前に置く
+        for comment in &kids.dangling {
+            elems = elems
+                .append(Doc::hardline())
+                .append(Doc::text(comment.clone()));
+        }
+        s("(")
             .append(Doc::line_().append(elems).nest(self.indent))
             .append(Doc::line_())
             .append(s(")"))
-            .group();
-        kids.finish(doc)
+            .group()
     }
 
     /// `[a; b; c]` や `(| a = 1; b = 2 |)` のような `;` 区切りの並び。

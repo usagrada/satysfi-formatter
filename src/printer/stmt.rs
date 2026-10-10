@@ -1,6 +1,6 @@
 //! 文 (`let` / `type` / `module` など) の Doc 化。
 
-use super::{s, with_leading, Doc, Kid, Kids, Printer};
+use super::{s, with_leading, Child, Doc, Kid, Kids, Printer};
 use satysfi_parser::{Cst, Rule};
 
 impl<'a> Printer<'a> {
@@ -195,16 +195,20 @@ impl<'a> Printer<'a> {
         let head_end = value_index.map_or(1, |i| i + 1);
         let mut items = children.items;
         let arms = items.split_off(head_end.min(items.len()));
+        // 行末のコメントは、次の要素の前の単独行のコメントとして扱う
+        let mut carry: Vec<String> = vec![];
+        let mut head_items = vec![];
+        for c in items {
+            let mut leading = std::mem::take(&mut carry);
+            leading.extend(c.leading);
+            carry.extend(c.trailing);
+            head_items.push(Kid {
+                cst: c.cst,
+                doc: with_leading(leading, self.node(c.cst)),
+            });
+        }
         let head_kids = Kids {
-            items: items
-                .into_iter()
-                .map(|c| {
-                    let mut leading = c.leading;
-                    // 行末のコメントは、次の要素の前の単独行のコメントとして扱う
-                    let doc = with_leading(std::mem::take(&mut leading), self.node(c.cst));
-                    Kid { cst: c.cst, doc }
-                })
-                .collect(),
+            items: head_items,
             dangling: vec![],
         };
         let mut doc = match value_index {
@@ -215,6 +219,10 @@ impl<'a> Printer<'a> {
             // let-rec f (| args = expr)+
             None => head_kids.items[0].doc.clone(),
         };
+        // 腕の前の行末コメントは、本体の行に残す
+        for comment in carry {
+            doc = doc.append(s(" ")).append(Doc::text(comment));
+        }
         doc = doc.append(self.prefixed_lines(arms, "| ").nest(self.indent));
         for comment in children.dangling {
             doc = doc.append(Doc::hardline()).append(Doc::text(comment));
@@ -234,48 +242,89 @@ impl<'a> Printer<'a> {
     }
 
     fn type_inner(&self, cst: &Cst) -> Doc {
-        let kids = self.kids(cst);
-        let name = kids
+        let mut children = self.children(cst);
+        // 行末のコメントは、次の子の前の単独行のコメントとして扱う
+        let mut carry: Vec<String> = vec![];
+        for child in children.items.iter_mut() {
+            let mut leading = std::mem::take(&mut carry);
+            leading.append(&mut child.leading);
+            child.leading = leading;
+            // variant の行末コメントはそのまま残す
+            if child.cst.rule != Rule::type_variant {
+                carry.extend(child.trailing.take());
+            }
+        }
+        children.dangling.splice(0..0, carry);
+        let name = children
             .items
             .iter()
-            .position(|k| k.cst.rule == Rule::type_name)
+            .position(|c| c.cst.rule == Rule::type_name)
             .unwrap_or(0);
         let mut doc = Doc::nil();
-        for kid in &kids.items[..name] {
-            doc = doc.append(kid.doc.clone()).append(s(" "));
+        let mut variants: Vec<&Child> = vec![];
+        let mut constraints = Doc::nil();
+        let mut synonym: Option<Kid> = None;
+        for (i, child) in children.items.iter().enumerate() {
+            let kid_doc = with_leading(child.leading.clone(), self.node(child.cst));
+            if i < name {
+                doc = doc.append(kid_doc).append(s(" "));
+            } else if i == name {
+                doc = doc.append(kid_doc);
+            } else {
+                match child.cst.rule {
+                    Rule::type_variant => variants.push(child),
+                    Rule::constraint => {
+                        constraints = constraints.append(Doc::hardline()).append(kid_doc);
+                    }
+                    _ => {
+                        synonym = Some(Kid {
+                            cst: child.cst,
+                            doc: kid_doc,
+                        })
+                    }
+                }
+            }
         }
-        doc = doc.append(kids.items[name].doc.clone());
-
-        let variants: Vec<&Kid> = kids.items[name + 1..]
-            .iter()
-            .filter(|k| k.cst.rule == Rule::type_variant)
-            .collect();
         if !variants.is_empty() {
-            // 1 行に収まれば `= A | B`、収まらなければ `|` を行頭に置いて縦に並べる
-            let mut body = s("| ").flat_alt(Doc::nil());
+            // 1 行に収まれば `= A | B`、収まらなければ `|` を行頭に置いて縦に並べる。
+            // コメントがあるときは必ず縦に並べる。
+            let mut body = Doc::nil();
+            let mut must_break = false;
             for (i, variant) in variants.iter().enumerate() {
                 if i > 0 {
-                    body = body.append(Doc::line()).append(s("| "));
+                    body = body.append(if must_break {
+                        Doc::hardline()
+                    } else {
+                        Doc::line()
+                    });
                 }
-                body = body.append(variant.doc.clone());
+                for comment in &variant.leading {
+                    body = body
+                        .append(Doc::text(comment.clone()))
+                        .append(Doc::hardline());
+                }
+                let bar = if i == 0 {
+                    s("| ").flat_alt(Doc::nil())
+                } else {
+                    s("| ")
+                };
+                body = body.append(bar).append(self.node(variant.cst));
+                must_break = variant.trailing.is_some();
+                if let Some(comment) = &variant.trailing {
+                    body = body.append(s(" ")).append(Doc::text(comment.clone()));
+                }
             }
             doc = doc
                 .append(s(" ="))
                 .append(Doc::line().append(body).nest(self.indent).group());
-        } else if let Some(ty) = kids.items[name + 1..]
-            .iter()
-            .find(|k| k.cst.rule == Rule::type_expr)
-        {
+        } else if let Some(ty) = &synonym {
             doc = doc.append(self.after_op(" =", ty));
         }
-        let mut constraints = Doc::nil();
-        for kid in kids.items[name + 1..]
-            .iter()
-            .filter(|k| k.cst.rule == Rule::constraint)
-        {
-            constraints = constraints.append(Doc::hardline()).append(kid.doc.clone());
+        doc = doc.append(constraints.nest(self.indent));
+        for comment in children.dangling {
+            doc = doc.append(Doc::hardline()).append(Doc::text(comment));
         }
-        kids.finish(doc.append(constraints.nest(self.indent)))
+        doc
     }
 
     /// `sig ... end` / `struct ... end`

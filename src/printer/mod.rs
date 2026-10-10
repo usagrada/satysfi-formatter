@@ -368,18 +368,20 @@ impl<'a> Printer<'a> {
     }
 
     /// 文の並び (preamble / struct の中身)。元の空行は 1 行まで残し、
-    /// `module` の前には必ず空行を入れる。
+    /// `module` の前後には必ず空行を入れる。
     pub(self) fn stmt_list(&self, cst: &Cst) -> Doc {
         let children = self.children(cst);
         let mut doc = Doc::nil();
         let mut first = true;
+        let mut prev_is_module = false;
         for child in children.items {
             if !first {
                 doc = doc.append(Doc::hardline());
-                if child.blank_before || child.cst.rule == Rule::module_stmt {
+                if child.blank_before || prev_is_module || child.cst.rule == Rule::module_stmt {
                     doc = doc.append(Doc::hardline());
                 }
             }
+            prev_is_module = child.cst.rule == Rule::module_stmt;
             let mut stmt = with_leading(child.leading, self.node(child.cst));
             if let Some(comment) = child.trailing {
                 stmt = stmt.append(Doc::text(" ")).append(Doc::text(comment));
