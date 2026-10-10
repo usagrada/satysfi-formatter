@@ -1,43 +1,136 @@
 //! 式・リスト・レコードなどの Doc 化。
 //!
 //! 幅に収まれば 1 行、収まらなければ縦に展開する。
-//! コメントを含むノードは、行が必ず折り返されるようにする。
 
-use super::{join, Doc, Printer, INDENT};
-use satysfi_parser::{Cst, Item, Rule};
+use super::{join, s, with_leading, Doc, Kid, Kids, Printer};
+use satysfi_parser::{Cst, Rule};
 
 impl<'a> Printer<'a> {
-    /// 式まわりの rule を Doc にする。対応していない rule は旧 Formatter に委譲する。
     pub(super) fn expr_node(&self, cst: &Cst) -> Doc {
         match cst.rule {
-            Rule::expr => match cst.inner.as_slice() {
-                [inner] if !self.has_comment(cst) => self.node(inner),
-                _ => self.legacy(cst),
-            },
-            Rule::unary => self.unary(cst),
-            Rule::list => self.list(cst),
-            Rule::record => self.record(cst),
-            Rule::tuple => self.tuple(cst),
+            Rule::expr => {
+                let kids = self.kids(cst);
+                match kids.items.as_slice() {
+                    [only] => kids.finish(only.doc.clone()),
+                    _ => self.raw(cst),
+                }
+            }
+            Rule::match_expr => self.match_expr(cst),
+            Rule::match_arm => self.match_arm(cst),
+            Rule::match_guard => {
+                let kids = self.kids(cst);
+                kids.finish(s("when ").append(kids.items[0].doc.clone()))
+            }
+            Rule::ctrl_while => self.ctrl_while(cst),
+            Rule::ctrl_if => self.ctrl_if(cst),
+            // then / else の中身。`if` が `then` / `else` を付ける
+            Rule::ctrl_then | Rule::ctrl_else => {
+                let kids = self.kids(cst);
+                kids.finish(kids.items[0].doc.clone())
+            }
+            Rule::lambda => self.lambda(cst),
+            Rule::assignment => {
+                let kids = self.kids(cst);
+                let doc = kids.items[0]
+                    .doc
+                    .clone()
+                    .append(self.after_op(" <-", &kids.items[1]));
+                kids.finish(doc)
+            }
+            Rule::dyadic_expr => self.chain(cst, Rule::dyadic_expr),
+            Rule::sequential_expr => self.chain(cst, Rule::sequential_expr),
+            Rule::unary_operator_expr => {
+                let kids = self.kids(cst);
+                let op = self.text_of(kids.items[0].cst).trim();
+                let sep = if op == "-" { "" } else { " " };
+                let doc = s(op).append(s(sep)).append(kids.items[1].doc.clone());
+                kids.finish(doc)
+            }
             Rule::application => self.application(cst),
-            Rule::dyadic_expr => self.dyadic(cst),
-            Rule::let_stmt => self.let_stmt(cst),
-            Rule::var
-            | Rule::modvar
-            | Rule::const_unit
-            | Rule::const_bool
-            | Rule::const_int
-            | Rule::const_float
-            | Rule::const_length
-            | Rule::const_string
-            | Rule::variant_name
-            | Rule::bin_operator
-            | Rule::unary_operator => Doc::text(self.text_of(cst).to_string()),
-            _ => self.legacy(cst),
+            Rule::application_args_normal => {
+                let kids = self.kids(cst);
+                kids.finish(kids.items[0].doc.clone())
+            }
+            Rule::application_args_optional => {
+                let kids = self.kids(cst);
+                match kids.items.first() {
+                    Some(arg) => kids.finish(s("?:").append(arg.doc.clone())),
+                    None => s("?*"),
+                }
+            }
+            Rule::command_application => {
+                let kids = self.kids(cst);
+                kids.finish(s("command ").append(kids.items[0].doc.clone()))
+            }
+            Rule::variant_constructor => {
+                let kids = self.kids(cst);
+                let doc = match kids.items.as_slice() {
+                    [name, arg] => {
+                        let sep = self.adjacent_sep(name.cst, arg.cst);
+                        name.doc.clone().append(s(sep)).append(arg.doc.clone())
+                    }
+                    [name] => name.doc.clone(),
+                    _ => self.raw(cst),
+                };
+                kids.finish(doc)
+            }
+            Rule::unary => self.unary(cst),
+            Rule::path => self.path(cst),
+            Rule::path_line => {
+                let kids = self.kids(cst);
+                kids.finish(s("-- ").append(kids.items[0].doc.clone()))
+            }
+            Rule::path_curve => {
+                let kids = self.kids(cst);
+                let doc = s(".. controls ")
+                    .append(kids.items[0].doc.clone())
+                    .append(s(" and "))
+                    .append(kids.items[1].doc.clone())
+                    .append(s(" .. "))
+                    .append(kids.items[2].doc.clone());
+                kids.finish(doc)
+            }
+            Rule::path_line_cycle => s("-- cycle"),
+            Rule::path_curve_cycle => {
+                let kids = self.kids(cst);
+                let doc = s(".. controls ")
+                    .append(kids.items[0].doc.clone())
+                    .append(s(" and "))
+                    .append(kids.items[1].doc.clone())
+                    .append(s(" .. cycle"));
+                kids.finish(doc)
+            }
+            Rule::list => self.seq(cst, "[", "]", None, &|c| self.node(c)),
+            Rule::record => self.seq(cst, "(|", "|)", Some(Rule::unary), &|c| self.node(c)),
+            Rule::record_unit => {
+                let kids = self.kids(cst);
+                let doc = kids.items[0]
+                    .doc
+                    .clone()
+                    .append(self.after_op(" =", &kids.items[1]));
+                kids.finish(doc)
+            }
+            Rule::tuple => {
+                let kids = self.kids(cst);
+                self.tuple_doc(kids)
+            }
+            Rule::expr_with_mod => {
+                let kids = self.kids(cst);
+                let doc = kids.items[0]
+                    .doc
+                    .clone()
+                    .append(s(".("))
+                    .append(kids.items[1].doc.clone())
+                    .append(s(")"));
+                kids.finish(doc)
+            }
+            // 葉
+            _ => self.raw(cst),
         }
     }
 
     /// expr / unary の包みを外した中身。
-    fn core<'c>(&self, cst: &'c Cst) -> &'c Cst {
+    pub(super) fn core<'c>(&self, cst: &'c Cst) -> &'c Cst {
         match cst.rule {
             Rule::expr if cst.inner.len() == 1 => self.core(&cst.inner[0]),
             Rule::unary
@@ -59,7 +152,7 @@ impl<'a> Printer<'a> {
     }
 
     /// 開き括弧を行末に置いたまま、自分で折り返せる式か。
-    fn is_hugging(&self, cst: &Cst) -> bool {
+    pub(super) fn is_hugging(&self, cst: &Cst) -> bool {
         let core = self.core(cst);
         match core.rule {
             Rule::list
@@ -69,7 +162,7 @@ impl<'a> Printer<'a> {
             | Rule::horizontal_text
             | Rule::math_text => true,
             // `f a [ ... ]` のように、最後の引数が自分で折り返せる適用
-            Rule::application if !self.has_comment(core) => core
+            Rule::application => core
                 .inner
                 .last()
                 .and_then(|arg| arg.inner.first())
@@ -78,211 +171,348 @@ impl<'a> Printer<'a> {
         }
     }
 
-    /// `= value` の部分。括弧で始まる式は行末に置き、それ以外は収まらなければ次の行に送る。
-    fn after_equal(&self, value: &Cst) -> Doc {
-        let doc = self.node(value);
-        if self.is_hugging(value) {
-            Doc::text(" =").append(Doc::text(" ")).append(doc)
+    /// `op value`。括弧で始まる式は行末に置き、それ以外は収まらなければ次の行に送る。
+    pub(super) fn after_op(&self, op: &str, value: &Kid) -> Doc {
+        if self.is_hugging(value.cst) {
+            s(op).append(s(" ")).append(value.doc.clone())
         } else {
-            Doc::text(" =").append(Doc::line().append(doc).nest(INDENT).group())
+            s(op).append(
+                Doc::line()
+                    .append(value.doc.clone())
+                    .nest(self.indent)
+                    .group(),
+            )
         }
     }
 
-    fn let_stmt(&self, cst: &Cst) -> Doc {
-        let simple = !self.has_comment(cst)
-            && cst.inner.last().map_or(false, |c| c.rule == Rule::expr)
-            && cst.inner[..cst.inner.len() - 1]
-                .iter()
-                .all(|c| matches!(c.rule, Rule::pattern | Rule::arg));
-        if !simple {
-            return self.legacy(cst);
+    /// `( expr )`。`let ... in` や `match` のように必ず複数行になる式は、
+    /// 括弧を単独行に置いて中身を字下げする。それ以外は括弧に密着させ、
+    /// 収まらなければ中身が自分で折り返す。
+    pub(super) fn paren(&self, inner: &Kid) -> Doc {
+        let statement_like = matches!(
+            self.core(inner.cst).rule,
+            Rule::bind_stmt | Rule::match_expr | Rule::sequential_expr
+        );
+        if statement_like {
+            s("(")
+                .append(Doc::hardline().append(inner.doc.clone()).nest(self.indent))
+                .append(Doc::hardline())
+                .append(s(")"))
+        } else {
+            s("(").append(inner.doc.clone()).append(s(")"))
         }
-        let (value, head) = cst.inner.split_last().unwrap();
-        let mut doc = Doc::text("let");
-        for c in head {
-            doc = doc.append(Doc::text(" ")).append(Doc::text(self.text_of(c).to_string()));
-        }
-        doc.append(self.after_equal(value))
     }
 
-    fn unary(&self, cst: &Cst) -> Doc {
-        match cst.inner.as_slice() {
-            [inner] if !self.has_comment(cst) => match inner.rule {
-                // `( expr )`
-                Rule::expr => Doc::text("(").append(self.node(inner)).append(")"),
-                // `( op )`
-                Rule::bin_operator => Doc::text(format!("({})", self.text_of(inner))),
-                _ => self.node(inner),
-            },
-            _ => self.legacy(cst),
+    /// 2 つのノードの間に空白がなければ空文字、あれば 1 つの空白。
+    /// `Some(x)` と `Some x` のように、元の書き方を保つために使う。
+    pub(super) fn adjacent_sep(&self, left: &Cst, right: &Cst) -> &'static str {
+        if left.span.end == right.span.start {
+            ""
+        } else {
+            " "
         }
+    }
+
+    fn match_expr(&self, cst: &Cst) -> Doc {
+        let mut children = self.children(cst);
+        if children.items.is_empty() {
+            return self.raw(cst);
+        }
+        let scrutinee = children.items.remove(0);
+        let mut doc = s("match ")
+            .append(with_leading(scrutinee.leading, self.node(scrutinee.cst)))
+            .append(s(" with"));
+        // 腕の前の行末コメントは `with` の行に残す
+        if let Some(comment) = scrutinee.trailing {
+            doc = doc.append(s(" ")).append(Doc::text(comment));
+        }
+        doc = doc.append(self.prefixed_lines(children.items, "| "));
+        for comment in children.dangling {
+            doc = doc.append(Doc::hardline()).append(Doc::text(comment));
+        }
+        doc
+    }
+
+    fn match_arm(&self, cst: &Cst) -> Doc {
+        let kids = self.kids(cst);
+        let (value, head) = kids.items.split_last().unwrap();
+        let mut doc = Doc::nil();
+        for (i, k) in head.iter().enumerate() {
+            if i > 0 {
+                doc = doc.append(s(" "));
+            }
+            doc = doc.append(k.doc.clone());
+        }
+        kids.finish(doc.append(self.after_op(" ->", value)))
+    }
+
+    fn ctrl_while(&self, cst: &Cst) -> Doc {
+        let kids = self.kids(cst);
+        let doc = s("while ")
+            .append(kids.items[0].doc.clone())
+            .append(self.after_op(" do", &kids.items[1]));
+        kids.finish(doc)
+    }
+
+    fn ctrl_if(&self, cst: &Cst) -> Doc {
+        let kids = self.kids(cst);
+        let [cond, then, els] = match kids.items.as_slice() {
+            [a, b, c] => [a, b, c],
+            _ => return self.raw(cst),
+        };
+        // `else if` は入れ子にせず並べる
+        let else_is_if = els
+            .cst
+            .inner
+            .first()
+            .map_or(false, |e| self.core(e).rule == Rule::ctrl_if);
+        let else_part = if else_is_if {
+            s(" ").append(els.doc.clone())
+        } else {
+            Doc::line().append(els.doc.clone()).nest(self.indent)
+        };
+        let doc = s("if ")
+            .append(cond.doc.clone())
+            .append(s(" then"))
+            .append(Doc::line().append(then.doc.clone()).nest(self.indent))
+            .append(Doc::line())
+            .append(s("else"))
+            .append(else_part)
+            .group();
+        kids.finish(doc)
+    }
+
+    fn lambda(&self, cst: &Cst) -> Doc {
+        let kids = self.kids(cst);
+        let (body, pats) = kids.items.split_last().unwrap();
+        let mut doc = s("fun");
+        for p in pats {
+            doc = doc.append(s(" ")).append(p.doc.clone());
+        }
+        kids.finish(doc.append(self.after_op(" ->", body)))
+    }
+
+    /// `a |> b |> c` や `a before b before c` のような、右に入れ子になった並び。
+    /// 収まらなければ 1 項ずつ改行する。
+    fn chain(&self, cst: &Cst, chain_rule: Rule) -> Doc {
+        // (直前の演算子, 項)
+        let mut parts: Vec<(Option<String>, Doc)> = vec![];
+        let mut carry: Vec<String> = vec![];
+        self.collect_chain(cst, chain_rule, &mut parts, &mut carry);
+        let is_seq = chain_rule == Rule::sequential_expr;
+
+        let mut iter = parts.into_iter();
+        let (_, first) = iter.next().unwrap();
+        let doc = if is_seq {
+            // `a before` の後で改行する。インデントは変えない。
+            let mut doc = first;
+            for (_, operand) in iter {
+                doc = doc.append(s(" before")).append(Doc::line()).append(operand);
+            }
+            doc.group()
+        } else {
+            let mut rest = Doc::nil();
+            for (op, operand) in iter {
+                rest = rest
+                    .append(Doc::line())
+                    .append(s(&op.unwrap_or_default()))
+                    .append(s(" "))
+                    .append(operand);
+            }
+            first.append(rest.nest(self.indent)).group()
+        };
+        carry.into_iter().fold(doc, |doc, comment| {
+            doc.append(Doc::hardline()).append(Doc::text(comment))
+        })
+    }
+
+    fn collect_chain(
+        &self,
+        cst: &Cst,
+        chain_rule: Rule,
+        parts: &mut Vec<(Option<String>, Doc)>,
+        carry: &mut Vec<String>,
+    ) {
+        let children = self.children(cst);
+        let mut op: Option<String> = None;
+        for child in children.items {
+            let mut leading = std::mem::take(carry);
+            leading.extend(child.leading);
+            carry.extend(child.trailing);
+            match child.cst.rule {
+                Rule::bin_operator => {
+                    op = Some(self.text_of(child.cst).to_string());
+                    // 演算子の前のコメントは、次の項の前に置く
+                    carry.splice(0..0, leading);
+                }
+                rule if rule == chain_rule => {
+                    carry.splice(0..0, leading);
+                    let mut inner_carry = std::mem::take(carry);
+                    // 入れ子の並びの先頭の演算子は、ここで拾った演算子
+                    let before = parts.len();
+                    self.collect_chain(child.cst, chain_rule, parts, &mut inner_carry);
+                    if let Some(first) = parts.get_mut(before) {
+                        first.0 = op.take();
+                    }
+                    *carry = inner_carry;
+                }
+                _ => {
+                    parts.push((op.take(), with_leading(leading, self.node(child.cst))));
+                }
+            }
+        }
+        carry.extend(children.dangling);
     }
 
     fn application(&self, cst: &Cst) -> Doc {
-        if self.has_comment(cst) || cst.inner.len() < 2 {
-            return self.legacy(cst);
+        let kids = self.kids(cst);
+        if kids.len() < 2 {
+            return self.raw(cst);
         }
-        let func = self.node(&cst.inner[0]);
-        let args = &cst.inner[1..];
-        let arg_doc = |arg: &Cst| -> Doc {
-            match (arg.rule, arg.inner.first()) {
-                (Rule::application_args_normal, Some(inner)) => self.node(inner),
-                (Rule::application_args_optional, Some(inner)) => {
-                    Doc::text("?:").append(self.node(inner))
-                }
-                _ => Doc::text(self.text_of(arg).to_string()),
-            }
-        };
+        let func = kids.items[0].doc.clone();
         // 括弧で包まれた引数 (リスト・レコード・ブロックなど) は直前の引数と同じ行に置き、
         // 中身を自分で折り返す。それ以外の引数は、収まらなければ 1 引数ずつ改行する。
         let mut broken = Doc::nil();
         let mut hugged = Doc::nil();
         let mut seen_hugged = false;
-        for arg in args {
+        for arg in &kids.items[1..] {
             let hugging = arg
+                .cst
                 .inner
                 .first()
                 .map_or(false, |inner| self.is_hugging(inner));
-            if hugging {
+            if hugging || seen_hugged {
                 seen_hugged = true;
-                hugged = hugged.append(Doc::text(" ")).append(arg_doc(arg));
-            } else if seen_hugged {
-                // 括弧の後に続く引数は同じ行に置く
-                hugged = hugged.append(Doc::text(" ")).append(arg_doc(arg));
+                hugged = hugged.append(s(" ")).append(arg.doc.clone());
             } else {
-                broken = broken.append(Doc::line()).append(arg_doc(arg));
+                broken = broken.append(Doc::line()).append(arg.doc.clone());
             }
         }
-        func.append(broken.nest(INDENT)).group().append(hugged)
+        let doc = func.append(broken.nest(self.indent)).group().append(hugged);
+        kids.finish(doc)
     }
 
-    /// `a |> b |> c` のような演算子の並び。収まらなければ演算子を行頭に置いて縦に並べる。
-    fn dyadic(&self, cst: &Cst) -> Doc {
-        if self.has_comment(cst) {
-            return self.legacy(cst);
-        }
-        let mut operands = vec![];
-        let mut ops = vec![];
-        let mut node = cst;
-        loop {
-            match node.inner.as_slice() {
-                [lhs, op, rhs] if node.rule == Rule::dyadic_expr && op.rule == Rule::bin_operator => {
-                    operands.push(lhs);
-                    ops.push(op);
-                    node = rhs;
+    fn unary(&self, cst: &Cst) -> Doc {
+        let kids = self.kids(cst);
+        let mut doc = Doc::nil();
+        let mut first = true;
+        for kid in &kids.items {
+            let part = match kid.cst.rule {
+                // 接頭辞 (`!` `&` `~`)
+                Rule::unary_prefix => {
+                    doc = doc.append(s(self.text_of(kid.cst).trim()));
+                    continue;
                 }
-                _ => {
-                    operands.push(node);
-                    break;
-                }
+                // `( expr )`
+                Rule::expr => self.paren(kid),
+                // `( op )`
+                Rule::bin_operator => s(&format!("({})", self.text_of(kid.cst).trim())),
+                _ => kid.doc.clone(),
+            };
+            if !first {
+                doc = doc.append(s("#"));
             }
+            doc = doc.append(part);
+            first = false;
         }
+        kids.finish(doc)
+    }
+
+    fn path(&self, cst: &Cst) -> Doc {
+        let kids = self.kids(cst);
         let mut rest = Doc::nil();
-        for (op, operand) in ops.iter().zip(operands.iter().skip(1)) {
-            rest = rest
-                .append(Doc::line())
-                .append(Doc::text(self.text_of(op).to_string()))
-                .append(Doc::text(" "))
-                .append(self.node(operand));
+        for k in &kids.items[1..] {
+            rest = rest.append(Doc::line()).append(k.doc.clone());
         }
-        self.node(operands[0]).append(rest.nest(INDENT)).group()
+        let doc = s("<[")
+            .append(
+                Doc::line()
+                    .append(kids.items[0].doc.clone())
+                    .append(rest)
+                    .nest(self.indent),
+            )
+            .append(Doc::line())
+            .append(s("]>"))
+            .group();
+        kids.finish(doc)
     }
 
-    fn tuple(&self, cst: &Cst) -> Doc {
-        if self.has_comment(cst) {
-            return self.legacy(cst);
-        }
-        let elems = cst.inner.iter().map(|c| self.node(c));
-        let body = join(elems, Doc::text(",").append(Doc::line()));
-        Doc::text("(")
-            .append(Doc::line_().append(body).nest(INDENT))
+    /// `(a, b, c)`。収まらなければ 1 要素ずつ改行する。
+    pub(super) fn tuple_doc(&self, kids: Kids) -> Doc {
+        let elems = join(
+            kids.items.iter().map(|k| k.doc.clone()),
+            s(",").append(Doc::line()),
+        );
+        let doc = s("(")
+            .append(Doc::line_().append(elems).nest(self.indent))
             .append(Doc::line_())
-            .append(")")
-            .group()
-    }
-
-    fn list(&self, cst: &Cst) -> Doc {
-        self.sequence(cst, "[", "]", |c| self.node(c))
-    }
-
-    fn record(&self, cst: &Cst) -> Doc {
-        // `(| r with ... |)` は未対応
-        if cst.inner.iter().any(|c| c.rule != Rule::record_unit) {
-            return self.legacy(cst);
-        }
-        self.sequence(cst, "(|", "|)", |c| self.record_unit(c))
-    }
-
-    fn record_unit(&self, cst: &Cst) -> Doc {
-        match cst.inner.as_slice() {
-            [name, value] if !self.has_comment(cst) => {
-                Doc::text(self.text_of(name).to_string()).append(self.after_equal(value))
-            }
-            _ => self.legacy(cst),
-        }
+            .append(s(")"))
+            .group();
+        kids.finish(doc)
     }
 
     /// `[a; b; c]` や `(| a = 1; b = 2 |)` のような `;` 区切りの並び。
     /// 収まれば 1 行 (末尾に `;` を付けない)、収まらなければ縦に展開する (末尾にも `;` を付ける)。
-    fn sequence(
+    /// `head` に指定した rule が先頭にあれば、`head with` として先頭に置く。
+    pub(super) fn seq(
         &self,
         cst: &Cst,
         open: &'static str,
         close: &'static str,
-        elem: impl Fn(&Cst) -> Doc,
+        head: Option<Rule>,
+        elem: &dyn Fn(&Cst) -> Doc,
     ) -> Doc {
         struct Entry {
             leading: Vec<String>,
             doc: Doc,
             trailing: Option<String>,
+            is_head: bool,
         }
-        let mut entries: Vec<Entry> = vec![];
-        let mut pending: Vec<String> = vec![];
-        for item in self.csttext.items(cst) {
-            match item {
-                Item::Node(child) => entries.push(Entry {
-                    leading: std::mem::take(&mut pending),
-                    doc: elem(child),
-                    trailing: None,
-                }),
-                Item::Comment { span, own_line } => {
-                    let comment = self.comment(span);
-                    match entries.last_mut() {
-                        Some(last) if !own_line && last.trailing.is_none() && pending.is_empty() => {
-                            last.trailing = Some(comment)
-                        }
-                        _ => pending.push(comment),
-                    }
-                }
-                Item::BlankLines(_) => {}
-            }
-        }
+        let children = self.children(cst);
+        let entries: Vec<Entry> = children
+            .items
+            .into_iter()
+            .enumerate()
+            .map(|(i, child)| Entry {
+                is_head: i == 0 && Some(child.cst.rule) == head,
+                doc: elem(child.cst),
+                leading: child.leading,
+                trailing: child.trailing,
+            })
+            .collect();
+        let pending = children.dangling;
         if entries.is_empty() && pending.is_empty() {
-            return Doc::text(format!("{open}{close}"));
+            return s(&format!("{open}{close}"));
         }
 
-        let count = entries.len();
+        let last_value = entries.iter().rposition(|e| !e.is_head);
         let mut body = Doc::nil();
         // 直前が行コメントで、必ず改行が必要か
         let mut must_break = false;
         let mut first = true;
         for (i, entry) in entries.into_iter().enumerate() {
             if !first {
-                body = body.append(if must_break { Doc::hardline() } else { Doc::line() });
+                body = body.append(if must_break {
+                    Doc::hardline()
+                } else {
+                    Doc::line()
+                });
             }
             for comment in entry.leading {
                 body = body.append(Doc::text(comment)).append(Doc::hardline());
             }
-            let semicolon = if i + 1 < count {
-                Doc::text(";")
-            } else {
+            let tail = if entry.is_head {
+                s(" with")
+            } else if Some(i) == last_value {
                 // 末尾の `;` は縦に展開したときだけ付ける
-                Doc::text(";").flat_alt(Doc::nil())
+                s(";").flat_alt(Doc::nil())
+            } else {
+                s(";")
             };
-            body = body.append(entry.doc).append(semicolon);
+            body = body.append(entry.doc).append(tail);
             must_break = entry.trailing.is_some();
             if let Some(comment) = entry.trailing {
-                body = body.append(Doc::text(" ")).append(Doc::text(comment));
+                body = body.append(s(" ")).append(Doc::text(comment));
             }
             first = false;
         }
@@ -294,11 +524,15 @@ impl<'a> Printer<'a> {
             must_break = true;
             first = false;
         }
-        let closing = if must_break { Doc::hardline() } else { Doc::line_() };
-        Doc::text(open)
-            .append(Doc::line_().append(body).nest(INDENT))
+        let closing = if must_break {
+            Doc::hardline()
+        } else {
+            Doc::line_()
+        };
+        s(open)
+            .append(Doc::line_().append(body).nest(self.indent))
             .append(closing)
-            .append(Doc::text(close))
+            .append(s(close))
             .group()
     }
 }

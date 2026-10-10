@@ -37,8 +37,7 @@ document(|title = {hello}|)'<+p{hello% comment
 % comment
 document (|title = { hello }|) '<
     +p {
-        hello
-        % comment
+        hello % comment
     }
 >
 "#;
@@ -65,8 +64,7 @@ document(|title = {hello}|)'<+p{hello% comment
 % comment
 document (|title = { hello }|) '<
     +p {
-        hello
-        % comment
+        hello% comment
         \listing {
             * item1
             * item2
@@ -148,8 +146,7 @@ document (|title = { hello }|) '<
     +p % comment
     {
         hello
-        \\
-        % comment
+        \\ % comment
     }
 >
 "#;
@@ -196,9 +193,10 @@ document(|title = {hello}|)'<
 @require: local %comment
 
 document (|title = { hello }|) '<
-    +section { hello } <%
+    +section { hello } <
+        %
         +p { hello }
-    >%
+    > %
 >
 "#;
     test_tmpl(text, expect)

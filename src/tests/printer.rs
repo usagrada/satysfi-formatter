@@ -1,4 +1,4 @@
-use crate::{format, format_legacy};
+use crate::format;
 use lspower::lsp::{FormattingOptions, FormattingProperty};
 
 fn option_with_width(width: i32) -> FormattingOptions {
@@ -17,36 +17,134 @@ fn fmt(input: &str, width: i32) -> String {
     format(input, option_with_width(width))
 }
 
-/// 空白と `;` を除いた文字列。整形で並びが変わっていないことの確認に使う。
-fn tokens(text: &str) -> String {
-    text.chars()
-        .filter(|c| !c.is_whitespace() && *c != ';')
-        .collect()
-}
+use super::check_invariants;
+
+// 構文を一通り含む入力
+const REC: &str = r##"@require: stdjareport
+
+let-rec f x = g x
+and g y = y
+let-block +p it = '<>
+let-inline \m x = {}
+type 'a t = A | B of int constraint 'a :: (| x : int |)
+and u = int
+module M : sig
+  type t
+  val f : int -> int constraint 'a :: (| |)
+end = struct
+  let f x = x
+end
+in
+let-rec h x = 1 | y = 2 in
+let a = fun x -> Some x in
+document (| title = {a} |) '<>
+"##;
+
+const COMMENTS: &str = r##"% license header
+@require: stdjareport % trailing in header
+% between headers
+@import: local
+
+% before let
+let x = 1 % trailing let
+let y = % after equal
+  2
+let l = [
+  1; % one
+  % own line
+  2;
+  % dangling
+]
+let r = (| a = 1; % first
+  b = 2 |)
+let f x y = % comment in def
+  x + y % after
+let g x =
+  match x with
+  | 0 -> 1 % zero
+  % own-line before arm
+  | _ -> 2
+let t = (1, % first
+  2)
+in
+
+% before document
+document (| title = {a}; % title
+  author = {b} |) '<
+  % in vertical
+  +p { hello % comment in text
+    world }
+  +p { a } % trailing block
+  % end of vertical
+> % after document
+"##;
+
+const MODES: &str = r##"@require: stdjareport
+
+module M : sig
+  type 'a t
+  val f : int -> int
+  val (+++) : int -> int -> int
+  direct \tabular : [inline-text list; (| l : int |)] inline-cmd
+end = struct
+  type 'a t = A | B of int
+  and u = int
+  let f x = x
+  let-rec g x = h x
+  and h y = y
+  let-rec k | 0 = 1 | n = n
+  let-inline \foo x = {#x;}
+  let-block +bar it = '<+p{ #it; }>
+  let-math \sq x = ${\sqrt{#x}}
+  let-mutable m <- 0
+  open Foo
+end
+
+let z = fun x -> (if x then [1; 2] else [3])
+let w = (fun x -> x) 1
+let s = `a % b`
+let o = Some 1
+let pt = <[ (0pt, 0pt) -- (1pt, 1pt) .. controls (1pt, 0pt) and (0pt, 1pt) .. (2pt, 2pt) -- cycle ]>
+let u = f ?:1 ?* 2
+let a = !x
+let q = M.(f 1)
+let p = not true
+let neg = -1
+in
+
+document (| title = {a} |) '<
+  +p {
+    hello\bold{world}text \emph{ x } and \br; and ${a^2 + b_{i j} = \frac{1}{2}}.
+    #embed;
+  }
+  +section{Sec}<
+    +p{ a }
+    +listing{
+      * item1
+        ** sub
+      * item2
+    }
+  >
+  +table (| a = 1 |) [[ {a}; {b} ]];
+  +math (${x}) ?:(1) ?*;
+  #blockembed;
+>
+"##;
 
 #[test]
-fn examples_are_idempotent_and_keep_tokens() {
+fn examples_are_idempotent_and_keep_tokens_and_comments() {
     let files = [
         ("ex1", include_str!("../../examples/ex1.saty")),
         ("ex2", include_str!("../../examples/ex2.saty")),
         ("ex3", include_str!("../../examples/ex3.saty")),
         ("draft", include_str!("../../doc/draft.saty")),
         ("doc", include_str!("../../doc/doc.saty")),
+        ("rec", REC),
+        ("comments", COMMENTS),
+        ("modes", MODES),
     ];
     for (name, input) in files {
-        for width in [20, 80, 200] {
-            let output = fmt(input, width);
-            assert_eq!(
-                output,
-                fmt(&output, width),
-                "{name}@{width}: not idempotent"
-            );
-            assert_eq!(
-                tokens(&output),
-                tokens(&format_legacy(input, option_with_width(width))),
-                "{name}@{width}: tokens changed"
-            );
-        }
+        check_invariants(name, input);
     }
 }
 

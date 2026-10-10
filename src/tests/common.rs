@@ -246,7 +246,10 @@ document(|title = {hello}|)'<+p{hello world}+p {format\SATYSFI;
 
 document (|title = { hello }|) '<
     +p { hello world }
-    +p { format\SATYSFI; format }
+    +p {
+        format\SATYSFI;
+        format
+    }
 >
 "#;
     test_tmpl(text, expect);
