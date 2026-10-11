@@ -29,7 +29,12 @@ fn default_config() {
 
 #[test]
 fn reads_toml() {
-    let config = PartialConfig::from_toml("line_width = 100\nindent_width = 2\n").unwrap();
+    let config = PartialConfig::from_toml(
+        r#"line_width = 100
+indent_width = 2
+"#,
+    )
+    .unwrap();
     assert_eq!(config.line_width, Some(100));
     assert_eq!(config.indent_width, Some(2));
     assert_eq!(config.final_newline, None);
@@ -38,15 +43,24 @@ fn reads_toml() {
 #[test]
 fn rejects_unknown_keys_and_invalid_values() {
     assert!(matches!(
-        PartialConfig::from_toml("max_width = 100\n"),
+        PartialConfig::from_toml(
+            r#"max_width = 100
+"#
+        ),
         Err(ConfigError::Parse(_))
     ));
     assert!(matches!(
-        PartialConfig::from_toml("line_width = 0\n"),
+        PartialConfig::from_toml(
+            r#"line_width = 0
+"#
+        ),
         Err(ConfigError::Invalid(_))
     ));
     assert!(matches!(
-        PartialConfig::from_toml("indent_width = 0\n"),
+        PartialConfig::from_toml(
+            r#"indent_width = 0
+"#
+        ),
         Err(ConfigError::Invalid(_))
     ));
 }
@@ -99,7 +113,12 @@ fn reads_editor_options() {
 #[test]
 fn reads_all_keys_from_toml() {
     let config = PartialConfig::from_toml(
-        "line_width = 100\nindent_width = 2\nuse_tabs = true\nfinal_newline = false\ncommand_space = false\n",
+        r#"line_width = 100
+indent_width = 2
+use_tabs = true
+final_newline = false
+command_space = false
+"#,
     )
     .unwrap();
     assert_eq!(
@@ -121,7 +140,12 @@ fn finds_config_file_in_ancestors() {
     fs::create_dir_all(&sub).unwrap();
     let file = sub.join("main.saty");
     fs::write(&file, "").unwrap();
-    fs::write(root.join(".satysfi-fmt.toml"), "line_width = 100\n").unwrap();
+    fs::write(
+        root.join(".satysfi-fmt.toml"),
+        r#"line_width = 100
+"#,
+    )
+    .unwrap();
 
     assert_eq!(
         find_config_file(&file),
@@ -130,13 +154,23 @@ fn finds_config_file_in_ancestors() {
     assert_eq!(resolve_config(&file).unwrap().line_width, Some(100));
 
     // 先頭に `.` のない satysfi-fmt.toml は読まない
-    fs::write(sub.join("satysfi-fmt.toml"), "line_width = 40\n").unwrap();
+    fs::write(
+        sub.join("satysfi-fmt.toml"),
+        r#"line_width = 40
+"#,
+    )
+    .unwrap();
     assert_eq!(
         find_config_file(&file),
         Some(root.join(".satysfi-fmt.toml"))
     );
     // 近いほうの設定ファイルを使う
-    fs::write(sub.join(".satysfi-fmt.toml"), "line_width = 60\n").unwrap();
+    fs::write(
+        sub.join(".satysfi-fmt.toml"),
+        r#"line_width = 60
+"#,
+    )
+    .unwrap();
     assert_eq!(find_config_file(&file), Some(sub.join(".satysfi-fmt.toml")));
     assert_eq!(resolve_config(&file).unwrap().line_width, Some(60));
 
@@ -151,8 +185,18 @@ fn finds_config_file_through_parent_references() {
     let b = a.join("b");
     fs::create_dir_all(&b).unwrap();
     fs::write(a.join("main.saty"), "").unwrap();
-    fs::write(b.join(".satysfi-fmt.toml"), "line_width = 60\n").unwrap();
-    fs::write(root.join(".satysfi-fmt.toml"), "line_width = 100\n").unwrap();
+    fs::write(
+        b.join(".satysfi-fmt.toml"),
+        r#"line_width = 60
+"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join(".satysfi-fmt.toml"),
+        r#"line_width = 100
+"#,
+    )
+    .unwrap();
 
     let file = b.join("..").join("main.saty");
     assert_eq!(
@@ -166,7 +210,12 @@ fn finds_config_file_through_parent_references() {
 #[test]
 fn invalid_config_file_reports_its_path() {
     let root = temp_dir("invalid");
-    fs::write(root.join(".satysfi-fmt.toml"), "line_width = \"wide\"\n").unwrap();
+    fs::write(
+        root.join(".satysfi-fmt.toml"),
+        r#"line_width = "wide"
+"#,
+    )
+    .unwrap();
     let err = resolve_config(&root.join("main.saty")).unwrap_err();
     assert!(err.to_string().contains(".satysfi-fmt.toml"), "{err}");
     fs::remove_dir_all(&root).unwrap();
@@ -174,7 +223,8 @@ fn invalid_config_file_reports_its_path() {
 
 #[test]
 fn format_uses_config() {
-    let input = "let x = [aaaaaaaa; bbbbbbbb]\n";
+    let input = r#"let x = [aaaaaaaa; bbbbbbbb]
+"#;
     let narrow = FormatConfig {
         line_width: 16,
         indent_width: 2,
@@ -182,14 +232,23 @@ fn format_uses_config() {
     };
     assert_eq!(
         format(input, &narrow).unwrap(),
-        "let x = [\n  aaaaaaaa;\n  bbbbbbbb;\n]\n"
+        r#"let x = [
+  aaaaaaaa;
+  bbbbbbbb;
+]
+"#
     );
     assert_eq!(format(input, &FormatConfig::default()).unwrap(), input);
 }
 
 #[test]
 fn format_reports_parse_error() {
-    let err = format("let x = = 1\n", &FormatConfig::default()).unwrap_err();
+    let err = format(
+        r#"let x = = 1
+"#,
+        &FormatConfig::default(),
+    )
+    .unwrap_err();
     assert!(
         matches!(err, crate::FormatError::Parse { line: 0, .. }),
         "{err:?}"
@@ -201,7 +260,8 @@ fn format_reports_parse_error() {
 fn config_file_takes_precedence_over_editor_options() {
     let root = temp_dir("editor");
     let file = root.join("src").join("main.saty");
-    let input = "let x = [aaaaaaaa; bbbbbbbb]\n";
+    let input = r#"let x = [aaaaaaaa; bbbbbbbb]
+"#;
     // エディタは「タブ幅 8、タブでインデント」
     let request = PartialConfig::from_editor_options(8, false, None);
     let config = || resolve_config(&file).unwrap().or(request.clone()).build();
@@ -219,12 +279,18 @@ fn config_file_takes_precedence_over_editor_options() {
     // 設定ファイルの項目が優先され、書いていない項目はエディタの指定
     fs::write(
         root.join(".satysfi-fmt.toml"),
-        "line_width = 16\nuse_tabs = false\n",
+        r#"line_width = 16
+use_tabs = false
+"#,
     )
     .unwrap();
     assert_eq!(
         format(input, &config()).unwrap(),
-        "let x = [\n        aaaaaaaa;\n        bbbbbbbb;\n]\n"
+        r#"let x = [
+        aaaaaaaa;
+        bbbbbbbb;
+]
+"#
     );
 
     fs::remove_dir_all(&root).unwrap();

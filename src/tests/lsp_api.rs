@@ -18,7 +18,8 @@ fn new_text(edits: Vec<TextEdit>) -> String {
 
 #[test]
 fn formatting_replaces_whole_document() {
-    let input = "let x  =  1\nlet y = `あ`";
+    let input = r#"let x  =  1
+let y = `あ`"#;
     assert_eq!(
         formatting(input, option(4, true)),
         vec![TextEdit {
@@ -26,26 +27,41 @@ fn formatting_replaces_whole_document() {
                 start: Position::new(0, 0),
                 end: Position::new(1, 11),
             },
-            new_text: "let x = 1\nlet y = `あ`\n".to_string(),
+            new_text: r#"let x = 1
+let y = `あ`
+"#
+            .to_string(),
         }]
     );
 }
 
 #[test]
 fn formatting_returns_no_edit_on_parse_error() {
-    assert_eq!(formatting("let x = = 1\n", option(4, true)), vec![]);
+    assert_eq!(
+        formatting(
+            r#"let x = = 1
+"#,
+            option(4, true)
+        ),
+        vec![]
+    );
 }
 
 #[test]
 fn formatting_options_are_honored() {
-    let input = "let x = [aaaaaaaa; bbbbbbbb]\n";
+    let input = r#"let x = [aaaaaaaa; bbbbbbbb]
+"#;
     let mut narrow = option(2, true);
     narrow
         .properties
         .insert("lineWidth".to_string(), FormattingProperty::Number(16));
     assert_eq!(
         new_text(formatting(input, narrow.clone())),
-        "let x = [\n  aaaaaaaa;\n  bbbbbbbb;\n]\n"
+        r#"let x = [
+  aaaaaaaa;
+  bbbbbbbb;
+]
+"#
     );
     narrow.insert_spaces = false;
     assert_eq!(

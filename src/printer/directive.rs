@@ -607,18 +607,30 @@ mod tests {
     #[test]
     fn region_whose_code_changed_cannot_be_restored() {
         let input = CstText::parse(
-            "let a = 1\n% satysfi-fmt: off\nlet b = 2\n",
+            r#"let a = 1
+% satysfi-fmt: off
+let b = 2
+"#,
             grammar::program,
         )
         .unwrap();
         // 範囲内のコードが入力と違う整形結果 (コメントが別の位置に動いた場合など)
-        let output = "let a = 1\n% satysfi-fmt: off\nlet c = 2\n";
+        let output = r#"let a = 1
+% satysfi-fmt: off
+let c = 2
+"#;
         assert_eq!(restore_precisely(&input, output), Err(1));
         // コードが同じなら、空白だけ入力に戻す
-        let output = "let a = 1\n% satysfi-fmt: off\nlet b    =    2\n";
+        let output = r#"let a = 1
+% satysfi-fmt: off
+let b    =    2
+"#;
         assert_eq!(
             restore_precisely(&input, output).as_deref(),
-            Ok("let a = 1\n% satysfi-fmt: off\nlet b = 2\n")
+            Ok(r#"let a = 1
+% satysfi-fmt: off
+let b = 2
+"#)
         );
     }
 
@@ -704,7 +716,13 @@ mod tests {
 
     #[test]
     fn initial_region_is_the_smallest_list_of_nodes_containing_both_comments() {
-        let src = "let a = 1\nlet-rec f x % satysfi-fmt: off\n = 1\nlet y = 2\n% satysfi-fmt: on\nlet z = 3\n";
+        let src = r#"let a = 1
+let-rec f x % satysfi-fmt: off
+ = 1
+let y = 2
+% satysfi-fmt: on
+let z = 3
+"#;
         let input = parse_src(src);
         let comments = comment_spans(&input);
         // off は 2 番目の文の中、on は文の並びの隙間にある。文の並びの 2 番目から 3 番目の文
@@ -716,13 +734,19 @@ mod tests {
         assert_eq!(preamble.rule, satysfi_parser::Rule::preamble);
         assert_eq!(
             &src[preamble.inner[first].span.start..preamble.inner[last].span.end],
-            "let-rec f x % satysfi-fmt: off\n = 1\nlet y = 2"
+            r#"let-rec f x % satysfi-fmt: off
+ = 1
+let y = 2"#
         );
     }
 
     #[test]
     fn initial_region_without_on_extends_to_the_last_node() {
-        let src = "let a = 1\nlet b = [1; % satysfi-fmt: off\n 2]\nlet c = 3\n";
+        let src = r#"let a = 1
+let b = [1; % satysfi-fmt: off
+ 2]
+let c = 3
+"#;
         let input = parse_src(src);
         let comments = comment_spans(&input);
         let Region::Children { path, first, last } = initial_region(&input.cst, comments[0], None)
@@ -732,13 +756,19 @@ mod tests {
         let preamble = node_at(&input.cst, &path).unwrap();
         assert_eq!(
             &src[preamble.inner[first].span.start..preamble.inner[last].span.end],
-            "let b = [1; % satysfi-fmt: off\n 2]\nlet c = 3"
+            r#"let b = [1; % satysfi-fmt: off
+ 2]
+let c = 3"#
         );
     }
 
     #[test]
     fn region_without_nodes_has_nothing_to_restore() {
-        let src = "let a = 1\n% satysfi-fmt: off\n% satysfi-fmt: on\nlet b = 2\n";
+        let src = r#"let a = 1
+% satysfi-fmt: off
+% satysfi-fmt: on
+let b = 2
+"#;
         let input = parse_src(src);
         let comments = comment_spans(&input);
         assert!(matches!(
@@ -749,18 +779,32 @@ mod tests {
 
     #[test]
     fn falls_back_to_the_whole_file_when_the_tree_shape_changed() {
-        let src = "let a = 1\n% satysfi-fmt: off\nlet   b   =   2\n";
+        let src = r#"let a = 1
+% satysfi-fmt: off
+let   b   =   2
+"#;
         let input = parse_src(src);
         // 整形結果の構文木の形が入力と違う (どの階層でも対応づけられない) 場合
-        let output = "let a = 1\n% satysfi-fmt: off\nlet b = 2\nin\ndocument (||) '<>\n";
+        let output = r#"let a = 1
+% satysfi-fmt: off
+let b = 2
+in
+document (||) '<>
+"#;
         assert_eq!(restore_by_nodes(&input, output), src);
     }
 
     #[test]
     fn restore_never_fails_even_if_the_region_cannot_be_restored_precisely() {
-        let src = "let a = 1\n% satysfi-fmt: off\nlet b = 2\n";
+        let src = r#"let a = 1
+% satysfi-fmt: off
+let b = 2
+"#;
         let input = parse_src(src);
-        let output = "let a = 1\n% satysfi-fmt: off\nlet c = 2\n";
+        let output = r#"let a = 1
+% satysfi-fmt: off
+let c = 2
+"#;
         assert!(restore_precisely(&input, output).is_err());
         let restored = restore_off_regions(&input, output);
         assert!(CstText::parse(&restored, grammar::program).is_ok());

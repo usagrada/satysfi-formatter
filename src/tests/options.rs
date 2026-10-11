@@ -12,14 +12,35 @@ fn config(indent_width: usize, line_width: usize) -> FormatConfig {
 
 #[test]
 fn indent_width_is_configurable() {
-    let input = "let x = [aaaaaaaa; bbbbbbbb]\nin\ndocument(||)'<+p{a}>\n";
+    let input = r#"let x = [aaaaaaaa; bbbbbbbb]
+in
+document(||)'<+p{a}>
+"#;
     assert_eq!(
         format(input, &config(2, 16)),
-        "let x = [\n  aaaaaaaa;\n  bbbbbbbb;\n]\nin\n\ndocument (||) '<\n  +p { a }\n>\n"
+        r#"let x = [
+  aaaaaaaa;
+  bbbbbbbb;
+]
+in
+
+document (||) '<
+  +p { a }
+>
+"#
     );
     assert_eq!(
         format(input, &config(8, 16)),
-        "let x = [\n        aaaaaaaa;\n        bbbbbbbb;\n]\nin\n\ndocument (||) '<\n        +p { a }\n>\n"
+        r#"let x = [
+        aaaaaaaa;
+        bbbbbbbb;
+]
+in
+
+document (||) '<
+        +p { a }
+>
+"#
     );
 }
 
@@ -29,8 +50,10 @@ fn indent_with_tabs() {
         use_tabs: true,
         ..config(4, 16)
     };
-    let input =
-        "let x = [[aaaaaaaa; bbbbbbbb]; [c]]\nin\ndocument(||)'<+p{a+++b}+section{s}<+p{c}>>\n";
+    let input = r#"let x = [[aaaaaaaa; bbbbbbbb]; [c]]
+in
+document(||)'<+p{a+++b}+section{s}<+p{c}>>
+"#;
     let output = format(input, &tabs);
     assert_eq!(
         output,
@@ -46,7 +69,15 @@ fn tabs_keep_verbatim_lines() {
         ..Default::default()
     };
     // off から on までは元の空白のまま。off / on のコメント自体はタブで字下げする
-    let input = "document(||)'<\n    % satysfi-fmt: off\n    +p{\n        a\n    }\n    % satysfi-fmt: on\n    +p{b}\n>\n";
+    let input = r#"document(||)'<
+    % satysfi-fmt: off
+    +p{
+        a
+    }
+    % satysfi-fmt: on
+    +p{b}
+>
+"#;
     assert_eq!(
         format(input, &tabs),
         "document (||) '<\n\t% satysfi-fmt: off\n    +p{\n        a\n    }\n\t% satysfi-fmt: on\n\t+p { b }\n>\n"
@@ -59,17 +90,28 @@ fn command_space_can_be_disabled() {
         command_space: false,
         ..Default::default()
     };
-    let input = "document(||)'<+section{a}<+p{\\emph{b}\\cmd(1)[2]{c}{d}}>>\n";
+    let input = r#"document(||)'<+section{a}<+p{\emph{b}\cmd(1)[2]{c}{d}}>>
+"#;
     let output = format(input, &compact);
     assert_eq!(
         output,
-        "document (||) '<\n    +section{ a }<\n        +p{ \\emph{ b }\\cmd (1) [2]{ c }{ d } }\n    >\n>\n"
+        r#"document (||) '<
+    +section{ a }<
+        +p{ \emph{ b }\cmd (1) [2]{ c }{ d } }
+    >
+>
+"#
     );
     assert_eq!(format(&output, &compact), output, "not idempotent");
     // 既定では空白を入れる
     assert_eq!(
         format(input, &FormatConfig::default()),
-        "document (||) '<\n    +section { a } <\n        +p { \\emph { b }\\cmd (1) [2] { c } { d } }\n    >\n>\n"
+        r#"document (||) '<
+    +section { a } <
+        +p { \emph { b }\cmd (1) [2] { c } { d } }
+    >
+>
+"#
     );
 }
 
@@ -79,15 +121,27 @@ fn command_space_is_kept_before_comment() {
         command_space: false,
         ..Default::default()
     };
-    let input = "document(||)'<+p % c\n{a}>\n";
+    let input = r#"document(||)'<+p % c
+{a}>
+"#;
     let output = format(input, &compact);
-    assert!(output.contains("+p % c\n"), "{output}");
+    assert!(
+        output.contains(
+            r#"+p % c
+"#
+        ),
+        "{output}"
+    );
     assert_eq!(format(&output, &compact), output, "not idempotent");
 }
 
 #[test]
 fn final_newline_is_inserted_by_default() {
-    assert_eq!(format("let x = 1", &FormatConfig::default()), "let x = 1\n");
+    assert_eq!(
+        format("let x = 1", &FormatConfig::default()),
+        r#"let x = 1
+"#
+    );
 }
 
 #[test]
@@ -114,6 +168,11 @@ fn default_line_width_is_80() {
 #[test]
 fn input_that_cannot_be_parsed_is_an_error() {
     let config = FormatConfig::default();
-    assert!(crate::format("let x = = 1\n", &config).is_err());
+    assert!(crate::format(
+        r#"let x = = 1
+"#,
+        &config
+    )
+    .is_err());
     assert!(crate::format("", &config).is_err());
 }

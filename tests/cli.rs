@@ -22,10 +22,17 @@ fn relative_path_finds_config_file_above_the_current_directory() {
     fs::create_dir_all(&sub).unwrap();
     fs::write(
         root.join(".satysfi-fmt.toml"),
-        "indent_width = 2\nline_width = 16\n",
+        r#"indent_width = 2
+line_width = 16
+"#,
     )
     .unwrap();
-    fs::write(sub.join("a.satyh"), "let x = [aaaaaaaa; bbbbbbbb]\n").unwrap();
+    fs::write(
+        sub.join("a.satyh"),
+        r#"let x = [aaaaaaaa; bbbbbbbb]
+"#,
+    )
+    .unwrap();
 
     let output = Command::new(env!("CARGO_BIN_EXE_satysfi-fmt"))
         .current_dir(&sub)
@@ -35,7 +42,11 @@ fn relative_path_finds_config_file_above_the_current_directory() {
     assert!(output.status.success(), "{output:?}");
     assert_eq!(
         String::from_utf8(output.stdout).unwrap(),
-        "let x = [\n  aaaaaaaa;\n  bbbbbbbb;\n]\n"
+        r#"let x = [
+  aaaaaaaa;
+  bbbbbbbb;
+]
+"#
     );
 
     fs::remove_dir_all(&root).unwrap();

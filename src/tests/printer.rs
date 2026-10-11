@@ -7,7 +7,7 @@ fn fmt(input: &str, width: usize) -> String {
 use super::{check_comment_insertion, check_invariants, check_off_on_insertion, Placement};
 
 // 構文を一通り含む入力
-const REC: &str = r##"@require: stdjareport
+const REC: &str = r#"@require: stdjareport
 
 let-rec f x = g x
 and g y = y
@@ -25,9 +25,9 @@ in
 let-rec h x = 1 | y = 2 in
 let a = fun x -> Some x in
 document (| title = {a} |) '<>
-"##;
+"#;
 
-const COMMENTS: &str = r##"% license header
+const COMMENTS: &str = r#"% license header
 @require: stdjareport % trailing in header
 % between headers
 @import: local
@@ -64,9 +64,9 @@ document (| title = {a}; % title
   +p { a } % trailing block
   % end of vertical
 > % after document
-"##;
+"#;
 
-const MODES: &str = r##"@require: stdjareport
+const MODES: &str = r#"@require: stdjareport
 
 module M : sig
   type 'a t
@@ -116,7 +116,7 @@ document (| title = {a} |) '<
   +math (${x}) ?:(1) ?*;
   #blockembed;
 >
-"##;
+"#;
 
 #[test]
 fn examples_are_idempotent_and_keep_tokens_and_comments() {
@@ -137,123 +137,267 @@ fn examples_are_idempotent_and_keep_tokens_and_comments() {
 
 #[test]
 fn list_fits_in_one_line() {
-    let input = "let x = [1; 2; 3;]\n";
-    assert_eq!(fmt(input, 80), "let x = [1; 2; 3]\n");
+    let input = r#"let x = [1; 2; 3;]
+"#;
+    assert_eq!(
+        fmt(input, 80),
+        r#"let x = [1; 2; 3]
+"#
+    );
 }
 
 #[test]
 fn list_breaks_when_too_long() {
-    let input = "let x = [aaaaaaaa; bbbbbbbb; cccccccc]\n";
-    let expect = "let x = [\n    aaaaaaaa;\n    bbbbbbbb;\n    cccccccc;\n]\n";
+    let input = r#"let x = [aaaaaaaa; bbbbbbbb; cccccccc]
+"#;
+    let expect = r#"let x = [
+    aaaaaaaa;
+    bbbbbbbb;
+    cccccccc;
+]
+"#;
     assert_eq!(fmt(input, 20), expect);
 }
 
 #[test]
 fn empty_list_and_record() {
     assert_eq!(
-        fmt("let x = [ ]\nlet y = (| |)\n", 80),
-        "let x = []\nlet y = (||)\n"
+        fmt(
+            r#"let x = [ ]
+let y = (| |)
+"#,
+            80
+        ),
+        r#"let x = []
+let y = (||)
+"#
     );
 }
 
 #[test]
 fn record_fits_in_one_line() {
-    let input = "let r = (| a = 1; b = 2; |)\n";
-    assert_eq!(fmt(input, 80), "let r = (|a = 1; b = 2|)\n");
+    let input = r#"let r = (| a = 1; b = 2; |)
+"#;
+    assert_eq!(
+        fmt(input, 80),
+        r#"let r = (|a = 1; b = 2|)
+"#
+    );
 }
 
 #[test]
 fn record_breaks_when_too_long() {
-    let input = "let r = (| aaaa = 1; bbbb = 2 |)\n";
-    let expect = "let r = (|\n    aaaa = 1;\n    bbbb = 2;\n|)\n";
+    let input = r#"let r = (| aaaa = 1; bbbb = 2 |)
+"#;
+    let expect = r#"let r = (|
+    aaaa = 1;
+    bbbb = 2;
+|)
+"#;
     assert_eq!(fmt(input, 16), expect);
 }
 
 #[test]
 fn nested_list_breaks_only_outer_when_needed() {
-    let input = "let x = [[1; 2]; [3; 4]]\n";
-    let expect = "let x = [\n    [1; 2];\n    [3; 4];\n]\n";
+    let input = r#"let x = [[1; 2]; [3; 4]]
+"#;
+    let expect = r#"let x = [
+    [1; 2];
+    [3; 4];
+]
+"#;
     assert_eq!(fmt(input, 18), expect);
 }
 
 #[test]
 fn application_breaks_arguments() {
-    let input = "let y = f aaaaaaaa bbbbbbbb cccccccc\n";
-    let expect = "let y =\n    f\n        aaaaaaaa\n        bbbbbbbb\n        cccccccc\n";
+    let input = r#"let y = f aaaaaaaa bbbbbbbb cccccccc
+"#;
+    let expect = r#"let y =
+    f
+        aaaaaaaa
+        bbbbbbbb
+        cccccccc
+"#;
     assert_eq!(fmt(input, 20), expect);
-    assert_eq!(fmt(input, 80), "let y = f aaaaaaaa bbbbbbbb cccccccc\n");
+    assert_eq!(
+        fmt(input, 80),
+        r#"let y = f aaaaaaaa bbbbbbbb cccccccc
+"#
+    );
 }
 
 #[test]
 fn application_hugs_last_list() {
-    let input = "let y = vconcat [aaaaaaaa; bbbbbbbb; cccccccc]\n";
-    let expect = "let y = vconcat [\n    aaaaaaaa;\n    bbbbbbbb;\n    cccccccc;\n]\n";
+    let input = r#"let y = vconcat [aaaaaaaa; bbbbbbbb; cccccccc]
+"#;
+    let expect = r#"let y = vconcat [
+    aaaaaaaa;
+    bbbbbbbb;
+    cccccccc;
+]
+"#;
     assert_eq!(fmt(input, 30), expect);
 }
 
 #[test]
 fn operators_break_before_operator() {
-    let input = "let y = aaaaaaaa |> bbbbbbbb |> cccccccc\n";
+    let input = r#"let y = aaaaaaaa |> bbbbbbbb |> cccccccc
+"#;
     assert_eq!(fmt(input, 80), input);
-    let expect = "let y =\n    aaaaaaaa\n        |> bbbbbbbb\n        |> cccccccc\n";
+    let expect = r#"let y =
+    aaaaaaaa
+        |> bbbbbbbb
+        |> cccccccc
+"#;
     assert_eq!(fmt(input, 20), expect);
 }
 
 #[test]
 fn comments_force_a_line_break() {
-    let input = "let x = [a; % first\n  b]\n";
-    let expect = "let x = [\n    a; % first\n    b;\n]\n";
+    let input = r#"let x = [a; % first
+  b]
+"#;
+    let expect = r#"let x = [
+    a; % first
+    b;
+]
+"#;
     assert_eq!(fmt(input, 80), expect);
 }
 
 #[test]
 fn own_line_comment_in_list() {
-    let input = "let x = [\n  % head\n  a;\n  b\n  % tail\n]\n";
-    let expect = "let x = [\n    % head\n    a;\n    b;\n    % tail\n]\n";
+    let input = r#"let x = [
+  % head
+  a;
+  b
+  % tail
+]
+"#;
+    let expect = r#"let x = [
+    % head
+    a;
+    b;
+    % tail
+]
+"#;
     assert_eq!(fmt(input, 80), expect);
 }
 
 #[test]
 fn off_and_on() {
-    let input = "let a = [1;2]\n% satysfi-fmt: off\nlet   b   =   [1;2]\nlet   c   =   [1;2]\n% satysfi-fmt: on\nlet d = [1;2]\n";
-    let expect = "let a = [1; 2]\n% satysfi-fmt: off\nlet   b   =   [1;2]\nlet   c   =   [1;2]\n% satysfi-fmt: on\nlet d = [1; 2]\n";
+    let input = r#"let a = [1;2]
+% satysfi-fmt: off
+let   b   =   [1;2]
+let   c   =   [1;2]
+% satysfi-fmt: on
+let d = [1;2]
+"#;
+    let expect = r#"let a = [1; 2]
+% satysfi-fmt: off
+let   b   =   [1;2]
+let   c   =   [1;2]
+% satysfi-fmt: on
+let d = [1; 2]
+"#;
     assert_eq!(fmt(input, 80), expect);
 }
 
 #[test]
 fn off_and_on_inside_a_list() {
-    let input =
-        "let x = [\n  a;\n  % satysfi-fmt: off\n  f   b   c;\n  % satysfi-fmt: on\n  d\n]\n";
-    let expect = "let x = [\n    a;\n    % satysfi-fmt: off\n  f   b   c;\n    % satysfi-fmt: on\n    d;\n]\n";
+    let input = r#"let x = [
+  a;
+  % satysfi-fmt: off
+  f   b   c;
+  % satysfi-fmt: on
+  d
+]
+"#;
+    let expect = r#"let x = [
+    a;
+    % satysfi-fmt: off
+  f   b   c;
+    % satysfi-fmt: on
+    d;
+]
+"#;
     assert_eq!(fmt(input, 80), expect);
 }
 
 #[test]
 fn comments_between_headers() {
-    let input = "@import: a\n% c1\n@require: b % c2\n\n% c3\ndocument(||)'<>";
-    let expect = "@import: a\n% c1\n@require: b % c2\n\n% c3\ndocument (||) '<>\n";
+    let input = r#"@import: a
+% c1
+@require: b % c2
+
+% c3
+document(||)'<>"#;
+    let expect = r#"@import: a
+% c1
+@require: b % c2
+
+% c3
+document (||) '<>
+"#;
     assert_eq!(fmt(input, 80), expect);
 }
 
 #[test]
 fn blank_lines_between_statements_are_kept_up_to_one() {
-    let input = "let a = 1\n\n\n\nlet b = 2\nlet c = 3\n";
-    assert_eq!(fmt(input, 80), "let a = 1\n\nlet b = 2\nlet c = 3\n");
+    let input = r#"let a = 1
+
+
+
+let b = 2
+let c = 3
+"#;
+    assert_eq!(
+        fmt(input, 80),
+        r#"let a = 1
+
+let b = 2
+let c = 3
+"#
+    );
 }
 
 #[test]
 fn multiline_string_literal_is_not_reindented() {
-    let input = "let s = `\n  a\n    b\n`\nlet t = [`x\n  y`; 1]\n";
+    let input = r#"let s = `
+  a
+    b
+`
+let t = [`x
+  y`; 1]
+"#;
     let output = fmt(input, 80);
-    assert!(output.contains("`\n  a\n    b\n`"), "{output}");
-    assert!(output.contains("`x\n  y`"), "{output}");
+    assert!(
+        output.contains(
+            r#"`
+  a
+    b
+`"#
+        ),
+        "{output}"
+    );
+    assert!(
+        output.contains(
+            r#"`x
+  y`"#
+        ),
+        "{output}"
+    );
     assert_eq!(output, fmt(&output, 80));
 }
 
 #[test]
 fn horizontal_text_keeps_adjacency() {
     let input = "document(||)'<+p{a\\emph{b}c \\emph{d} e}>";
-    let expect = "document (||) '<\n    +p { a\\emph { b }c \\emph { d } e }\n>\n";
+    let expect = r#"document (||) '<
+    +p { a\emph { b }c \emph { d } e }
+>
+"#;
     assert_eq!(fmt(input, 80), expect);
     // 長くても 1 行の文章は途中で折り返さない
     let long =
@@ -262,7 +406,7 @@ fn horizontal_text_keeps_adjacency() {
 }
 
 // 式・パターン・型・文の各構文を含む入力
-const EXPRS: &str = r##"@require: stdjareport
+const EXPRS: &str = r#"@require: stdjareport
 
 let f (a, b) [c; d] (x :: xs) (Some y as z) _ = a
 let g = fun x y -> x + y
@@ -301,10 +445,10 @@ let a = 1 in
 let-mutable b <- 2 in
 let-rec c d = d in
 document (| title = {a}; author = {b} |) '<>
-"##;
+"#;
 
 // 水平・垂直・数式モードとコマンドを含む入力
-const TEXTS: &str = r##"@require: stdjareport
+const TEXTS: &str = r#"@require: stdjareport
 
 document (| title = {a} |) '<
   +p {
@@ -327,7 +471,7 @@ document (| title = {a} |) '<
   +m{${| a | b + c |}}
   +newpage;
 >
-"##;
+"#;
 
 const SAMPLES: [(&str, &str); 5] = [
     ("rec", REC),
