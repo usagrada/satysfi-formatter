@@ -19,7 +19,7 @@ toml = "0.8"
 
 [features]
 default = ["lsp"]
-# language server 向けの API (`format` / `formatting`)。LSP の型 (lspower) を使う
+# language server 向けの旧 API (`formatting`)。LSP の型 (lspower) を使う
 lsp = ["dep:lspower"]
 
 [[bin]]

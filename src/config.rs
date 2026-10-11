@@ -2,11 +2,11 @@
 //!
 //! 設定は次の順で重ねる (上ほど優先)。
 //!
-//! * CLI: コマンドライン引数 → 設定ファイル → 既定値
+//! * CLI: 設定ファイル → 既定値
 //! * language server: 設定ファイル → `FormattingOptions` (`tabSize` など) → 既定値
 //!
 //! 呼び出し側 (CLI / language server) は、文書のパスを [`resolve_config`] に渡して設定ファイルを読み、
-//! 自分の持つ設定 (コマンドライン引数やエディタの指定) と重ねてから [`crate::format`] に渡す。
+//! 自分の持つ設定 (エディタの指定など) と重ねてから [`crate::format`] に渡す。
 //!
 //! ```ignore
 //! // language server の例

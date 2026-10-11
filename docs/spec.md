@@ -75,7 +75,7 @@ satysfi-fmt [OPTIONS] [FILE]...
 
 ### 2.3 ライブラリ API
 
-一般的なフォーマッタ (Ruff, StyLua, Prettier など) にならい、「設定を解決する関数」と「文字列を整形する純粋な関数」に分ける。ファイルの入出力や LSP の型の扱いはライブラリの外 (呼び出し側) で行う。
+「設定を解決する関数」と「文字列を整形する純粋な関数」に分ける。ファイルの入出力や LSP の型の扱いはライブラリの外 (呼び出し側) で行う。
 
 | 項目 | 説明 |
 |---|---|
@@ -84,7 +84,7 @@ satysfi-fmt [OPTIONS] [FILE]...
 | `PartialConfig` | 一部だけ指定された設定。`or(lower)` で重ね、`build()` で既定値を埋める |
 | `PartialConfig::from_editor_options(tab_size, insert_spaces, insert_final_newline)` | エディタ (LSP の `FormattingOptions`) の指定から設定を作る。`tab_size` が 0 なら `indent_width` を指定しない。`insert_spaces` が false なら `use_tabs` |
 | `resolve_config(path: &Path) -> Result<PartialConfig, ConfigError>` | `path` に対応する設定ファイルを探して読む。見つからなければ空の設定。呼ぶたびに読み直す |
-| `formatting(input, FormattingOptions) -> Vec<TextEdit>` | 旧 API。satysfi-language-server が移行するまでの互換として、feature `lsp` (既定で有効) の下に残す。非推奨。ファイル全体を置き換える `TextEdit` を 1 件返す。構文エラーのときは空の `Vec` |
+| `formatting(input, FormattingOptions) -> Vec<TextEdit>` | 旧 API。satysfi-language-server が移行するまでの互換として、feature `lsp` (既定で有効) の下に残す。非推奨。ファイル全体を置き換える `TextEdit` を 1 件返す。構文エラーのときは空の `Vec`。`FormattingOptions` の `lineWidth` プロパティ (正の数) があれば `line_width` として使う。設定ファイルは読まない |
 
 language server がライブラリを直接使うときは、設定を **設定ファイル → エディタの指定 → 既定値** の順に重ねる。プロセスとして呼ぶときは §2.1 の標準入力を使う。
 
