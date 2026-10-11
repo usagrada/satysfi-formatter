@@ -1,7 +1,6 @@
-# satysfi-formatter 実装方針・テスト方針 (草案)
+# satysfi-formatter 実装方針・テスト方針
 
 > 仕様は [spec.md](./spec.md) を参照。本書は実装とテストの進め方をまとめる。
-> `feature/support-pretty-format` ブランチ (`5a8c227` 時点) の内容に基づく。
 
 ## 1. 実装方針
 

@@ -1,7 +1,5 @@
-# satysfi-formatter 仕様書 (草案)
+# satysfi-formatter 仕様書
 
-> **ステータス: 草案 (Draft)**
-> `feature/support-pretty-format` ブランチ (`5a8c227` 時点) の挙動とテストをもとに書き起こした。
 > 実装の進め方・テストの進め方は [implementation.md](./implementation.md) に分けてある。本書は「何を出力するか」だけを定める。
 > 例の出力は、特に断りがなければ インデント幅 4・行幅 80 の場合のもの。
 

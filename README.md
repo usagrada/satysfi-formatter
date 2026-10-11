@@ -4,6 +4,8 @@ SATySFi 用の formatter
 
 [document](./doc/doc.pdf)
 
+仕様は [docs/spec.md](./docs/spec.md)、実装とテストの方針は [docs/implementation.md](./docs/implementation.md) にまとめている。
+
 ## install
 
 ```bash
