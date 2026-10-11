@@ -1,7 +1,7 @@
 [package]
 name = "satysfi-formatter"
-version = "0.1.0"
-edition = "2021"
+version = "0.2.0"
+edition = "2024"
 authors = ["usagrada"]
 license = "MIT"
 repository = "https://github.com/usagrada/"
@@ -9,7 +9,7 @@ repository = "https://github.com/usagrada/"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-satysfi-parser = { git = "https://github.com/usagrada/satysfi-parser.git", rev = "9a064ad23eeb41edf9262ae0ea60a39b6f4fcb39" }
+satysfi-parser = { git = "https://github.com/usagrada/satysfi-parser.git", rev = "9079f9da2e15e006dac1516736148a6986f14f06" }
 clap = { version = "3", features = ["derive"] }
 dirs = "*"
 lspower = { version = "1.4.0", optional = true }

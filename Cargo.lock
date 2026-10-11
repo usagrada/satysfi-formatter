@@ -589,7 +589,7 @@ checksum = "7b4b9743ed687d4b4bcedf9ff5eaa7398495ae14e61cba0a295704edbc7decde"
 
 [[package]]
 name = "satysfi-formatter"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap 3.1.8",
  "dirs",
