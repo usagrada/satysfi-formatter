@@ -275,3 +275,107 @@ fn off_in_the_preamble_reaches_the_document_body() {
     let expect = "let x = [1; 2]\n% satysfi-fmt: off\nlet y = [1;   2]\nin\ndocument (||) '<\n  +p{   abc }\n>\n";
     test_tmpl(text, expect);
 }
+
+// ---- 構文の途中に書いた off / on ----
+// 整形でコメントの位置が変わり、範囲を正確には戻せないときは、
+// off と on を含む同じ階層のノードの並びを丸ごと元のまま出力する (エラーにならない)。
+
+#[test]
+fn off_inside_a_statement_keeps_the_statement_as_is() {
+    let text = "let-rec f x % satysfi-fmt: off\n = 1\nlet   y   =   [1;2]\n% satysfi-fmt: on\nlet   z   =   [1;2]\n";
+    let expect = "let-rec f x % satysfi-fmt: off\n = 1\nlet   y   =   [1;2]\n% satysfi-fmt: on\nlet z = [1; 2]\n";
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn off_before_a_name_does_not_duplicate_the_comment() {
+    // 整形でコメントが文の前に動くが、元の文を戻すときに動いた方を取り除くので、コメントは 1 つだけ残る
+    let text = "let-rec % satysfi-fmt: off\n f   x = 1\nlet   y   =   [1;2]\n% satysfi-fmt: on\nlet   z   =   [1;2]\n";
+    let expect = "let-rec % satysfi-fmt: off\n f   x = 1\nlet   y   =   [1;2]\n% satysfi-fmt: on\nlet z = [1; 2]\n";
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn off_after_equal_keeps_the_following_nodes() {
+    let text = "let   a   =   [1;2]\nlet x = % satysfi-fmt: off\n   [1;2]\nlet   y   =   [1;2]\n% satysfi-fmt: on\nlet   z   =   [1;2]\n";
+    let expect = "let a = [1; 2]\nlet x =\n    % satysfi-fmt: off\n   [1;2]\nlet   y   =   [1;2]\n% satysfi-fmt: on\nlet z = [1; 2]\n";
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn off_in_a_type_definition_without_on_keeps_the_rest_of_the_file() {
+    let text = "type t = % satysfi-fmt: off\n   A   |   B\nlet   z   =   [1;2]\n";
+    let expect = "type t = % satysfi-fmt: off\n   A   |   B\nlet   z   =   [1;2]\n";
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn off_and_on_inside_one_list_keep_the_elements_between_them() {
+    let text = "let   a   =   [1;2]\nlet x = [1;   2; % satysfi-fmt: off\n   3;   4; % satysfi-fmt: on\n 5]\nlet   z   =   [1;2]\n";
+    let expect = "let a = [1; 2]\nlet x = [\n    1;\n    2; % satysfi-fmt: off\n   3;   4; % satysfi-fmt: on\n    5;\n]\nlet z = [1; 2]\n";
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn off_and_on_in_different_statements_widen_to_the_enclosing_statements() {
+    // off を含む文 (リスト) と、on を含む文を含めて、間の文はすべて元のまま
+    let text = "let   a   =   [1;2]\nlet x = [1;   2; % satysfi-fmt: off\n   3;   4]\nlet   y   =   [1;2]\nlet w = [5;   6; % satysfi-fmt: on\n 7]\nlet   z   =   [1;2]\n";
+    let expect = "let a = [1; 2]\nlet x = [\n    1;\n    2; % satysfi-fmt: off\n   3;   4]\nlet   y   =   [1;2]\nlet w = [5;   6; % satysfi-fmt: on\n    7;\n]\nlet z = [1; 2]\n";
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn format_never_returns_an_error_for_off_and_on() {
+    use crate::{format, FormatConfig};
+    // 構文エラー以外ではエラーにならない
+    for text in [
+        "let-rec % satysfi-fmt: off\n f x = 1\n",
+        "let x = (1, % satysfi-fmt: off\n 2)\n",
+        "type t = A % satysfi-fmt: on\n | B\n",
+        "% satysfi-fmt: on\n% satysfi-fmt: off\nlet x = 1\n",
+        "let x = 1 % satysfi-fmt: off",
+    ] {
+        assert!(
+            format(text, &FormatConfig::default()).is_ok(),
+            "failed: {text:?}"
+        );
+    }
+}
+
+#[test]
+fn off_and_on_around_only_a_keyword_keep_their_position() {
+    // off と on の間にノードがなく、`and` だけがある。整形で on が `and` の前に動かないよう、
+    // 両方を含む `let-rec` の文を元のまま出力する
+    let text = "let-rec f x = g x% satysfi-fmt: off\n\nand% satysfi-fmt: on\n g y   =   y\nlet   z   =   [1;2]\n";
+    let expect = "let-rec f x = g x% satysfi-fmt: off\n\nand% satysfi-fmt: on\n g y   =   y\nlet z = [1; 2]\n";
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn off_and_on_around_a_symbol_keep_their_position() {
+    let text = "type 'a t%satysfi-fmt: off\n =% satysfi-fmt: on\n A   |   B\nlet   z   =   [1;2]\n";
+    let expect = "type 'a t%satysfi-fmt: off\n =% satysfi-fmt: on\n A   |   B\nlet z = [1; 2]\n";
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn off_and_on_never_move_relative_to_the_code() {
+    use super::directives_keep_their_position;
+    use crate::{format, FormatConfig};
+    for text in [
+        "let-rec f x % satysfi-fmt: off\n = 1\nlet   y   =   [1;2]\n% satysfi-fmt: on\nlet   z   =   [1;2]\n",
+        "let-rec % satysfi-fmt: off\n f   x = 1\nlet   y   =   [1;2]\n% satysfi-fmt: on\nlet   z   =   [1;2]\n",
+        "type t = % satysfi-fmt: off\n   A   |   B\nlet   z   =   [1;2]\n",
+        "let x = (1, % satysfi-fmt: off\n 2, % satysfi-fmt: on\n 3)\n",
+        "let x = f a % satysfi-fmt: off\n b % satysfi-fmt: on\n c\n",
+        "let x = if a % satysfi-fmt: off\n then b % satysfi-fmt: on\n else c\n",
+    ] {
+        let output = format(text, &FormatConfig::default()).unwrap();
+        assert!(
+            directives_keep_their_position(text, &output),
+            "off / on moved:\n{text}\n--- output\n{output}"
+        );
+        // 2 回目の整形でも変わらない
+        assert_eq!(format(&output, &FormatConfig::default()).unwrap(), output);
+    }
+}

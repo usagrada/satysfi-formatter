@@ -351,7 +351,7 @@ fn comments_survive_insertion_at_any_position() {
 #[test]
 fn off_and_on_on_their_own_lines_keep_the_region_as_is() {
     for (name, src) in SAMPLES {
-        let (checked, _) = check_off_on_insertion(name, src, Placement::OwnLine);
+        let checked = check_off_on_insertion(name, src, Placement::OwnLine);
         assert!(checked > 20, "{name}: only {checked} pairs were checked");
     }
 }
@@ -359,17 +359,16 @@ fn off_and_on_on_their_own_lines_keep_the_region_as_is() {
 #[test]
 fn off_and_on_at_line_ends_keep_the_region_as_is() {
     for (name, src) in SAMPLES {
-        let (checked, _) = check_off_on_insertion(name, src, Placement::LineEnd);
+        let checked = check_off_on_insertion(name, src, Placement::LineEnd);
         assert!(checked > 20, "{name}: only {checked} pairs were checked");
     }
 }
 
 #[test]
-fn off_and_on_at_any_position_never_break_the_code() {
-    // 構文の途中ではエラーになることがあるが、壊れた出力は返さない
+fn off_and_on_at_any_position_never_fail() {
+    // 構文の途中でもエラーにならず、off と on の間は元のまま残る
     for (name, src) in SAMPLES {
-        let (checked, errors) = check_off_on_insertion(name, src, Placement::Anywhere);
+        let checked = check_off_on_insertion(name, src, Placement::Anywhere);
         assert!(checked > 50, "{name}: only {checked} pairs were checked");
-        eprintln!("{name}: {errors} of {checked} pairs could not be kept unformatted");
     }
 }

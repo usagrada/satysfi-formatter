@@ -23,9 +23,6 @@ pub enum FormatError {
         column: usize,
         expected: Vec<&'static str>,
     },
-    /// `% satysfi-fmt: off` から `on` までを、整形前の文字列に戻せなかった。
-    /// `line` はその `off` コメントの行
-    FormatOff { line: usize },
 }
 
 impl fmt::Display for FormatError {
@@ -34,11 +31,6 @@ impl fmt::Display for FormatError {
             FormatError::Parse { line, column, .. } => {
                 write!(f, "parse error at line {}, column {}", line + 1, column + 1)
             }
-            FormatError::FormatOff { line } => write!(
-                f,
-                "cannot keep the region after `satysfi-fmt: off` at line {} unformatted",
-                line + 1
-            ),
         }
     }
 }
@@ -61,8 +53,7 @@ pub(crate) fn parse(input: &str) -> Result<CstText, FormatError> {
 pub fn format(input: &str, config: &FormatConfig) -> Result<String, FormatError> {
     let csttext = parse(input)?;
     let output = printer::Printer::new(&csttext, config).print();
-    let mut output = printer::directive::restore_off_regions(&csttext, &output)
-        .map_err(|line| FormatError::FormatOff { line })?;
+    let mut output = printer::directive::restore_off_regions(&csttext, &output);
     // `on` のない `off` で、ファイルの最後まで元のままのとき
     if config.final_newline && !output.ends_with('\n') {
         output.push('\n');

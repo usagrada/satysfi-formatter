@@ -229,23 +229,43 @@ pub(crate) enum Placement {
     /// 行頭に単独行のコメントとして置く (普通の書き方)。必ず整形できること
     OwnLine,
     /// 空白のあるあらゆる位置に行末のコメントとして置く。
-    /// 構文の途中では整形でコメントの位置が変わり、範囲を戻せずにエラーになることがある
+    /// 構文の途中では整形でコメントの位置が変わるので、範囲を広げて元のまま戻す
     Anywhere,
     /// 既存の行の末尾に置く (普通の書き方)。必ず整形できること
     LineEnd,
 }
 
+/// `off` / `on` のコメントの前にあるコード (コメント・空白・`;` を除く) が、整形の前後で同じか。
+/// 整形でコメントがコードに対して動いていないことの確認に使う。
+pub(crate) fn directives_keep_their_position(input: &str, output: &str) -> bool {
+    fn directive_contexts(text: &str) -> Vec<String> {
+        let mut result = vec![];
+        let mut code = String::new();
+        for line in text.lines() {
+            match comment_start(line) {
+                Some(i) => {
+                    code.push_str(&line[..i]);
+                    let comment = &line[i..];
+                    if comment.contains("satysfi-fmt:") {
+                        result.push(tokens(&code));
+                    }
+                }
+                None => code.push_str(line),
+            }
+        }
+        result
+    }
+    directive_contexts(input) == directive_contexts(output)
+}
+
 /// `% satysfi-fmt: off` / `on` の組をいろいろな位置に挿入して整形し、次を確認する。
 /// * off と on の間の文字列が元のまま残る
+/// * `off` / `on` のコメントが元の位置から動かない
 /// * 整形結果が冪等で、トークン列とコメントが変わらない
-/// * `Placement::Anywhere` 以外では、範囲を戻せないエラーにならない
+/// * どの位置でもエラーにならない (範囲を戻せないときは、ノードの並びを丸ごと元のまま出力する)
 ///
-/// 挿入によってパースできなくなる組は飛ばす。(確認した組の数, エラーになった組の数) を返す。
-pub(crate) fn check_off_on_insertion(
-    name: &str,
-    src: &str,
-    placement: Placement,
-) -> (usize, usize) {
+/// 挿入によってパースできなくなる組は飛ばす。確認した組の数を返す。
+pub(crate) fn check_off_on_insertion(name: &str, src: &str, placement: Placement) -> usize {
     use satysfi_parser::{grammar, CstText};
     let config = FormatConfig::default();
     let (points, off_text, on_text) = match placement {
@@ -265,7 +285,6 @@ pub(crate) fn check_off_on_insertion(
         ),
     };
     let mut checked = 0;
-    let mut errors = 0;
     let mut failures = vec![];
     for (n, &i) in points.iter().enumerate() {
         // `Anywhere` は位置が多いので、off は 1 つおきに置く
@@ -316,21 +335,23 @@ pub(crate) fn check_off_on_insertion(
                 None => &modified[region_start..],
             };
             let problem = match crate::format(&modified, &config) {
-                Err(crate::FormatError::FormatOff { .. }) if placement == Placement::Anywhere => {
-                    errors += 1;
-                    None
-                }
                 Err(err) => Some(err.to_string()),
                 Ok(output) => {
                     let mut expected_comments = comments(&modified);
                     expected_comments.sort();
                     let mut actual_comments = comments(&output);
                     actual_comments.sort();
-                    if !output.contains(region.trim_end_matches('\n')) {
+                    // 構文の途中に置いたときは、ノード単位で戻すので、範囲の前後の空白や
+                    // ノードの外にある記号 (`:` `=` など) までは元のまま保てない。
+                    let kept = region.trim_end_matches('\n');
+                    let again = |text: &str| crate::format(text, &config).unwrap_or_default();
+                    if placement != Placement::Anywhere && !output.contains(kept) {
                         Some("region changed".to_string())
                     } else if actual_comments != expected_comments {
                         Some("comments changed".to_string())
-                    } else if crate::format(&output, &config).as_ref() != Ok(&output) {
+                    } else if !directives_keep_their_position(&modified, &output) {
+                        Some("off / on moved".to_string())
+                    } else if again(&output) != output {
                         Some("not idempotent".to_string())
                     } else if tokens(&output) != tokens(&modified) {
                         Some("tokens changed".to_string())
@@ -372,7 +393,7 @@ pub(crate) fn check_off_on_insertion(
             .join("\n"),
         failures.first().unwrap()
     );
-    (checked, errors)
+    checked
 }
 
 #[test]
