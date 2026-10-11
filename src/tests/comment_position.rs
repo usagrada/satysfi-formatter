@@ -55,11 +55,159 @@ fn comment_after_the_last_expression_of_a_statement() {
   % end
 let y = 1
 "#;
+    // 本体より深く字下げされたコメントは、本体の続きとして、本体と同じ字下げで出す
     let expect = r#"let f x =
     % head
     x % tail
-% end
+    % end
 let y = 1
+"#;
+    test_tmpl(text, expect);
+}
+
+// ---- 文の後ろの単独行のコメントが、その文の本体か、次の文の見出しか ----
+// 直前の文より深く字下げされ、直前の文や他のコメントと空行で区切られていないものは、直前の文の本体の続き。
+// 文と同じ (またはより浅い) 字下げのものや、空行で区切られているものは、次の文の見出し。
+
+#[test]
+fn comment_at_the_same_indentation_as_the_statements_is_a_heading_of_the_next_statement() {
+    let text = r#"let f x =
+  x
+% heading
+let y = 1
+"#;
+    let expect = r#"let f x = x
+% heading
+let y = 1
+"#;
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn indented_comment_after_a_blank_line_is_a_heading_of_the_next_statement() {
+    let text = r#"let f x =
+  x
+
+  % separated by a blank line
+let y = 1
+"#;
+    let expect = r#"let f x = x
+
+% separated by a blank line
+let y = 1
+"#;
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn several_indented_comments_are_all_part_of_the_body() {
+    let text = r#"let f x =
+  x
+  % body 1
+  % body 2
+let y = 1
+"#;
+    let expect = r#"let f x = x
+    % body 1
+    % body 2
+let y = 1
+"#;
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn comments_are_split_where_the_indentation_stops_being_deeper() {
+    let text = r#"let f x =
+  x
+  % body
+% heading
+let y = 1
+"#;
+    let expect = r#"let f x = x
+    % body
+% heading
+let y = 1
+"#;
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn a_blank_line_after_the_body_comment_is_kept_once() {
+    let text = r#"let f x =
+  x
+  % body
+
+% heading
+let y = 1
+"#;
+    let expect = r#"let f x = x
+    % body
+
+% heading
+let y = 1
+"#;
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn a_blank_line_between_the_body_comment_and_the_next_statement_is_kept_once() {
+    let text = r#"let f x =
+  x
+  % end
+
+let y = 1
+"#;
+    let expect = r#"let f x = x
+    % end
+
+let y = 1
+"#;
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn indented_comment_at_the_end_of_a_struct_belongs_to_the_last_statement() {
+    let text = r#"module M = struct
+  let f x =
+    x
+    % end
+end
+"#;
+    let expect = r#"module M = struct
+    let f x = x
+        % end
+end
+"#;
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn comment_of_the_last_statement_before_end_of_struct_at_the_same_indentation_stays_in_the_struct()
+{
+    let text = r#"module M = struct
+  let f x = x
+  % last
+end
+"#;
+    let expect = r#"module M = struct
+    let f x = x
+    % last
+end
+"#;
+    test_tmpl(text, expect);
+}
+
+#[test]
+fn a_comment_indented_more_than_the_previous_statement_is_its_body_even_if_it_looks_like_a_heading()
+{
+    // 字下げだけでは見出しと区別できない。直前の文を優先する
+    let text = r#"let a = 1
+   % indented
+let b = 2
+"#;
+    let expect = r#"let a = 1
+    % indented
+let b = 2
 "#;
     test_tmpl(text, expect);
 }

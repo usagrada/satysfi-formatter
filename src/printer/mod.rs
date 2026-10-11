@@ -45,6 +45,8 @@ pub(self) struct Child<'c> {
     pub blank_before: bool,
     /// leading の各コメントの前に空行があるか (最初のコメントの前は `blank_before`)
     pub leading_blanks: Vec<bool>,
+    /// leading の各コメントの列 (行頭からの文字数)
+    pub leading_cols: Vec<usize>,
     /// leading と子の間に空行があるか
     pub blank_after_leading: bool,
 }
@@ -53,6 +55,10 @@ pub(self) struct Children<'c> {
     pub items: Vec<Child<'c>>,
     /// 最後の子の後 (または子がないとき) にある、単独行のコメント
     pub dangling: Vec<String>,
+    /// dangling の各コメントの前に空行があるか
+    pub dangling_blanks: Vec<bool>,
+    /// dangling の各コメントの列
+    pub dangling_cols: Vec<usize>,
 }
 
 /// 子ノードを Doc にしたもの。コメントは Doc に含まれている。
@@ -172,6 +178,7 @@ impl<'a> Printer<'a> {
         let mut blank_before_pending = false;
         // pending の各コメントの前に空行があったか (最初は常に false)
         let mut pending_blanks: Vec<bool> = vec![];
+        let mut pending_cols: Vec<usize> = vec![];
         for item in self.csttext.items(cst) {
             match item {
                 Item::Node(child) => {
@@ -184,6 +191,7 @@ impl<'a> Printer<'a> {
                         cst: child,
                         leading: std::mem::take(&mut pending),
                         leading_blanks: std::mem::take(&mut pending_blanks),
+                        leading_cols: std::mem::take(&mut pending_cols),
                         trailing: None,
                         blank_before,
                         blank_after_leading,
@@ -206,6 +214,7 @@ impl<'a> Printer<'a> {
                                 pending_blanks.push(blank);
                             }
                             blank = false;
+                            pending_cols.push(self.column(span.start));
                             pending.push(comment)
                         }
                     }
@@ -213,10 +222,24 @@ impl<'a> Printer<'a> {
                 Item::BlankLines(_) => blank = true,
             }
         }
+        // dangling の各コメントの前の空行 (最初のコメントの前は blank_before_pending)
+        let mut dangling_blanks = pending_blanks;
+        if let Some(first) = dangling_blanks.first_mut() {
+            *first = blank_before_pending;
+        }
         Children {
             items,
             dangling: pending,
+            dangling_blanks,
+            dangling_cols: pending_cols,
         }
+    }
+
+    /// 位置 `pos` の列 (行頭からの文字数)。
+    pub(self) fn column(&self, pos: usize) -> usize {
+        let text = &self.csttext.text;
+        let line_start = text[..pos].rfind('\n').map_or(0, |i| i + 1);
+        text[line_start..pos].chars().count()
     }
 
     /// 子を Doc にする。行末のコメントは次の子の前の単独行のコメントとして扱う
@@ -475,11 +498,63 @@ impl<'a> Printer<'a> {
     /// 文の並び (preamble / struct の中身)。元の空行は 1 行まで残し、
     /// `module` の前後には必ず空行を入れる。
     pub(self) fn stmt_list(&self, cst: &Cst) -> Doc {
-        let children = self.children(cst);
+        let mut children = self.children(cst);
+        // 文の後ろにある単独行のコメントのうち、その文より深く字下げされ、空行で区切られていないものは、
+        // 次の文の見出しではなく、その文の本体の続きとして、本体と同じ字下げで出す。
+        let count = children.items.len();
+        let mut tails: Vec<Vec<String>> = vec![vec![]; count];
+        for j in 1..count {
+            let prev_col = self.column(children.items[j - 1].cst.span.start);
+            let child = &mut children.items[j];
+            let taken = (0..child.leading.len())
+                .take_while(|&k| {
+                    let blank = if k == 0 {
+                        child.blank_before
+                    } else {
+                        child.leading_blanks[k]
+                    };
+                    // `off` / `on` は、次の文に付く指示なので本体のコメントにはしない
+                    !blank
+                        && child.leading_cols[k] > prev_col
+                        && directive::parse(&child.leading[k]).is_none()
+                })
+                .count();
+            if taken > 0 {
+                tails[j - 1] = child.leading.drain(..taken).collect();
+                // 残りの先頭のコメント (なければ子) の前の空行は、そのまま引き継ぐ
+                child.blank_before = match child.leading_blanks.get(taken) {
+                    Some(blank) => *blank,
+                    None => child.blank_after_leading,
+                };
+                if child.leading.is_empty() {
+                    // コメントがなくなったので、コメントと子の間の空行は文の間の空行になった
+                    child.blank_after_leading = false;
+                }
+                child.leading_blanks.drain(..taken);
+                child.leading_cols.drain(..taken);
+                if let Some(first) = child.leading_blanks.first_mut() {
+                    *first = false;
+                }
+            }
+        }
+        if let Some(last) = children.items.last() {
+            let prev_col = self.column(last.cst.span.start);
+            let taken = (0..children.dangling.len())
+                .take_while(|&k| {
+                    !children.dangling_blanks[k]
+                        && children.dangling_cols[k] > prev_col
+                        && directive::parse(&children.dangling[k]).is_none()
+                })
+                .count();
+            if taken > 0 {
+                tails[count - 1] = children.dangling.drain(..taken).collect();
+            }
+        }
+
         let mut doc = Doc::nil();
         let mut first = true;
         let mut prev_is_module = false;
-        for child in children.items {
+        for (child, tail) in children.items.into_iter().zip(tails) {
             if !first {
                 doc = doc.append(Doc::hardline());
                 if child.blank_before || prev_is_module || child.cst.rule == Rule::module_stmt {
@@ -490,6 +565,10 @@ impl<'a> Printer<'a> {
             let mut stmt = leading_lines(&child).append(self.node(child.cst));
             if let Some(comment) = child.trailing {
                 stmt = stmt.append(Doc::text(" ")).append(Doc::text(comment));
+            }
+            if !tail.is_empty() {
+                let comments = join(tail.into_iter().map(Doc::text), Doc::hardline());
+                stmt = stmt.append(Doc::hardline().append(comments).nest(self.indent));
             }
             doc = doc.append(stmt);
             first = false;
