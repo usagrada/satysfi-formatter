@@ -4,7 +4,7 @@ SATySFi 用の formatter
 
 [document](./doc/doc.pdf)
 
-仕様は [docs/spec.md](./docs/spec.md)、実装とテストの方針は [docs/implementation.md](./docs/implementation.md) にまとめている。
+仕様は [docs/spec.md](./docs/spec.md)、実装とテストの方針は [docs/implementation.md](./docs/implementation.md)、開発環境は [docs/development.md](./docs/development.md) にまとめている。
 
 ## install
 
@@ -231,6 +231,10 @@ let d = 4
 * 構文の途中 (`let-rec` と関数名の間など) に書くと、コメントの位置を保てないことがある。
   そのときは、`off` と `on` を含む構文のまとまり (文の並びなら、`off` を含む文から `on` を含む文まで)
   が、整形されない範囲に含まれる。行頭や行末に書く通常の使い方では、範囲は広がらない。
+
+## 開発環境
+
+Dev Container で開発環境を用意できる。手順は [docs/development.md](./docs/development.md) を参照。
 
 ## 謝辞
 
