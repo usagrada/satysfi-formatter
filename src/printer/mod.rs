@@ -5,7 +5,7 @@
 //! * 行幅に収まれば 1 行、収まらなければ縦に展開する (`group`)。
 //! * コメントと空行は `CstText::items` で子ノードの隙間から取り出す。
 //!   行コメントは行末まで続くので、後ろには必ず改行を置く (`hardline`)。
-//! * `% satysfi-fmt: off` から `on` までは整形せず、元の文字列に戻す。→ [`directive`]
+//! * `% satysfi-fmt off` から `on` までは整形せず、元の文字列に戻す。→ [`directive`]
 
 pub mod directive;
 mod expr;

@@ -70,17 +70,17 @@ fn tabs_keep_verbatim_lines() {
     };
     // off から on までは元の空白のまま。off / on のコメント自体はタブで字下げする
     let input = r#"document(||)'<
-    % satysfi-fmt: off
+    % satysfi-fmt off
     +p{
         a
     }
-    % satysfi-fmt: on
+    % satysfi-fmt on
     +p{b}
 >
 "#;
     assert_eq!(
         format(input, &tabs),
-        "document (||) '<\n\t% satysfi-fmt: off\n    +p{\n        a\n    }\n\t% satysfi-fmt: on\n\t+p { b }\n>\n"
+        "document (||) '<\n\t% satysfi-fmt off\n    +p{\n        a\n    }\n\t% satysfi-fmt on\n\t+p { b }\n>\n"
     );
 }
 

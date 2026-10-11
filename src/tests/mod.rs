@@ -246,7 +246,7 @@ pub(crate) fn directives_keep_their_position(input: &str, output: &str) -> bool 
                 Some(i) => {
                     code.push_str(&line[..i]);
                     let comment = &line[i..];
-                    if comment.contains("satysfi-fmt:") {
+                    if comment.contains("satysfi-fmt ") {
                         result.push(tokens(&code));
                     }
                 }
@@ -258,7 +258,7 @@ pub(crate) fn directives_keep_their_position(input: &str, output: &str) -> bool 
     directive_contexts(input) == directive_contexts(output)
 }
 
-/// `% satysfi-fmt: off` / `on` の組をいろいろな位置に挿入して整形し、次を確認する。
+/// `% satysfi-fmt off` / `on` の組をいろいろな位置に挿入して整形し、次を確認する。
 /// * off と on の間の文字列が元のまま残る
 /// * `off` / `on` のコメントが元の位置から動かない
 /// * 整形結果が冪等で、トークン列とコメントが変わらない
@@ -269,19 +269,19 @@ pub(crate) fn check_off_on_insertion(name: &str, src: &str, placement: Placement
     use satysfi_parser::{grammar, CstText};
     let config = FormatConfig::default();
     let (points, off_text, on_text) = match placement {
-        Placement::OwnLine => (line_starts(src), "% satysfi-fmt: off", "% satysfi-fmt: on"),
+        Placement::OwnLine => (line_starts(src), "% satysfi-fmt off", "% satysfi-fmt on"),
         Placement::Anywhere => (
             insertion_points(src),
-            "%satysfi-fmt:off",
-            "% satysfi-fmt: on",
+            "%satysfi-fmt off",
+            "% satysfi-fmt on",
         ),
         Placement::LineEnd => (
             insertion_points(src)
                 .into_iter()
                 .filter(|&i| src[i..].starts_with('\n'))
                 .collect(),
-            " % satysfi-fmt: off",
-            " % satysfi-fmt: on",
+            " % satysfi-fmt off",
+            " % satysfi-fmt on",
         ),
     };
     let mut checked = 0;

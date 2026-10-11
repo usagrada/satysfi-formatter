@@ -1,10 +1,10 @@
 //! コメントによる整形の制御 (clang-format の `// clang-format off` / `on` と同じ考え方)。
 //!
-//! * `% satysfi-fmt: off` から `% satysfi-fmt: on` までの文字列は、整形せずに元のまま出力する。
+//! * `% satysfi-fmt off` から `% satysfi-fmt on` までの文字列は、整形せずに元のまま出力する。
 //!   空白・改行・字下げ・間にあるコメントも元のまま残る。ノードや行の途中に書いてもよい。
 //! * `off` / `on` のコメント自体は、通常どおり整形 (字下げ) される。
 //! * `on` がなければ、ファイルの最後まで整形しない。
-//! * `% satysfi-fmt: off: 理由` のように、`:` の後ろに説明を書いてよい。
+//! * `% satysfi-fmt off: 理由` のように、`off` / `on` の後ろに `:` で説明を書いてよい。
 //!
 //! いったん全体を整形してから、`off` と `on` の間を整形前の文字列に戻す ([`restore_off_regions`])。
 //!
@@ -25,12 +25,16 @@ pub enum Directive {
 
 /// コメント文字列 (`%` を含む) から directive を取り出す。
 ///
-/// `% satysfi-fmt: off` / `% satysfi-fmt: on` の形のコメントだけが対象。
-/// `%` はいくつ重ねてもよい (`%% satysfi-fmt: off`)。
+/// `% satysfi-fmt off` / `% satysfi-fmt on` の形のコメントだけが対象。
+/// `%` はいくつ重ねてもよい (`%% satysfi-fmt off`)。
 /// コメントの途中に書いたものや、他の文章が続くものは普通のコメントとして扱う。
 pub fn parse(comment: &str) -> Option<Directive> {
     let body = comment.strip_prefix('%')?.trim_start_matches('%');
-    let rest = body.trim().strip_prefix("satysfi-fmt:")?;
+    // `satysfi-fmt` と `off` / `on` の間には空白が要る (`satysfi-fmt: off` や `satysfi-fmt-off` は対象外)
+    let rest = body.trim().strip_prefix("satysfi-fmt")?;
+    if !rest.starts_with(char::is_whitespace) {
+        return None;
+    }
     // `off: 理由` のような説明は読み飛ばす
     match rest.split(':').next()?.trim() {
         "off" => Some(Directive::Off),
@@ -91,7 +95,7 @@ fn significant(text: &str) -> String {
     text.replace("=|", "=")
 }
 
-/// 整形結果 `output` の `% satysfi-fmt: off` から `on` までを、整形前 (`input`) の文字列に戻す。
+/// 整形結果 `output` の `% satysfi-fmt off` から `on` までを、整形前 (`input`) の文字列に戻す。
 ///
 /// 範囲を正確に戻せないときは、`off` と `on` を含むノードの並びを丸ごと元のまま出力する
 /// (さらに戻せなければ階層を広げ、最後はファイル全体を元のまま返す)。
@@ -542,21 +546,21 @@ mod tests {
     #[test]
     fn parse_directive() {
         // skip は対応していない (普通のコメント)
-        assert_eq!(parse("% satysfi-fmt: skip"), None);
-        assert_eq!(parse("%satysfi-fmt:off"), Some(Directive::Off));
-        assert_eq!(parse("%   satysfi-fmt:  on  "), Some(Directive::On));
-        assert_eq!(parse("% satysfi-fmt: off"), Some(Directive::Off));
-        assert_eq!(parse("% satysfi-fmt: on"), Some(Directive::On));
+        assert_eq!(parse("% satysfi-fmt skip"), None);
+        assert_eq!(parse("%satysfi-fmt off"), Some(Directive::Off));
+        assert_eq!(parse("%   satysfi-fmt on  "), Some(Directive::On));
+        assert_eq!(parse("% satysfi-fmt off"), Some(Directive::Off));
+        assert_eq!(parse("% satysfi-fmt on"), Some(Directive::On));
         // `%` を重ねてもよい
-        assert_eq!(parse("%% satysfi-fmt: off"), Some(Directive::Off));
-        assert_eq!(parse("%%%satysfi-fmt:on"), Some(Directive::On));
+        assert_eq!(parse("%% satysfi-fmt off"), Some(Directive::Off));
+        assert_eq!(parse("%%%satysfi-fmt on"), Some(Directive::On));
         // `:` の後ろの説明は読み飛ばす
         assert_eq!(
-            parse("% satysfi-fmt: off: aligned table"),
+            parse("% satysfi-fmt off: aligned table"),
             Some(Directive::Off)
         );
         assert_eq!(
-            parse("% satysfi-fmt: on: end of the table"),
+            parse("% satysfi-fmt on: end of the table"),
             Some(Directive::On)
         );
     }
@@ -572,33 +576,35 @@ mod tests {
             "% clang-format off",
             // 名前や区切りが違う
             "% satysfi-fmt-off",
-            "% satysfi-fmt off",
+            "% satysfi-fmt: off",
+            "% satysfi-fmt:off",
+            "% satysfi-fmt: on",
             "% satysfi-fmt",
-            "% satysfi-fmt:",
-            "% satysfi-fmt: ",
+            "% satysfi-fmt ",
+            "% satysfi-fmt ",
             "% satysfi_fmt: off",
             "% SATYSFI-FMT: OFF",
             "% Satysfi-fmt: off",
             // 続きがある
-            "% satysfi-fmt: offset",
-            "% satysfi-fmt: off the table",
-            "% satysfi-fmt: online",
-            "% satysfi-fmt: on and off",
-            "% satysfi-fmt: onto",
+            "% satysfi-fmt offset",
+            "% satysfi-fmt off the table",
+            "% satysfi-fmt online",
+            "% satysfi-fmt on and off",
+            "% satysfi-fmt onto",
             // コメントの途中に書いてある
-            "% turn satysfi-fmt: off here",
-            "% see `% satysfi-fmt: off`",
-            "% TODO satysfi-fmt: on",
+            "% turn satysfi-fmt off here",
+            "% see `% satysfi-fmt off`",
+            "% TODO satysfi-fmt on",
             // % を重ねても、続きがあれば普通のコメント
-            "%% satysfi-fmt: off the table",
-            "%%% turn satysfi-fmt: on",
+            "%% satysfi-fmt off the table",
+            "%%% turn satysfi-fmt on",
             // 空
             "%",
             "% ",
             // 未対応の指示
-            "% satysfi-fmt: skip",
-            "% satysfi-fmt: ignore",
-            "% satysfi-fmt: unknown",
+            "% satysfi-fmt skip",
+            "% satysfi-fmt ignore",
+            "% satysfi-fmt unknown",
         ] {
             assert_eq!(parse(comment), None, "{comment:?}");
         }
@@ -608,7 +614,7 @@ mod tests {
     fn region_whose_code_changed_cannot_be_restored() {
         let input = CstText::parse(
             r#"let a = 1
-% satysfi-fmt: off
+% satysfi-fmt off
 let b = 2
 "#,
             grammar::program,
@@ -616,19 +622,19 @@ let b = 2
         .unwrap();
         // 範囲内のコードが入力と違う整形結果 (コメントが別の位置に動いた場合など)
         let output = r#"let a = 1
-% satysfi-fmt: off
+% satysfi-fmt off
 let c = 2
 "#;
         assert_eq!(restore_precisely(&input, output), Err(1));
         // コードが同じなら、空白だけ入力に戻す
         let output = r#"let a = 1
-% satysfi-fmt: off
+% satysfi-fmt off
 let b    =    2
 "#;
         assert_eq!(
             restore_precisely(&input, output).as_deref(),
             Ok(r#"let a = 1
-% satysfi-fmt: off
+% satysfi-fmt off
 let b = 2
 "#)
         );
@@ -717,10 +723,10 @@ let b = 2
     #[test]
     fn initial_region_is_the_smallest_list_of_nodes_containing_both_comments() {
         let src = r#"let a = 1
-let-rec f x % satysfi-fmt: off
+let-rec f x % satysfi-fmt off
  = 1
 let y = 2
-% satysfi-fmt: on
+% satysfi-fmt on
 let z = 3
 "#;
         let input = parse_src(src);
@@ -734,7 +740,7 @@ let z = 3
         assert_eq!(preamble.rule, satysfi_parser::Rule::preamble);
         assert_eq!(
             &src[preamble.inner[first].span.start..preamble.inner[last].span.end],
-            r#"let-rec f x % satysfi-fmt: off
+            r#"let-rec f x % satysfi-fmt off
  = 1
 let y = 2"#
         );
@@ -743,7 +749,7 @@ let y = 2"#
     #[test]
     fn initial_region_without_on_extends_to_the_last_node() {
         let src = r#"let a = 1
-let b = [1; % satysfi-fmt: off
+let b = [1; % satysfi-fmt off
  2]
 let c = 3
 "#;
@@ -756,7 +762,7 @@ let c = 3
         let preamble = node_at(&input.cst, &path).unwrap();
         assert_eq!(
             &src[preamble.inner[first].span.start..preamble.inner[last].span.end],
-            r#"let b = [1; % satysfi-fmt: off
+            r#"let b = [1; % satysfi-fmt off
  2]
 let c = 3"#
         );
@@ -765,8 +771,8 @@ let c = 3"#
     #[test]
     fn region_without_nodes_has_nothing_to_restore() {
         let src = r#"let a = 1
-% satysfi-fmt: off
-% satysfi-fmt: on
+% satysfi-fmt off
+% satysfi-fmt on
 let b = 2
 "#;
         let input = parse_src(src);
@@ -780,13 +786,13 @@ let b = 2
     #[test]
     fn falls_back_to_the_whole_file_when_the_tree_shape_changed() {
         let src = r#"let a = 1
-% satysfi-fmt: off
+% satysfi-fmt off
 let   b   =   2
 "#;
         let input = parse_src(src);
         // 整形結果の構文木の形が入力と違う (どの階層でも対応づけられない) 場合
         let output = r#"let a = 1
-% satysfi-fmt: off
+% satysfi-fmt off
 let b = 2
 in
 document (||) '<>
@@ -797,12 +803,12 @@ document (||) '<>
     #[test]
     fn restore_never_fails_even_if_the_region_cannot_be_restored_precisely() {
         let src = r#"let a = 1
-% satysfi-fmt: off
+% satysfi-fmt off
 let b = 2
 "#;
         let input = parse_src(src);
         let output = r#"let a = 1
-% satysfi-fmt: off
+% satysfi-fmt off
 let c = 2
 "#;
         assert!(restore_precisely(&input, output).is_err());

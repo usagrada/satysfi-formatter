@@ -288,17 +288,17 @@ fn own_line_comment_in_list() {
 #[test]
 fn off_and_on() {
     let input = r#"let a = [1;2]
-% satysfi-fmt: off
+% satysfi-fmt off
 let   b   =   [1;2]
 let   c   =   [1;2]
-% satysfi-fmt: on
+% satysfi-fmt on
 let d = [1;2]
 "#;
     let expect = r#"let a = [1; 2]
-% satysfi-fmt: off
+% satysfi-fmt off
 let   b   =   [1;2]
 let   c   =   [1;2]
-% satysfi-fmt: on
+% satysfi-fmt on
 let d = [1; 2]
 "#;
     assert_eq!(fmt(input, 80), expect);
@@ -308,17 +308,17 @@ let d = [1; 2]
 fn off_and_on_inside_a_list() {
     let input = r#"let x = [
   a;
-  % satysfi-fmt: off
+  % satysfi-fmt off
   f   b   c;
-  % satysfi-fmt: on
+  % satysfi-fmt on
   d
 ]
 "#;
     let expect = r#"let x = [
     a;
-    % satysfi-fmt: off
+    % satysfi-fmt off
   f   b   c;
-    % satysfi-fmt: on
+    % satysfi-fmt on
     d;
 ]
 "#;
