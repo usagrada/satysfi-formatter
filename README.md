@@ -116,8 +116,9 @@ let table = [
 let y = [1; 2]
 ```
 
-* 指示として扱うのは、`% satysfi-fmt: off` と `% satysfi-fmt: on` の形のコメントだけ (`%` は 1 つ、空白は自由)。
-  `% off` や `% satysfi-fmt: off the table`、`%% satysfi-fmt: off`、コメントの途中に書いたもの、
+* 指示として扱うのは、`% satysfi-fmt: off` と `% satysfi-fmt: on` の形のコメントだけ
+  (空白は自由で、`%% satysfi-fmt: off` のように `%` を重ねてもよい)。
+  `% off` や `% satysfi-fmt: off the table`、コメントの途中に書いたもの、
   文字列やヘッダ行の中の同じ文字列は、普通のコメント・文字列として扱い、整形を止めない。
 * `% satysfi-fmt: off` から `% satysfi-fmt: on` までは、空白・改行・字下げ・コメントも含めて元のまま出力する。
 * `off` / `on` のコメント自体は、通常どおり字下げされる。

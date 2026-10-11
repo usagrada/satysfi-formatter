@@ -399,7 +399,7 @@ fn ordinary_comments_do_not_stop_formatting() {
         "% satysfi-fmt: offset",
         "% satysfi-fmt: off the table",
         "% turn satysfi-fmt: off here",
-        "%% satysfi-fmt: off",
+        "%% satysfi-fmt: off the table",
         "% satysfi-fmt: skip",
         "% satysfi-fmt: unknown",
     ] {
@@ -421,6 +421,8 @@ fn only_the_directive_comments_stop_formatting() {
         "% satysfi-fmt: off",
         "%satysfi-fmt:off",
         "%    satysfi-fmt:    off   ",
+        "%% satysfi-fmt: off",
+        "%%%satysfi-fmt:off",
         "% satysfi-fmt: off: aligned table",
     ] {
         let text = format!("let   a   =   [1;2]\n{comment}\nlet   b   =   [1;2]\n");

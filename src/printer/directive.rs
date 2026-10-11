@@ -25,14 +25,11 @@ pub enum Directive {
 
 /// コメント文字列 (`%` を含む) から directive を取り出す。
 ///
-/// `% satysfi-fmt: off` / `% satysfi-fmt: on` の形のコメントだけが対象で、
-/// `%` は 1 つだけ。コメントの途中に書いたものや、他の文章が続くものは普通のコメントとして扱う。
+/// `% satysfi-fmt: off` / `% satysfi-fmt: on` の形のコメントだけが対象。
+/// `%` はいくつ重ねてもよい (`%% satysfi-fmt: off`)。
+/// コメントの途中に書いたものや、他の文章が続くものは普通のコメントとして扱う。
 pub fn parse(comment: &str) -> Option<Directive> {
-    let body = comment.strip_prefix('%')?;
-    // `%% satysfi-fmt: off` のように `%` を重ねたものは対象外
-    if body.starts_with('%') {
-        return None;
-    }
+    let body = comment.strip_prefix('%')?.trim_start_matches('%');
     let rest = body.trim().strip_prefix("satysfi-fmt:")?;
     // `off: 理由` のような説明は読み飛ばす
     match rest.split(':').next()?.trim() {
@@ -550,6 +547,9 @@ mod tests {
         assert_eq!(parse("%   satysfi-fmt:  on  "), Some(Directive::On));
         assert_eq!(parse("% satysfi-fmt: off"), Some(Directive::Off));
         assert_eq!(parse("% satysfi-fmt: on"), Some(Directive::On));
+        // `%` を重ねてもよい
+        assert_eq!(parse("%% satysfi-fmt: off"), Some(Directive::Off));
+        assert_eq!(parse("%%%satysfi-fmt:on"), Some(Directive::On));
         // `:` の後ろの説明は読み飛ばす
         assert_eq!(
             parse("% satysfi-fmt: off: aligned table"),
@@ -589,9 +589,9 @@ mod tests {
             "% turn satysfi-fmt: off here",
             "% see `% satysfi-fmt: off`",
             "% TODO satysfi-fmt: on",
-            // % を重ねたもの
-            "%% satysfi-fmt: off",
-            "%%% satysfi-fmt: on",
+            // % を重ねても、続きがあれば普通のコメント
+            "%% satysfi-fmt: off the table",
+            "%%% turn satysfi-fmt: on",
             // 空
             "%",
             "% ",
