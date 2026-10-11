@@ -141,8 +141,7 @@ command_space = true  # コマンドとテキスト引数の間に空白を入�
       手で揃えた表など、整形してほしくない部分は、コメントで整形を止められます。
       `% satysfi-fmt off` から `% satysfi-fmt on` までの間は、空白や改行も含めて、書いたとおりに出力されます。
       `on` を書かなければ、ファイルの最後まで整形されません。
-    }
-    +cmd-saty(`let x = [1;   2]
+      \cmd-saty(`let x = [1;   2]
 % satysfi-fmt off
 let table = [
   [1;   0;   0];
@@ -151,7 +150,6 @@ let table = [
 % satysfi-fmt on
 let y = [1;   2]
 `);
-    +p{
       上のコードは、 `x` と `y` だけが整形され、 `table` は元のままになります。
       `off` / `on` のコメント自体は、通常どおり字下げが整えられます。
     }

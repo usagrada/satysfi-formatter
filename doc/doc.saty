@@ -11,144 +11,137 @@ open CodePrinter
 let-block ctx +newpage = clear-page
 % シェルコマンド
 let-block +cmd arg = '<
-  +code-printer
-    ?:(make-config CodeSyntax.shell CodeTheme.basic-dark
-      |> set-basic-font-size 9pt
-      |> set-number-fun CodeDesign.number-fun-null)
-    (arg);
+  +code-printer?:(make-config CodeSyntax.shell CodeTheme.basic-dark
+    |> set-basic-font-size 9pt
+    |> set-number-fun CodeDesign.number-fun-null)(arg);
 >
 % インラインシェルコマンド
-let-inline \cmd arg = { \code-printer
-  ?:(make-config CodeSyntax.shell CodeTheme.basic-dark
+let-inline \cmd arg = {
+  \code-printer?:(make-config CodeSyntax.shell CodeTheme.basic-dark
     |> set-basic-font-size 9pt
-    |> set-number-fun CodeDesign.number-fun-null)
-  (arg); }
+    |> set-number-fun CodeDesign.number-fun-null)(arg);
+}
 % インラインRustコマンド
-let-inline \cmd-rust arg = { \code-printer
-  ?:(make-config CodeSyntax.rust CodeTheme.basic-dark
+let-inline \cmd-rust arg = {
+  \code-printer?:(make-config CodeSyntax.rust CodeTheme.basic-dark
     |> set-basic-font-size 9pt
-    |> set-number-fun CodeDesign.number-fun-null)
-  (arg); }
+    |> set-number-fun CodeDesign.number-fun-null)(arg);
+}
 % インラインsatysfiコマンド
-let-inline \cmd-saty arg = { \code-printer
-  ?:(make-config CodeSyntax.satysfi CodeTheme.basic-dark
+let-inline \cmd-saty arg = {
+  \code-printer?:(make-config CodeSyntax.satysfi CodeTheme.basic-dark
     |> set-basic-font-size 9pt
-    |> set-number-fun CodeDesign.number-fun-null)
-  (arg); }
+    |> set-number-fun CodeDesign.number-fun-null)(arg);
+}
 in
 
-document (|
+document(|
   title = { \SATySFi;-formatter };
   author = { usagrada };
   show-toc = true;
   show-title = true;
-|) '<
+|)'<
   +newpage;
-  +p {
+  +p{
     \SATySFi;を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。
-    \footnote { このドキュメントは format のテストも兼ねて書いています。 }
-    \footnote { 期待するフォーマットが得られない場合は、 Issue や Pull Request いただけると幸いです。 }
+    \footnote{ このドキュメントは format のテストも兼ねて書いています。 }
+    \footnote{ 期待するフォーマットが得られない場合は、 Issue や Pull Request いただけると幸いです。 }
   }
-  +section { formatter の install 方法 } <
-    +p {
+  +section{ formatter の install 方法 }<
+    +p{
       以下のどちらかの方法で、入れることができます。
       ターミナルに以下のコマンドを打ち込んでください。
-      \footnote {
+      \footnote{
         --force は無くても入りますが、既にインストールしている場合、
         最新のデータにアップデートするために同じコマンドを使用できます。
       }
     }
-    +cmd
-      (`cargo install --force --git https://github.com/usagrada/satysfi-formatter.git --branch main`);
-    +cmd
-      (`git clone -b main https://github.com/usagrada/satysfi-formatter.git
+    +cmd(`cargo install --force --git https://github.com/usagrada/satysfi-formatter.git --branch main`);
+    +cmd(`git clone -b main https://github.com/usagrada/satysfi-formatter.git
 cd satysfi-formatter
 cargo install --path .
 `);
   >
-  +section { formatter の使い方 } <
-    +cmd (`satysfi-fmt $input`);
-    +p { 整形結果が標準出力に出ます。ファイルは書き換えません。 }
-    +cmd (`satysfi-fmt $input --write`);
-    +p {
+  +section{ formatter の使い方 }<
+    +cmd(`satysfi-fmt $input`);
+    +p{ 整形結果が標準出力に出ます。ファイルは書き換えません。 }
+    +cmd(`satysfi-fmt $input --write`);
+    +p{
       `-w` または `--write` を指定することで、input で入力したファイルに書き込むことができます。
       内容が変わらないファイルは書き直しません。
     }
-    +cmd (`satysfi-fmt $input -o $output`);
-    +p { `-o` または `--output` でファイルを指定して出力できます。 }
-    +cmd (`satysfi-fmt --check $input`);
-    +p {
+    +cmd(`satysfi-fmt $input -o $output`);
+    +p{ `-o` または `--output` でファイルを指定して出力できます。 }
+    +cmd(`satysfi-fmt --check $input`);
+    +p{
       `--check` を指定すると、ファイルを書き換えず、整形されていないファイルの名前を標準エラー出力に出します。
       CI で整形済みかを確認するときに使えます。
     }
-    +cmd (`satysfi-fmt -w *.saty *.satyh`);
-    +p { 複数のファイルは、 `--write` または `--check` のときに指定できます。 }
-    +subsection { 終了コード } <
-      +p {
-        \listing {
+    +cmd(`satysfi-fmt -w *.saty *.satyh`);
+    +p{ 複数のファイルは、 `--write` または `--check` のときに指定できます。 }
+    +subsection{ 終了コード }<
+      +p{
+        \listing{
           * 0: 成功です。 `--check` のときは、すべて整形済みです。
           * 1: `--check` で、整形されていないファイルがありました。
           * 2: エラーです。構文エラー、ファイルの読み書きの失敗、設定ファイルの誤り、引数の誤りが含まれます。
         }
       }
-      +p {
+      +p{
         構文エラーのときは何も出力せず、 `path:line:column: error: syntax error` の形で標準エラー出力に出します。
         複数のファイルを渡したとき、途中でエラーになっても残りは処理します。
       }
     >
-    +subsection { エディタから使う } <
-      +p {
+    +subsection{ エディタから使う }<
+      +p{
         ファイルを指定しない（または `-` を指定する）と標準入力を整形して、標準出力に出します。
         エディタや language server は、このコマンドを呼べば使えます。
       }
-      +cmd (`satysfi-fmt --assume-filename path/to/main.saty < main.saty`);
-      +p {
+      +cmd(`satysfi-fmt --assume-filename path/to/main.saty < main.saty`);
+      +p{
         `--assume-filename` には、整形する文書のパスを渡します。
         設定ファイルをそのパスから探すのと、エラー表示に使います。
       }
     >
   >
-  +section { format option } <
-    +p {
+  +section{ format option }<
+    +p{
       整形の設定は、設定ファイル `.satysfi-fmt.toml` に書きます。
       コマンドライン引数では変えられません。
       整形するファイルのディレクトリから親へ向かって探し、最初に見つかったものを使います。
       `--config` でファイルを直接指定することもできます。
     }
-    +cmd
-      (`line_width = 100      # 行幅 (既定 80)
+    +cmd(`line_width = 100      # 行幅 (既定 80)
 indent_width = 2      # インデント幅 (既定 4)
 use_tabs = false      # インデントにタブを使うか (既定 false)
 final_newline = true  # 末尾に改行を入れるか (既定 true)
-block_command_space = false  # ブロックコマンドのテキスト引数の前に空白を入れるか (既定 false)
+command_space = true  # コマンドとテキスト引数の間に空白を入れるか (既定 true)
 `);
-    +p {
+    +p{
       すべて省略でき、省略した項目は既定値になります。
       書き間違い（知らない項目名など）はエラーになります。
     }
-    +subsection { インデント } <
-      +p {
+    +subsection{ インデント }<
+      +p{
         基本の indent は 4 です。
         設定ファイルの `indent_width` で、インデントのスペースの数を変えられます。
         この document は `indent_width = 2` で整形しています。
       }
     >
-    +subsection { 行幅 } <
-      +p {
+    +subsection{ 行幅 }<
+      +p{
         リストやレコード、関数の引数などは、 `line_width` に収まれば 1 行に、収まらなければ縦に展開されます。
         行幅は目安なので、長い識別子や文字列などは超えることがあります。
         テキスト（ `+p` の中の文章）は、行幅に合わせて折り返しません。
       }
     >
   >
-  +section { 整形を無効にする } <
-    +p {
+  +section{ 整形を無効にする }<
+    +p{
       手で揃えた表など、整形してほしくない部分は、コメントで整形を止められます。
       `% satysfi-fmt off` から `% satysfi-fmt on` までの間は、空白や改行も含めて、書いたとおりに出力されます。
       `on` を書かなければ、ファイルの最後まで整形されません。
-    }
-    +cmd-saty
-      (`let x = [1;   2]
+      \cmd-saty(`let x = [1;   2]
 % satysfi-fmt off
 let table = [
   [1;   0;   0];
@@ -157,13 +150,12 @@ let table = [
 % satysfi-fmt on
 let y = [1;   2]
 `);
-    +p {
       上のコードは、 `x` と `y` だけが整形され、 `table` は元のままになります。
       `off` / `on` のコメント自体は、通常どおり字下げが整えられます。
     }
   >
-  +section { 開発者の方 } <
-    +p {
+  +section{ 開発者の方 }<
+    +p{
       `lib.rs` の
       `format`
       を開始地点とし、コードを
@@ -175,21 +167,20 @@ let y = [1;   2]
       仕様は `docs/spec.md` にまとめています。
       期待するフォーマットが得られないなど、修正等があれば、 Pull Request や Issue にお願いいたします。
     }
-    +p { Issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。 その際、実際にそれがコンパイル可能である必要はありません。 }
-    +subsection { Pull Request } <
-      +p {
+    +p{ Issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。 その際、実際にそれがコンパイル可能である必要はありません。 }
+    +subsection{ Pull Request }<
+      +p{
         実装した部分のテストケースを書いていただいてから、プルリクエストをいただけると幸いです。
         その際、
         `src/tests`以下でしたら何処に書いていただいても構いません。
       }
     >
-    +subsection { issue } <
-      +p {
+    +subsection{ issue }<
+      +p{
         以下にサンプルを載せておきます。
         `r#""`の内部に書かれたテキストはスペースや改行を含め全てそのまま出力されるため、
         スペース数改行数等の違いにより、テストが容易に落ちます。
-        \cmd-rust
-          (`#[test]
+        \cmd-rust(`#[test]
 fn test1() {
     // format 前のテキスト
     let text = r#"@import: hello
@@ -211,11 +202,11 @@ document (|title = { hello }|) '<
       }
     >
   >
-  +section { \SATySFi;-formatter の実装 } <
-    +subsection { 構成 } <
-      +p {
+  +section{ \SATySFi;-formatter の実装 }<
+    +subsection{ 構成 }<
+      +p{
         `src/printer` 以下に、 rule の種類ごとにモジュールを分けています。
-        \listing {
+        \listing{
           * expr: 式、リスト、レコード、関数適用、制御構文
           * stmt: `let` や `type`、 `module` などの文
           * types: 型
@@ -225,8 +216,8 @@ document (|title = { hello }|) '<
         }
       }
     >
-    +subsection { 行幅に応じた整形 } <
-      +p {
+    +subsection{ 行幅に応じた整形 }<
+      +p{
         リストやレコードは、収まれば 1 行、収まらなければ 1 要素ずつ改行します。
         このとき、縦に展開した場合だけ、最後の要素にも `;` を付けます。
         演算子の連鎖は、収まらなければ演算子を行頭に置いて並べます。
@@ -234,22 +225,24 @@ document (|title = { hello }|) '<
         ただし、最後の引数がリストやレコードなどのときは、括弧を直前の行に置いたまま中身だけを展開します。
       }
     >
-    +subsection { コメント } <
-      +p {
+    +subsection{ コメント }<
+      +p{
         コメントは消さずに、元の位置に近い場所に出力します。
         行末のコメントは行末に残し、単独行のコメントは直後の要素の前に置きます。
         行コメントは行末まで続くので、後ろに続く記号を飲み込まないように、必要なときは次の要素の前の行に移します。
       }
     >
   >
-  +section { document の更新 } <
-    +p {
+  +section{ document の更新 }<
+    +p{
       `draft.saty`を更新して、以下のコマンドを叩くと
-      `doc.pdf`を更新します。 \cmd (`cargo make build-doc`);
+      `doc.pdf`を更新します。 \cmd(`cargo make build-doc`);
       その際、
       `cargo-make`というパッケージが必要なので、インストールしていない方は以下のコマンドでインストールしてください。
-      \cmd (`cargo install --force cargo-make`);
+      \cmd(`cargo install --force cargo-make`);
     }
-    +p { `doc` ディレクトリの `.satysfi-fmt.toml` で、インデント幅を 2 にして整形しています。 }
+    +p{
+      `doc` ディレクトリの `.satysfi-fmt.toml` で、インデント幅を 2 にして整形しています。
+    }
   >
 >
