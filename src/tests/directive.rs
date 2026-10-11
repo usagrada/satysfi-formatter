@@ -379,3 +379,83 @@ fn off_and_on_never_move_relative_to_the_code() {
         assert_eq!(format(&output, &FormatConfig::default()).unwrap(), output);
     }
 }
+
+// ---- off / on として扱うコメントは `% satysfi-fmt: off` / `on` だけ ----
+
+fn format_default(text: &str) -> String {
+    crate::format(text, &crate::FormatConfig::default()).unwrap()
+}
+
+#[test]
+fn ordinary_comments_do_not_stop_formatting() {
+    for comment in [
+        "% off",
+        "% on",
+        "% format: off",
+        "% satysfi-fmt-off",
+        "% satysfi-fmt off",
+        "% satysfi-fmt:",
+        "% SATYSFI-FMT: OFF",
+        "% satysfi-fmt: offset",
+        "% satysfi-fmt: off the table",
+        "% turn satysfi-fmt: off here",
+        "%% satysfi-fmt: off",
+        "% satysfi-fmt: skip",
+        "% satysfi-fmt: unknown",
+    ] {
+        let text = format!("let   a   =   [1;2]\n{comment}\nlet   b   =   [1;2]\n");
+        let output = format_default(&text);
+        // どちらの文も整形され、コメントは残る
+        assert!(output.contains("let a = [1; 2]"), "{comment}\n{output}");
+        assert!(output.contains("let b = [1; 2]"), "{comment}\n{output}");
+        assert!(
+            output.contains(comment.trim_end()) || output.contains(&comment.replacen('%', "% ", 1)),
+            "{comment}\n{output}"
+        );
+    }
+}
+
+#[test]
+fn only_the_directive_comments_stop_formatting() {
+    for comment in [
+        "% satysfi-fmt: off",
+        "%satysfi-fmt:off",
+        "%    satysfi-fmt:    off   ",
+        "% satysfi-fmt: off: aligned table",
+    ] {
+        let text = format!("let   a   =   [1;2]\n{comment}\nlet   b   =   [1;2]\n");
+        let output = format_default(&text);
+        assert!(output.contains("let a = [1; 2]"), "{comment}\n{output}");
+        assert!(
+            output.contains("let   b   =   [1;2]"),
+            "{comment}\n{output}"
+        );
+    }
+}
+
+#[test]
+fn on_without_off_does_nothing() {
+    let text = "let   a   =   [1;2]\n% satysfi-fmt: on\nlet   b   =   [1;2]\n";
+    assert_eq!(
+        format_default(text),
+        "let a = [1; 2]\n% satysfi-fmt: on\nlet b = [1; 2]\n"
+    );
+}
+
+#[test]
+fn directive_text_that_is_not_a_comment_is_ignored() {
+    // 文字列、ヘッダ行、エスケープした `\%` の中は、コメントではない
+    let text = "@require: a % satysfi-fmt: off\nlet   s   =   `% satysfi-fmt: off`\nlet   t   =   [1;2]\nin\ndocument(||)'<+p{a \\% satysfi-fmt: off\n}+p{  b  }>\n";
+    let output = format_default(text);
+    assert!(output.contains("let t = [1; 2]"), "{output}");
+    assert!(output.contains("+p { b }"), "{output}");
+}
+
+#[test]
+fn a_directive_in_a_comment_after_code_on_the_same_line_is_a_directive() {
+    // 行末に書いたコメントも、`% satysfi-fmt: off` の形なら有効
+    let text = "let   a   =   1 % satysfi-fmt: off\nlet   b   =   [1;2]\n% satysfi-fmt: on\nlet   c   =   [1;2]\n";
+    let output = format_default(text);
+    assert!(output.contains("let   b   =   [1;2]"), "{output}");
+    assert!(output.contains("let c = [1; 2]"), "{output}");
+}

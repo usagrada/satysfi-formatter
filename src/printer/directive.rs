@@ -24,9 +24,16 @@ pub enum Directive {
 }
 
 /// コメント文字列 (`%` を含む) から directive を取り出す。
+///
+/// `% satysfi-fmt: off` / `% satysfi-fmt: on` の形のコメントだけが対象で、
+/// `%` は 1 つだけ。コメントの途中に書いたものや、他の文章が続くものは普通のコメントとして扱う。
 pub fn parse(comment: &str) -> Option<Directive> {
-    let body = comment.trim_start_matches('%').trim();
-    let rest = body.strip_prefix("satysfi-fmt:")?;
+    let body = comment.strip_prefix('%')?;
+    // `%% satysfi-fmt: off` のように `%` を重ねたものは対象外
+    if body.starts_with('%') {
+        return None;
+    }
+    let rest = body.trim().strip_prefix("satysfi-fmt:")?;
     // `off: 理由` のような説明は読み飛ばす
     match rest.split(':').next()?.trim() {
         "off" => Some(Directive::Off),
@@ -540,15 +547,61 @@ mod tests {
         // skip は対応していない (普通のコメント)
         assert_eq!(parse("% satysfi-fmt: skip"), None);
         assert_eq!(parse("%satysfi-fmt:off"), Some(Directive::Off));
-        assert_eq!(parse("%%  satysfi-fmt:  on  "), Some(Directive::On));
-        assert_eq!(parse("% satysfi-fmt: unknown"), None);
+        assert_eq!(parse("%   satysfi-fmt:  on  "), Some(Directive::On));
+        assert_eq!(parse("% satysfi-fmt: off"), Some(Directive::Off));
+        assert_eq!(parse("% satysfi-fmt: on"), Some(Directive::On));
         // `:` の後ろの説明は読み飛ばす
         assert_eq!(
             parse("% satysfi-fmt: off: aligned table"),
             Some(Directive::Off)
         );
-        assert_eq!(parse("% satysfi-fmt: offset"), None);
-        assert_eq!(parse("% other: skip"), None);
+        assert_eq!(
+            parse("% satysfi-fmt: on: end of the table"),
+            Some(Directive::On)
+        );
+    }
+
+    #[test]
+    fn other_comments_are_not_directives() {
+        for comment in [
+            // off / on だけ
+            "% off",
+            "% on",
+            "% format: off",
+            "% fmt: off",
+            "% clang-format off",
+            // 名前や区切りが違う
+            "% satysfi-fmt-off",
+            "% satysfi-fmt off",
+            "% satysfi-fmt",
+            "% satysfi-fmt:",
+            "% satysfi-fmt: ",
+            "% satysfi_fmt: off",
+            "% SATYSFI-FMT: OFF",
+            "% Satysfi-fmt: off",
+            // 続きがある
+            "% satysfi-fmt: offset",
+            "% satysfi-fmt: off the table",
+            "% satysfi-fmt: online",
+            "% satysfi-fmt: on and off",
+            "% satysfi-fmt: onto",
+            // コメントの途中に書いてある
+            "% turn satysfi-fmt: off here",
+            "% see `% satysfi-fmt: off`",
+            "% TODO satysfi-fmt: on",
+            // % を重ねたもの
+            "%% satysfi-fmt: off",
+            "%%% satysfi-fmt: on",
+            // 空
+            "%",
+            "% ",
+            // 未対応の指示
+            "% satysfi-fmt: skip",
+            "% satysfi-fmt: ignore",
+            "% satysfi-fmt: unknown",
+        ] {
+            assert_eq!(parse(comment), None, "{comment:?}");
+        }
     }
 
     #[test]
