@@ -452,7 +452,7 @@ document(||)'<>
 in % after in
 
 % own line after in
-document (||) '<>
+document(||)'<>
 "#;
     test_tmpl(text, expect);
 }
@@ -508,7 +508,7 @@ document(||)'<>
     ]>
 in
 
-document (||) '<>
+document(||)'<>
 "#;
     test_tmpl(text, expect);
 }
@@ -529,7 +529,7 @@ document(||)'<>
 @import: b
 
 % before document
-document (||) '<>
+document(||)'<>
 "#;
     test_tmpl(text, expect);
 }
@@ -539,7 +539,7 @@ fn comments_after_document() {
     let text = r#"document(||)'<>
 % after
 "#;
-    let expect = r#"document (||) '<>
+    let expect = r#"document(||)'<>
 
 % after
 "#;
@@ -556,11 +556,11 @@ fn comments_between_blocks() {
   % end
 >
 "#;
-    let expect = r#"document (||) '<
-    +p { a } % c1
+    let expect = r#"document(||)'<
+    +p{ a } % c1
 
     % c2
-    +p { b }
+    +p{ b }
     % end
 >
 "#;
@@ -572,8 +572,8 @@ fn comment_in_text_keeps_adjacency() {
     let text = r#"document(||)'<+p{a%c
 b}>
 "#;
-    let expect = r#"document (||) '<
-    +p {
+    let expect = r#"document(||)'<
+    +p{
         a% c
         b
     }
@@ -587,8 +587,8 @@ fn comment_after_text_gets_a_space() {
     let text = r#"document(||)'<+p{a%c
 }>
 "#;
-    let expect = r#"document (||) '<
-    +p {
+    let expect = r#"document(||)'<
+    +p{
         a % c
     }
 >
@@ -601,8 +601,8 @@ fn comment_before_text() {
     let text = r#"document(||)'<+p{% c0
 a}>
 "#;
-    let expect = r#"document (||) '<
-    +p {
+    let expect = r#"document(||)'<
+    +p{
         % c0
         a
     }
@@ -616,9 +616,9 @@ fn comment_in_nested_command() {
     let text = r#"document(||)'<+p{\emph{x % c
  y}}>
 "#;
-    let expect = r#"document (||) '<
-    +p {
-        \emph {
+    let expect = r#"document(||)'<
+    +p{
+        \emph{
             x % c
             y
         }
@@ -633,8 +633,8 @@ fn comment_in_math() {
     let text = r#"document(||)'<+p{${a % c
  b}}>
 "#;
-    let expect = r#"document (||) '<
-    +p {
+    let expect = r#"document(||)'<
+    +p{
         ${
             a % c
             b
@@ -650,8 +650,8 @@ fn comment_at_the_start_of_math_list() {
     let text = r#"document(||)'<+p{${|%cmt
  a | b + c |}}>
 "#;
-    let expect = r#"document (||) '<
-    +p {
+    let expect = r#"document(||)'<
+    +p{
         ${
             % cmt
             | a | b + c |
@@ -667,8 +667,8 @@ fn comment_before_math_in_braces() {
     let text = r#"document(||)'<+p{${%cmt
  a}}>
 "#;
-    let expect = r#"document (||) '<
-    +p {
+    let expect = r#"document(||)'<
+    +p{
         ${
             % cmt
             a
@@ -684,8 +684,8 @@ fn comment_in_horizontal_list_cell_breaks_the_line() {
     let text = r#"document(||)'<+tab{| a%cmt
  | b |}>
 "#;
-    let expect = r#"document (||) '<
-    +tab {
+    let expect = r#"document(||)'<
+    +tab{
         | a % cmt
         | b
         |
@@ -700,8 +700,8 @@ fn comment_between_horizontal_list_cells() {
     let text = r#"document(||)'<+tab{| a |%cmt
  b |}>
 "#;
-    let expect = r#"document (||) '<
-    +tab {
+    let expect = r#"document(||)'<
+    +tab{
         | a
         | % cmt
         b
@@ -720,8 +720,8 @@ fn comment_between_bullets() {
  * b
 }>
 "#;
-    let expect = r#"document (||) '<
-    +listing {
+    let expect = r#"document(||)'<
+    +listing{
         * a
         % cmt
         * b
@@ -738,8 +738,8 @@ fn comment_between_star_and_text() {
  a
 }>
 "#;
-    let expect = r#"document (||) '<
-    +listing {
+    let expect = r#"document(||)'<
+    +listing{
         % cmt
         * a
     }
@@ -783,11 +783,11 @@ let y = 2
 
 #[test]
 fn blank_line_between_comment_and_block_is_kept_in_place() {
-    let text = r#"document (||) '<
-    +p { a }
+    let text = r#"document(||)'<
+    +p{ a }
     % about p
 
-    +p { b }
+    +p{ b }
 >
 "#;
     test_tmpl(text, text);
@@ -812,12 +812,12 @@ let y = 2
 
 #[test]
 fn blank_lines_between_comments_in_a_vertical_area_are_kept_in_place() {
-    let text = r#"document (||) '<
-    +p { a }
+    let text = r#"document(||)'<
+    +p{ a }
     % section header
 
     % note about b
-    +p { b }
+    +p{ b }
 >
 "#;
     test_tmpl(text, text);

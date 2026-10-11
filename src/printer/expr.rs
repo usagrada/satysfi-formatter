@@ -2,7 +2,7 @@
 //!
 //! 幅に収まれば 1 行、収まらなければ縦に展開する。
 
-use super::{join, s, with_leading, Doc, Kid, Kids, Printer};
+use super::{Doc, Kid, Kids, Printer, join, s, with_leading};
 use satysfi_parser::{Cst, Rule};
 
 /// `a |> b |> c` の 1 項
@@ -184,7 +184,7 @@ impl<'a> Printer<'a> {
                 .inner
                 .last()
                 .and_then(|arg| arg.inner.first())
-                .map_or(false, |inner| self.is_hugging(inner)),
+                .is_some_and(|inner| self.is_hugging(inner)),
             _ => false,
         }
     }
@@ -289,7 +289,7 @@ impl<'a> Printer<'a> {
             .cst
             .inner
             .first()
-            .map_or(false, |e| self.core(e).rule == Rule::ctrl_if);
+            .is_some_and(|e| self.core(e).rule == Rule::ctrl_if);
         let else_part = if else_is_if {
             s(" ").append(els.doc.clone())
         } else {
@@ -414,6 +414,9 @@ impl<'a> Printer<'a> {
             return self.raw(cst);
         }
         let func = kids.items[0].doc.clone();
+        // 本体の `document(||)'<...>` は、引数の間に空白を入れない。
+        let is_document = self.text_of(kids.items[0].cst).trim() == "document";
+        let gap = || if is_document { Doc::nil() } else { s(" ") };
         // 末尾に連続する、括弧で包まれた引数 (リスト・レコード・ブロックなど) は
         // 直前の引数と同じ行に置き、中身を自分で折り返す。
         // それ以外の引数は、収まらなければ 1 引数ずつ改行する。
@@ -426,16 +429,21 @@ impl<'a> Printer<'a> {
                         .cst
                         .inner
                         .first()
-                        .map_or(false, |inner| self.is_hugging(inner))
+                        .is_some_and(|inner| self.is_hugging(inner))
             })
             .map_or(0, |i| i + 1);
         let mut broken = Doc::nil();
         let mut hugged = Doc::nil();
         for (i, arg) in args.iter().enumerate() {
             if i >= hugged_from {
-                hugged = hugged.append(s(" ")).append(arg.doc.clone());
+                hugged = hugged.append(gap()).append(arg.doc.clone());
             } else {
-                broken = broken.append(Doc::line()).append(arg.doc.clone());
+                let sep = if is_document {
+                    Doc::line_()
+                } else {
+                    Doc::line()
+                };
+                broken = broken.append(sep).append(arg.doc.clone());
             }
         }
         let doc = func.append(broken.nest(self.indent)).group().append(hugged);

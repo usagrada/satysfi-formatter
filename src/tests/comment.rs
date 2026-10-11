@@ -13,8 +13,8 @@ document(|title = {hello}|)'<+p{% comment
 @require: local
 
 % comment
-document (|title = { hello }|) '<
-    +p {
+document(|title = { hello }|)'<
+    +p{
         % comment
     }
 >
@@ -35,8 +35,8 @@ document(|title = {hello}|)'<+p{hello% comment
 @require: local
 
 % comment
-document (|title = { hello }|) '<
-    +p {
+document(|title = { hello }|)'<
+    +p{
         hello % comment
     }
 >
@@ -51,7 +51,7 @@ fn test_comment3() {
   %comment
   
 document(|title = {hello}|)'<+p{hello% comment
-    \listing {
+    \listing{
         * item1
         * item2
         * item3
@@ -62,10 +62,10 @@ document(|title = {hello}|)'<+p{hello% comment
 @require: local
 
 % comment
-document (|title = { hello }|) '<
-    +p {
+document(|title = { hello }|)'<
+    +p{
         hello% comment
-        \listing {
+        \listing{
             * item1
             * item2
             * item3
@@ -83,7 +83,7 @@ fn test_comment4() {
   %comment
   
 document(|title = { hello }|)'<+p{% comment
-    \listing {
+    \listing{
         * item1
         * item2
         * item3
@@ -93,10 +93,10 @@ document(|title = { hello }|)'<+p{% comment
 @require: local
 
 % comment
-document (|title = { hello }|) '<
-    +p {
+document(|title = { hello }|)'<
+    +p{
         % comment
-        \listing {
+        \listing{
             * item1
             * item2
             * item3
@@ -120,7 +120,7 @@ document(|title = {hello}|)'<+p% comment
     let expect = r#"@import: hello
 @require: local %comment
 
-document (|title = { hello }|) '<
+document(|title = { hello }|)'<
     +p % comment
     { hello }
 >
@@ -142,7 +142,7 @@ document(|title = {hello}|)'<+p% comment
     let expect = r#"@import: hello
 @require: local %comment
 
-document (|title = { hello }|) '<
+document(|title = { hello }|)'<
     +p % comment
     {
         hello
@@ -167,9 +167,9 @@ document(|title = {hello}|)'<
     let expect = r#"@import: hello
 @require: local %comment
 
-document (|title = { hello }|) '<
+document(|title = { hello }|)'<
     % comment
-    +p { hello }
+    +p{ hello }
     % comment
 >
 "#;
@@ -192,10 +192,10 @@ document(|title = {hello}|)'<
     let expect = r#"@import: hello
 @require: local %comment
 
-document (|title = { hello }|) '<
-    +section { hello } <
+document(|title = { hello }|)'<
+    +section{ hello }<
         %
-        +p { hello }
+        +p{ hello }
     > %
 >
 "#;

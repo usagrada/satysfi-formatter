@@ -125,7 +125,7 @@ pub(crate) fn check_invariants(name: &str, input: &str) {
 /// コメントが失われず、整形結果が冪等で、トークン列が変わらないことを確認する。
 /// 挿入によってパースできなくなる位置は飛ばす。確認した位置の数を返す。
 pub(crate) fn check_comment_insertion(name: &str, src: &str) -> usize {
-    use satysfi_parser::{grammar, CstText};
+    use satysfi_parser::{CstText, grammar};
     let config = FormatConfig::default();
     let mut checked = 0;
     let mut failures = vec![];
@@ -267,7 +267,7 @@ pub(crate) fn directives_keep_their_position(input: &str, output: &str) -> bool 
 ///
 /// 挿入によってパースできなくなる組は飛ばす。確認した組の数を返す。
 pub(crate) fn check_off_on_insertion(name: &str, src: &str, placement: Placement) -> usize {
-    use satysfi_parser::{grammar, CstText};
+    use satysfi_parser::{CstText, grammar};
     let config = FormatConfig::default();
     let (points, off_text, on_text) = match placement {
         Placement::OwnLine => (line_starts(src), "% satysfi-fmt off", "% satysfi-fmt on"),
@@ -325,7 +325,7 @@ pub(crate) fn check_off_on_insertion(name: &str, src: &str, placement: Placement
             let indent = |text: &str| text.len() - text.trim_start().len();
             let off_start = i + indent(off_text);
             let on_start = on.map(|j| j + off_text.len() + 1 + indent(on_text));
-            if !starts.contains(&off_start) || on_start.map_or(false, |k| !starts.contains(&k)) {
+            if !starts.contains(&off_start) || on_start.is_some_and(|k| !starts.contains(&k)) {
                 continue;
             }
             checked += 1;
@@ -403,12 +403,12 @@ fn test_unicode() {
 
 document(||)'<
 +section{ section }<
-+p {日本語}
++p{日本語}
 >>"#;
 
-    let expect = r#"document (||) '<
-    +section { section } <
-        +p { 日本語 }
+    let expect = r#"document(||)'<
+    +section{ section }<
+        +p{ 日本語 }
     >
 >
 "#;

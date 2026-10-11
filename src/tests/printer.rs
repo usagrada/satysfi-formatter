@@ -4,7 +4,7 @@ fn fmt(input: &str, width: usize) -> String {
     format(input, &config_with_width(width))
 }
 
-use super::{check_comment_insertion, check_invariants, check_off_on_insertion, Placement};
+use super::{Placement, check_comment_insertion, check_invariants, check_off_on_insertion};
 
 // 構文を一通り含む入力
 const REC: &str = r#"@require: stdjareport
@@ -24,7 +24,7 @@ end
 in
 let-rec h x = 1 | y = 2 in
 let a = fun x -> Some x in
-document (| title = {a} |) '<>
+document(| title = {a} |)'<>
 "#;
 
 const COMMENTS: &str = r#"% license header
@@ -56,12 +56,12 @@ let t = (1, % first
 in
 
 % before document
-document (| title = {a}; % title
-  author = {b} |) '<
+document(| title = {a}; % title
+  author = {b} |)'<
   % in vertical
-  +p { hello % comment in text
+  +p{ hello % comment in text
     world }
-  +p { a } % trailing block
+  +p{ a } % trailing block
   % end of vertical
 > % after document
 "#;
@@ -99,8 +99,8 @@ let p = not true
 let neg = -1
 in
 
-document (| title = {a} |) '<
-  +p {
+document(| title = {a} |)'<
+  +p{
     hello\bold{world}text \emph{ x } and \br; and ${a^2 + b_{i j} = \frac{1}{2}}.
     #embed;
   }
@@ -338,7 +338,7 @@ document(||)'<>"#;
 @require: b % c2
 
 % c3
-document (||) '<>
+document(||)'<>
 "#;
     assert_eq!(fmt(input, 80), expect);
 }
@@ -394,8 +394,8 @@ let t = [`x
 #[test]
 fn horizontal_text_keeps_adjacency() {
     let input = "document(||)'<+p{a\\emph{b}c \\emph{d} e}>";
-    let expect = r#"document (||) '<
-    +p { a\emph { b }c \emph { d } e }
+    let expect = r#"document(||)'<
+    +p{ a\emph{ b }c \emph{ d } e }
 >
 "#;
     assert_eq!(fmt(input, 80), expect);
@@ -444,14 +444,14 @@ in
 let a = 1 in
 let-mutable b <- 2 in
 let-rec c d = d in
-document (| title = {a}; author = {b} |) '<>
+document(| title = {a}; author = {b} |)'<>
 "#;
 
 // 水平・垂直・数式モードとコマンドを含む入力
 const TEXTS: &str = r#"@require: stdjareport
 
-document (| title = {a} |) '<
-  +p {
+document(| title = {a} |)'<
+  +p{
     hello \emph{world}text ${x^2 + y_i} #embed; `code` \%
     \f?:(1) ?* (2){x}{y}
   }

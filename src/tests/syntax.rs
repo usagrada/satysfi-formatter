@@ -8,7 +8,7 @@ document(||)'<>"#;
     let expect = r#"let f () = a <- 1 before b <- 2 before c
 in
 
-document (||) '<>
+document(||)'<>
 "#;
     test_tmpl(text, expect);
 }
@@ -21,7 +21,7 @@ document(||)'<>"#;
     let expect = r#"let p = <[ (0pt, 0pt) -- (1pt, 1pt) -- cycle ]>
 in
 
-document (||) '<>
+document(||)'<>
 "#;
     test_tmpl(text, expect);
 }

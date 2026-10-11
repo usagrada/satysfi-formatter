@@ -250,22 +250,22 @@ let y = [
 #[test]
 fn off_and_on_in_horizontal_mode() {
     let text = r#"document(||)'<
-  +p {
+  +p{
     x   y
     % satysfi-fmt off
-    \emph  {  y  }   z
+    \emph{  y  }   z
     % satysfi-fmt on
-    \emph  {  z  }
+    \emph{  z  }
   }
 >
 "#;
-    let expect = r#"document (||) '<
-    +p {
+    let expect = r#"document(||)'<
+    +p{
         x y
         % satysfi-fmt off
-    \emph  {  y  }   z
+    \emph{  y  }   z
         % satysfi-fmt on
-        \emph { z }
+        \emph{ z }
     }
 >
 "#;
@@ -277,19 +277,19 @@ fn off_and_on_in_a_vertical_area() {
     let text = r#"document(||)'<
   +p{ a }
   % satysfi-fmt off
-  +p   {  b  }
-  +p   {  c  }
+  +p{  b  }
+  +p{  c  }
   % satysfi-fmt on
-  +p   {  d  }
+  +p{  d  }
 >
 "#;
-    let expect = r#"document (||) '<
-    +p { a }
+    let expect = r#"document(||)'<
+    +p{ a }
     % satysfi-fmt off
-  +p   {  b  }
-  +p   {  c  }
+  +p{  b  }
+  +p{  c  }
     % satysfi-fmt on
-    +p { d }
+    +p{ d }
 >
 "#;
     test_tmpl(text, expect);
@@ -310,7 +310,7 @@ document(||)'<>
 % satysfi-fmt on
 @import: b
 
-document (||) '<>
+document(||)'<>
 "#;
     test_tmpl(text, expect);
 }
@@ -322,7 +322,7 @@ fn off_in_the_preamble_reaches_the_document_body() {
 % satysfi-fmt off
 let y = [1;   2]
 in
-document (||) '<
+document(||)'<
   +p{   abc }
 >
 "#;
@@ -330,7 +330,7 @@ document (||) '<
 % satysfi-fmt off
 let y = [1;   2]
 in
-document (||) '<
+document(||)'<
   +p{   abc }
 >
 "#;
@@ -456,7 +456,7 @@ let z = [1; 2]
 
 #[test]
 fn format_never_returns_an_error_for_off_and_on() {
-    use crate::{format, FormatConfig};
+    use crate::{FormatConfig, format};
     // 構文エラー以外ではエラーにならない
     for text in [
         r#"let-rec % satysfi-fmt off
@@ -518,7 +518,7 @@ let z = [1; 2]
 #[test]
 fn off_and_on_never_move_relative_to_the_code() {
     use super::directives_keep_their_position;
-    use crate::{format, FormatConfig};
+    use crate::{FormatConfig, format};
     for text in [
         r#"let-rec f x % satysfi-fmt off
  = 1
@@ -661,7 +661,7 @@ document(||)'<+p{a \% satysfi-fmt off
 "#;
     let output = format_default(text);
     assert!(output.contains("let t = [1; 2]"), "{output}");
-    assert!(output.contains("+p { b }"), "{output}");
+    assert!(output.contains("+p{ b }"), "{output}");
 }
 
 #[test]

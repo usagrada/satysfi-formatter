@@ -120,7 +120,7 @@ cargo install --path .
 indent_width = 2      # インデント幅 (既定 4)
 use_tabs = false      # インデントにタブを使うか (既定 false)
 final_newline = true  # 末尾に改行を入れるか (既定 true)
-command_space = true  # コマンドとテキスト引数の間に空白を入れるか (既定 true)
+block_command_space = false  # ブロックコマンドのテキスト引数の前に空白を入れるか (既定 false)
 `);
     +p {
       すべて省略でき、省略した項目は既定値になります。

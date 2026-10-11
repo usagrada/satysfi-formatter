@@ -4,7 +4,7 @@
 //! 空白の連続は「空白 1 つ」または「改行 1 つ」に正規化する (改行があれば改行を残す)。
 //! `{` の直後と `}` の直前の空白は無視される。コメントはその後ろの空白も読み飛ばす。
 
-use super::{leading_lines, s, with_leading, Doc, Printer};
+use super::{Doc, Printer, leading_lines, s, with_leading};
 use satysfi_parser::{Cst, Rule};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -35,7 +35,10 @@ impl<'a> Printer<'a> {
             Rule::vertical => self.vertical(cst),
             Rule::horizontal_single => {
                 let (body, multiline) = self.horizontal_body(cst);
-                self.braces(body, multiline)
+                // 文章以外 (インラインコマンドなど) を含むときは、
+                // 1 行に収まらなければ `{` の後と `}` の前で改行する。
+                let has_non_text = cst.inner.iter().any(|c| c.rule != Rule::regular_text);
+                self.braces(body, multiline, has_non_text)
             }
             Rule::horizontal_list => self.horizontal_list(cst),
             Rule::horizontal_bullet_list => self.horizontal_bullet_list(cst),
@@ -121,14 +124,20 @@ impl<'a> Printer<'a> {
     }
 
     /// `{ body }`。中身が複数行なら、`{` と `}` を単独行に置いて縦に展開する。
-    /// 1 行の文章は、行幅を超えても `{` と `}` を割らない。
-    fn braces(&self, body: Option<Doc>, multiline: bool) -> Doc {
+    /// 1 行の文章は、行幅を超えても `{` と `}` を割らない。ただし `breakable` (文章以外を含む)
+    /// のときは、1 行に収まらなければ割る。
+    fn braces(&self, body: Option<Doc>, multiline: bool, breakable: bool) -> Doc {
         match body {
             None => s("{}"),
             Some(body) if multiline => s("{")
                 .append(Doc::hardline().append(body).nest(self.indent))
                 .append(Doc::hardline())
                 .append(s("}")),
+            Some(body) if breakable => s("{")
+                .append(Doc::line().append(body).nest(self.indent))
+                .append(Doc::line())
+                .append(s("}"))
+                .group(),
             Some(body) => s("{ ").append(body).append(s(" }")),
         }
     }
@@ -211,10 +220,10 @@ impl<'a> Printer<'a> {
                     if !child.leading.is_empty() || child.trailing.is_some() {
                         return true;
                     }
-                    if let Some(end) = prev_end {
-                        if self.csttext.text[end..child.cst.span.start].contains('\n') {
-                            return true;
-                        }
+                    if let Some(end) = prev_end
+                        && self.csttext.text[end..child.cst.span.start].contains('\n')
+                    {
+                        return true;
                     }
                     if self.math_multiline(child.cst) {
                         return true;
@@ -464,43 +473,59 @@ impl<'a> Printer<'a> {
             .append(s(">"))
     }
 
-    /// `\name(arg){ text }` / `+name(arg){ text }`。テキスト引数がなければ `;` で終える。
+    /// `\name(arg){ text }` / `+name (arg) { text }`。テキスト引数がなければ `;` で終える。
     /// 式の引数は、収まらなければ 1 引数ずつ改行する。ただし括弧で包まれた引数
     /// (リストなど) は直前と同じ行に置き、中身を自分で折り返す。テキスト引数は最後の行に続ける。
+    /// 行幅で描画したときに複数行になるか。
+    fn is_multiline_doc(&self, doc: &Doc) -> bool {
+        doc.pretty(self.width).to_string().contains('\n')
+    }
+
     fn command(&self, cst: &Cst) -> Doc {
         let kids = self.kids(cst);
+        // コマンド名と引数、引数同士の間には空白を入れない。
+        // ただし `block_command_space` が真なら、ブロックコマンドのテキスト引数の前に `+p { a }` と空白を置く。
+        let inline = cst.rule == Rule::inline_cmd;
         let mut broken = Doc::nil();
+        let mut broken_any = false;
+        let mut first = Doc::nil();
+        let mut prev_multiline = false;
         let mut tail = Doc::nil();
         let mut seen_tail = false;
         let mut has_text = false;
         for kid in &kids.items[1..] {
             let is_text = kid.cst.rule == Rule::cmd_text_arg;
             has_text |= is_text;
-            let hugging = kid
-                .cst
-                .inner
-                .first()
-                .map_or(false, |inner| match inner.rule {
-                    Rule::list | Rule::record => true,
-                    Rule::expr => self.is_hugging(inner),
-                    _ => false,
-                });
+            let hugging = kid.cst.inner.first().is_some_and(|inner| match inner.rule {
+                Rule::list | Rule::record => true,
+                Rule::expr => self.is_hugging(inner),
+                _ => false,
+            });
             if is_text || hugging || seen_tail {
                 seen_tail = true;
-                // `command_space` が偽なら、テキスト引数の前の空白を省く。
-                // 間にコメントがあるときは省かない。
-                let space = !is_text || self.command_space || kid.commented;
-                if space {
+                // 間にコメントがあるときは、元の改行を保つため空白を残す。
+                if (is_text && !inline && self.block_command_space) || kid.commented {
                     tail = tail.append(s(" "));
                 }
                 tail = tail.append(kid.doc.clone());
             } else {
-                broken = broken.append(Doc::line()).append(kid.doc.clone());
+                // 1 つ目の引数はコマンド名と同じ行に置く。字下げは外側に揃え、2 つ目以降を改行する。
+                if !broken_any {
+                    first = kid.doc.clone();
+                    broken_any = true;
+                } else if prev_multiline {
+                    // 前の引数が複数行なら、収まる限りその最後の行に続ける。
+                    broken = broken.append(Doc::line_().append(kid.doc.clone()).group());
+                } else {
+                    broken = broken.append(Doc::line_()).append(kid.doc.clone());
+                }
+                prev_multiline = self.is_multiline_doc(&kid.doc);
             }
         }
         let mut doc = kids.items[0]
             .doc
             .clone()
+            .append(first)
             .append(broken.nest(self.indent))
             .group()
             .append(tail);

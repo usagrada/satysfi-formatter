@@ -8,8 +8,8 @@ fn test_const_string_sequently1() {
 >
 "#;
 
-    let expect = r#"document (||) '<
-    +p { `ok` `no` }
+    let expect = r#"document(||)'<
+    +p{ `ok` `no` }
 >
 "#;
     test_tmpl(text, expect)
@@ -24,8 +24,8 @@ fn test_const_string_sequently2() {
 >
 "#;
 
-    let expect = r#"document (||) '<
-    +p {
+    let expect = r#"document(||)'<
+    +p{
         `ok`
         `no`
     }

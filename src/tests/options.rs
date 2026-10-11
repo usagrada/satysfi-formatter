@@ -24,8 +24,8 @@ document(||)'<+p{a}>
 ]
 in
 
-document (||) '<
-  +p { a }
+document(||)'<
+  +p{ a }
 >
 "#
     );
@@ -37,8 +37,8 @@ document (||) '<
 ]
 in
 
-document (||) '<
-        +p { a }
+document(||)'<
+        +p{ a }
 >
 "#
     );
@@ -57,7 +57,7 @@ document(||)'<+p{a+++b}+section{s}<+p{c}>>
     let output = format(input, &tabs);
     assert_eq!(
         output,
-        "let x = [\n\t[\n\t\taaaaaaaa;\n\t\tbbbbbbbb;\n\t];\n\t[c];\n]\nin\n\ndocument (||) '<\n\t+p { a+++b }\n\t+section { s } <\n\t\t+p { c }\n\t>\n>\n"
+        "let x = [\n\t[\n\t\taaaaaaaa;\n\t\tbbbbbbbb;\n\t];\n\t[c];\n]\nin\n\ndocument(||)'<\n\t+p{ a+++b }\n\t+section{ s }<\n\t\t+p{ c }\n\t>\n>\n"
     );
     assert_eq!(format(&output, &tabs), output, "not idempotent");
 }
@@ -80,47 +80,108 @@ fn tabs_keep_verbatim_lines() {
 "#;
     assert_eq!(
         format(input, &tabs),
-        "document (||) '<\n\t% satysfi-fmt off\n    +p{\n        a\n    }\n\t% satysfi-fmt on\n\t+p { b }\n>\n"
+        "document(||)'<\n\t% satysfi-fmt off\n    +p{\n        a\n    }\n\t% satysfi-fmt on\n\t+p{ b }\n>\n"
     );
 }
 
 #[test]
-fn command_space_can_be_disabled() {
-    let compact = FormatConfig {
-        command_space: false,
-        ..Default::default()
-    };
-    let input = r#"document(||)'<+section{a}<+p{\emph{b}\cmd(1)[2]{c}{d}}>>
+fn inline_command_arguments_are_not_separated_by_spaces() {
+    let config = FormatConfig::default();
+    let input = r#"document(||)'<+section{a} <+p{\emph{b} \cmd(1) [2] {c} {d}}>>
 "#;
-    let output = format(input, &compact);
+    let output = format(input, &config);
     assert_eq!(
         output,
-        r#"document (||) '<
+        r#"document(||)'<
     +section{ a }<
-        +p{ \emph{ b }\cmd (1) [2]{ c }{ d } }
+        +p{ \emph{ b } \cmd(1)[2]{ c }{ d } }
     >
 >
 "#
     );
-    assert_eq!(format(&output, &compact), output, "not idempotent");
-    // 既定では空白を入れる
+    assert_eq!(format(&output, &config), output, "not idempotent");
+}
+
+#[test]
+fn block_command_space_puts_a_space_before_text_arguments() {
+    let spaced = FormatConfig {
+        block_command_space: true,
+        ..Default::default()
+    };
+    let input = r#"document(||)'<+section{a}<+cmd(1)[2]{b}+p{\emph{c}}>>
+"#;
+    let output = format(input, &spaced);
     assert_eq!(
-        format(input, &FormatConfig::default()),
-        r#"document (||) '<
+        output,
+        r#"document(||)'<
     +section { a } <
-        +p { \emph { b }\cmd (1) [2] { c } { d } }
+        +cmd(1)[2] { b }
+        +p { \emph{ c } }
     >
 >
 "#
+    );
+    assert_eq!(format(&output, &spaced), output, "not idempotent");
+}
+
+#[test]
+fn long_inline_command_breaks_after_the_brace() {
+    let config = FormatConfig::default();
+    let input = r#"let-inline \cmd arg = { \code-printer ?:(make-config CodeSyntax.rust CodeTheme.basic-dark |> set-basic-font-size 9pt) (arg); }
+in
+document(||)'<>
+"#;
+    let output = format(input, &config);
+    assert_eq!(
+        output,
+        r#"let-inline \cmd arg = {
+    \code-printer?:(make-config CodeSyntax.rust CodeTheme.basic-dark
+        |> set-basic-font-size 9pt)
+        (arg);
+}
+in
+
+document(||)'<>
+"#
+    );
+    assert_eq!(format(&output, &config), output, "not idempotent");
+    // 1 行に収まるときはそのまま
+    assert_eq!(
+        format("document(||)'<+p{\\emph{a}}>", &config),
+        "document(||)'<\n    +p{ \\emph{ a } }\n>\n"
     );
 }
 
 #[test]
-fn command_space_is_kept_before_comment() {
-    let compact = FormatConfig {
-        command_space: false,
-        ..Default::default()
-    };
+fn argument_follows_a_multiline_argument() {
+    let config = FormatConfig::default();
+    let input = r#"let-inline \cmd arg = {
+\code-printer ?:(make-config CodeSyntax.rust CodeTheme.basic-dark
+  |> set-basic-font-size 9pt
+  |> set-number-fun CodeDesign.number-fun-null) (arg);
+}
+in
+document(||)'<>
+"#;
+    let output = format(input, &config);
+    assert_eq!(
+        output,
+        r#"let-inline \cmd arg = {
+    \code-printer?:(make-config CodeSyntax.rust CodeTheme.basic-dark
+        |> set-basic-font-size 9pt
+        |> set-number-fun CodeDesign.number-fun-null)(arg);
+}
+in
+
+document(||)'<>
+"#
+    );
+    assert_eq!(format(&output, &config), output, "not idempotent");
+}
+
+#[test]
+fn space_is_kept_before_comment() {
+    let compact = FormatConfig::default();
     let input = r#"document(||)'<+p % c
 {a}>
 "#;
@@ -168,11 +229,13 @@ fn default_line_width_is_80() {
 #[test]
 fn input_that_cannot_be_parsed_is_an_error() {
     let config = FormatConfig::default();
-    assert!(crate::format(
-        r#"let x = = 1
+    assert!(
+        crate::format(
+            r#"let x = = 1
 "#,
-        &config
-    )
-    .is_err());
+            &config
+        )
+        .is_err()
+    );
     assert!(crate::format("", &config).is_err());
 }

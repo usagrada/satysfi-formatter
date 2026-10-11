@@ -59,7 +59,7 @@ line_width = 100      # 行幅 (既定 80)
 indent_width = 2      # インデント幅 (既定 4)
 use_tabs = false      # インデントにタブを使うか (既定 false)
 final_newline = true  # 末尾に改行を入れるか (既定 true)
-command_space = true  # コマンドとテキスト引数の間に空白を入れるか (既定 true)
+block_command_space = false  # ブロックコマンドのテキスト引数の前に空白を入れるか (既定 false)
 ```
 
 * すべて省略でき、省略した項目は既定値になる。`line_width` と `indent_width` は 1 以上。
@@ -72,8 +72,8 @@ command_space = true  # コマンドとテキスト引数の間に空白を入�
 
 * `line_width`: 行幅。リストやレコードは、この幅に収まれば 1 行に、収まらなければ縦に展開される。
   目安なので、長い識別子や文字列などは超えることがある。全角文字は 2 桁として数える。
+* `block_command_space`: `true` なら `+p { ... }`、`false` なら `+p{ ... }`。
 * `use_tabs`: `true` のときも、タブ 1 つを `indent_width` 桁として行幅を数える。
-* `command_space`: `true` なら `+p { ... }`、`false` なら `+p{ ... }`。
 
 ## エディタから使う
 
@@ -178,7 +178,7 @@ let m = [
 縦モード・横モードの途中 (`+p { ... }` の並びや、テキストの中) にも書ける。
 
 ```satysfi
-document (||) '<
+document(||)'<
   +p { a }
   % satysfi-fmt off
   +p   {  b  }

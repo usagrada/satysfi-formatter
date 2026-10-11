@@ -1,6 +1,6 @@
 //! 設定の読み込みと優先順位
-use crate::config::{find_config_file, resolve_config, ConfigError, PartialConfig};
-use crate::{format, FormatConfig};
+use crate::config::{ConfigError, PartialConfig, find_config_file, resolve_config};
+use crate::{FormatConfig, format};
 use std::fs;
 use std::path::PathBuf;
 
@@ -22,7 +22,7 @@ fn default_config() {
             indent_width: 4,
             use_tabs: false,
             final_newline: true,
-            command_space: true,
+            block_command_space: false,
         }
     );
 }
@@ -84,7 +84,7 @@ fn upper_layer_takes_precedence() {
             indent_width: 2,
             use_tabs: true,
             final_newline: true,
-            command_space: true,
+            block_command_space: false,
         }
     );
 }
@@ -117,7 +117,7 @@ fn reads_all_keys_from_toml() {
 indent_width = 2
 use_tabs = true
 final_newline = false
-command_space = false
+block_command_space = true
 "#,
     )
     .unwrap();
@@ -128,7 +128,7 @@ command_space = false
             indent_width: 2,
             use_tabs: true,
             final_newline: false,
-            command_space: false,
+            block_command_space: true,
         }
     );
 }

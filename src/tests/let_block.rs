@@ -21,10 +21,10 @@ document(||)'<
 let-block ctx +newpage = clear-page
 in
 
-document (||) '<
+document(||)'<
     +newpage;
 
-    +p { hello }
+    +p{ hello }
 >
 "#;
     test_tmpl(text, expect)
@@ -51,14 +51,14 @@ document(||)'<
 
 let-block ctx +newpage = clear-page
 let-block ctx +newcmd arg = '<
-    +cmd { arg }
+    +cmd{ arg }
 >
 in
 
-document (||) '<
+document(||)'<
     +newpage;
 
-    +p { hello }
+    +p{ hello }
 >
 "#;
     test_tmpl(text, expect);
@@ -92,10 +92,10 @@ let a = '<
 >
 in
 
-document (||) '<
+document(||)'<
     +newpage;
 
-    +p { hello }
+    +p{ hello }
 >
 "#;
     test_tmpl(text, expect);
@@ -122,10 +122,10 @@ document(||)'<
 let a = Some x#a
 in
 
-document (||) '<
+document(||)'<
     +newpage;
 
-    +p { hello }
+    +p{ hello }
 >
 "#;
     test_tmpl(text, expect);

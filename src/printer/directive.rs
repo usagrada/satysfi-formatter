@@ -15,7 +15,7 @@
 //! それでも `off` / `on` が元の位置に残らなければ 1 つ上の階層へ広げ、
 //! 最後はファイル全体を元のまま返す。そのため整形がエラーになることはない。
 
-use satysfi_parser::{grammar, Cst, CstText, Item, Span};
+use satysfi_parser::{Cst, CstText, Item, Span, grammar};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Directive {
@@ -133,7 +133,7 @@ pub(crate) fn restore_precisely(input: &CstText, output: &str) -> Result<String,
             significant(&src[in_comments[i].start..in_comments[i].end])
                 == significant(&output[out_comments[i].start..out_comments[i].end])
         };
-        if !same_comment(off) || !on.map_or(true, same_comment) {
+        if !same_comment(off) || !on.is_none_or(same_comment) {
             return Err(line_of(off));
         }
         let in_start = in_comments[off].end;
@@ -410,7 +410,7 @@ fn restore_by_nodes(input: &CstText, output: &str) -> String {
         let parsed = CstText::parse(&result, grammar::program).ok();
         let result_comments = parsed.as_ref().map(comment_spans);
         // `off` / `on` のコメントが、元の位置 (前にあるコードが同じ位置) から動いていないこと
-        let stable = result_comments.as_ref().map_or(false, |spans| {
+        let stable = result_comments.as_ref().is_some_and(|spans| {
             spans.len() == comments.len()
                 && off_on.iter().all(|(off, on)| {
                     std::iter::once(*off)
@@ -795,7 +795,7 @@ let   b   =   2
 % satysfi-fmt off
 let b = 2
 in
-document (||) '<>
+document(||)'<>
 "#;
         assert_eq!(restore_by_nodes(&input, output), src);
     }

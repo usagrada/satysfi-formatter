@@ -77,7 +77,7 @@ fn let_block_with_context() {
     let text = r#"let-block ctx +bar x = '<+p{#x;}>
 "#;
     let expect = r#"let-block ctx +bar x = '<
-    +p { #x; }
+    +p{ #x; }
 >
 "#;
     test_tmpl(text, expect);
@@ -339,7 +339,7 @@ document(||)'<>
 @require: b
 @import: c
 
-document (||) '<>
+document(||)'<>
 "#;
     test_tmpl(text, expect);
 }
@@ -353,7 +353,7 @@ document(||)'<>
     let expect = r#"let x = 1
 in
 
-document (||) '<>
+document(||)'<>
 "#;
     test_tmpl(text, expect);
 }
@@ -364,7 +364,7 @@ fn blank_lines_at_end_are_removed() {
 
 
 "#;
-    let expect = r#"document (||) '<>
+    let expect = r#"document(||)'<>
 "#;
     test_tmpl(text, expect);
 }

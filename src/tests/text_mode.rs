@@ -5,7 +5,7 @@ use super::{test_tmpl, test_width};
 fn empty_vertical() {
     let text = r#"document(||)'<>
 "#;
-    let expect = r#"document (||) '<>
+    let expect = r#"document(||)'<>
 "#;
     test_tmpl(text, expect);
 }
@@ -14,8 +14,8 @@ fn empty_vertical() {
 fn empty_horizontal() {
     let text = r#"document(||)'<+p{}>
 "#;
-    let expect = r#"document (||) '<
-    +p {}
+    let expect = r#"document(||)'<
+    +p{}
 >
 "#;
     test_tmpl(text, expect);
@@ -25,8 +25,8 @@ fn empty_horizontal() {
 fn blank_only_horizontal() {
     let text = r#"document(||)'<+p{ }>
 "#;
-    let expect = r#"document (||) '<
-    +p {}
+    let expect = r#"document(||)'<
+    +p{}
 >
 "#;
     test_tmpl(text, expect);
@@ -36,9 +36,9 @@ fn blank_only_horizontal() {
 fn blocks_are_split() {
     let text = r#"document(||)'<+p{a}+p{b}>
 "#;
-    let expect = r#"document (||) '<
-    +p { a }
-    +p { b }
+    let expect = r#"document(||)'<
+    +p{ a }
+    +p{ b }
 >
 "#;
     test_tmpl(text, expect);
@@ -51,10 +51,10 @@ fn blank_lines_between_blocks_are_kept_up_to_one() {
 
 +p{b}>
 "#;
-    let expect = r#"document (||) '<
-    +p { a }
+    let expect = r#"document(||)'<
+    +p{ a }
 
-    +p { b }
+    +p{ b }
 >
 "#;
     test_tmpl(text, expect);
@@ -64,7 +64,7 @@ fn blank_lines_between_blocks_are_kept_up_to_one() {
 fn block_command_without_arguments() {
     let text = r#"document(||)'<+newpage;>
 "#;
-    let expect = r#"document (||) '<
+    let expect = r#"document(||)'<
     +newpage;
 >
 "#;
@@ -75,7 +75,7 @@ fn block_command_without_arguments() {
 fn block_embedding() {
     let text = r#"document(||)'<#blk;>
 "#;
-    let expect = r#"document (||) '<
+    let expect = r#"document(||)'<
     #blk;
 >
 "#;
@@ -86,8 +86,8 @@ fn block_embedding() {
 fn inline_embedding_and_commands() {
     let text = r#"document(||)'<+p{#inl; \emph{x} #M.y;}>
 "#;
-    let expect = r#"document (||) '<
-    +p { #inl; \emph { x } #M.y; }
+    let expect = r#"document(||)'<
+    +p{ #inl; \emph{ x } #M.y; }
 >
 "#;
     test_tmpl(text, expect);
@@ -97,8 +97,8 @@ fn inline_embedding_and_commands() {
 fn commands_without_arguments() {
     let text = r#"document(||)'<+p{\a;\b;}>
 "#;
-    let expect = r#"document (||) '<
-    +p { \a;\b; }
+    let expect = r#"document(||)'<
+    +p{ \a;\b; }
 >
 "#;
     test_tmpl(text, expect);
@@ -108,8 +108,8 @@ fn commands_without_arguments() {
 fn text_after_arguments_is_kept_adjacent() {
     let text = r#"document(||)'<+p{\a{x}{y}(1)(2)}>
 "#;
-    let expect = r#"document (||) '<
-    +p { \a { x } { y }(1)(2) }
+    let expect = r#"document(||)'<
+    +p{ \a{ x }{ y }(1)(2) }
 >
 "#;
     test_tmpl(text, expect);
@@ -119,8 +119,8 @@ fn text_after_arguments_is_kept_adjacent() {
 fn optional_and_omitted_arguments() {
     let text = r#"document(||)'<+p{\a?:(1) ?* (2){x}}>
 "#;
-    let expect = r#"document (||) '<
-    +p { \a ?:(1) ?* (2) { x } }
+    let expect = r#"document(||)'<
+    +p{ \a?:(1)?*(2){ x } }
 >
 "#;
     test_tmpl(text, expect);
@@ -130,9 +130,9 @@ fn optional_and_omitted_arguments() {
 fn block_command_with_arguments_and_vertical() {
     let text = r#"document(||)'<+p(1)?:(2)?*{x}<+p{y}>>
 "#;
-    let expect = r#"document (||) '<
-    +p (1) ?:(2) ?* { x } <
-        +p { y }
+    let expect = r#"document(||)'<
+    +p(1)?:(2)?*{ x }<
+        +p{ y }
     >
 >
 "#;
@@ -143,8 +143,8 @@ fn block_command_with_arguments_and_vertical() {
 fn command_with_module() {
     let text = r#"document(||)'<+p{\M.f{x}}>
 "#;
-    let expect = r#"document (||) '<
-    +p { \M.f { x } }
+    let expect = r#"document(||)'<
+    +p{ \M.f{ x } }
 >
 "#;
     test_tmpl(text, expect);
@@ -154,8 +154,8 @@ fn command_with_module() {
 fn escaped_characters() {
     let text = r#"document(||)'<+p{a \% b \\ c \{ \} \@ \` \| \* \$ \# \;}>
 "#;
-    let expect = r#"document (||) '<
-    +p { a \% b \\ c \{ \} \@ \` \| \* \$ \# \; }
+    let expect = r#"document(||)'<
+    +p{ a \% b \\ c \{ \} \@ \` \| \* \$ \# \; }
 >
 "#;
     test_tmpl(text, expect);
@@ -165,8 +165,8 @@ fn escaped_characters() {
 fn inline_code() {
     let text = r#"document(||)'<+p{`code` and ``co`de``}>
 "#;
-    let expect = r#"document (||) '<
-    +p { `code` and ``co`de`` }
+    let expect = r#"document(||)'<
+    +p{ `code` and ``co`de`` }
 >
 "#;
     test_tmpl(text, expect);
@@ -179,8 +179,8 @@ fn line_breaks_in_text_are_kept() {
 
    c}>
 "#;
-    let expect = r#"document (||) '<
-    +p {
+    let expect = r#"document(||)'<
+    +p{
         a
         b
         c
@@ -194,8 +194,8 @@ fn line_breaks_in_text_are_kept() {
 fn spaces_are_collapsed_and_trimmed() {
     let text = r#"document(||)'<+p{   a   b   }>
 "#;
-    let expect = r#"document (||) '<
-    +p { a b }
+    let expect = r#"document(||)'<
+    +p{ a b }
 >
 "#;
     test_tmpl(text, expect);
@@ -205,8 +205,8 @@ fn spaces_are_collapsed_and_trimmed() {
 fn spaces_around_commands_are_collapsed() {
     let text = r#"document(||)'<+p{a   \emph{b}   c}>
 "#;
-    let expect = r#"document (||) '<
-    +p { a \emph { b } c }
+    let expect = r#"document(||)'<
+    +p{ a \emph{ b } c }
 >
 "#;
     test_tmpl(text, expect);
@@ -216,8 +216,8 @@ fn spaces_around_commands_are_collapsed() {
 fn adjacent_commands_stay_adjacent() {
     let text = r#"document(||)'<+p{\emph{b}\emph{c}}>
 "#;
-    let expect = r#"document (||) '<
-    +p { \emph { b }\emph { c } }
+    let expect = r#"document(||)'<
+    +p{ \emph{ b }\emph{ c } }
 >
 "#;
     test_tmpl(text, expect);
@@ -227,8 +227,8 @@ fn adjacent_commands_stay_adjacent() {
 fn inline_math_in_text() {
     let text = r#"document(||)'<+p{x ${y} z}>
 "#;
-    let expect = r#"document (||) '<
-    +p { x ${y} z }
+    let expect = r#"document(||)'<
+    +p{ x ${y} z }
 >
 "#;
     test_tmpl(text, expect);
@@ -243,8 +243,8 @@ fn bullet_list_with_nesting() {
   * d
 }>
 "#;
-    let expect = r#"document (||) '<
-    +p {
+    let expect = r#"document(||)'<
+    +p{
         * a
         * b
         ** c
@@ -259,8 +259,8 @@ fn bullet_list_with_nesting() {
 fn bullet_list_in_one_line() {
     let text = r#"document(||)'<+listing{* a * b}>
 "#;
-    let expect = r#"document (||) '<
-    +listing {
+    let expect = r#"document(||)'<
+    +listing{
         * a
         * b
     }
@@ -273,8 +273,8 @@ fn bullet_list_in_one_line() {
 fn horizontal_list() {
     let text = r#"document(||)'<+tab{| a | b | c |}>
 "#;
-    let expect = r#"document (||) '<
-    +tab { | a | b | c | }
+    let expect = r#"document(||)'<
+    +tab{ | a | b | c | }
 >
 "#;
     test_tmpl(text, expect);
@@ -285,8 +285,8 @@ fn horizontal_list_with_empty_cell() {
     let text = r#"document(||)'<+tab{| a | b |
  | c | d |}>
 "#;
-    let expect = r#"document (||) '<
-    +tab { | a | b | | c | d | }
+    let expect = r#"document(||)'<
+    +tab{ | a | b | | c | d | }
 >
 "#;
     test_tmpl(text, expect);
@@ -296,8 +296,8 @@ fn horizontal_list_with_empty_cell() {
 fn embedding_only() {
     let text = r#"document(||)'<+p{#a;}>
 "#;
-    let expect = r#"document (||) '<
-    +p { #a; }
+    let expect = r#"document(||)'<
+    +p{ #a; }
 >
 "#;
     test_tmpl(text, expect);
@@ -305,14 +305,14 @@ fn embedding_only() {
 
 #[test]
 fn multiline_argument_breaks_braces() {
-    let text = r#"document(||)'<+p {
+    let text = r#"document(||)'<+p{
 \emph{a
 b}
 }>
 "#;
-    let expect = r#"document (||) '<
-    +p {
-        \emph {
+    let expect = r#"document(||)'<
+    +p{
+        \emph{
             a
             b
         }
@@ -326,8 +326,8 @@ b}
 fn one_line_text_is_never_split() {
     let text = r#"document(||)'<+p{aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff gggggggggg}>
 "#;
-    let expect = r#"document (||) '<
-    +p { aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff gggggggggg }
+    let expect = r#"document(||)'<
+    +p{ aaaaaaaaaa bbbbbbbbbb cccccccccc dddddddddd eeeeeeeeee ffffffffff gggggggggg }
 >
 "#;
     test_width(text, 30, expect);
@@ -337,10 +337,9 @@ fn one_line_text_is_never_split() {
 fn command_arguments_break_when_too_long() {
     let text = r#"document(||)'<+very-long-command-name(aaaaaaaaaaaaaaaa)(bbbbbbbbbbbbbbbb){text}>
 "#;
-    let expect = r#"document (||) '<
-    +very-long-command-name
-        (aaaaaaaaaaaaaaaa)
-        (bbbbbbbbbbbbbbbb) { text }
+    let expect = r#"document(||)'<
+    +very-long-command-name(aaaaaaaaaaaaaaaa)
+        (bbbbbbbbbbbbbbbb){ text }
 >
 "#;
     test_width(text, 30, expect);
@@ -350,8 +349,8 @@ fn command_arguments_break_when_too_long() {
 fn command_hugs_a_list_argument() {
     let text = r#"document(||)'<+fig(vconcat [aaaaaaaaaaaaaaaa; bbbbbbbbbbbbbbbb; cccccccccccccccc]);>
 "#;
-    let expect = r#"document (||) '<
-    +fig (vconcat [
+    let expect = r#"document(||)'<
+    +fig(vconcat [
         aaaaaaaaaaaaaaaa;
         bbbbbbbbbbbbbbbb;
         cccccccccccccccc;
@@ -365,10 +364,10 @@ fn command_hugs_a_list_argument() {
 fn section_with_nested_blocks() {
     let text = r#"document(||)'<+section{Sec}<+p{a}+p{b}>>
 "#;
-    let expect = r#"document (||) '<
-    +section { Sec } <
-        +p { a }
-        +p { b }
+    let expect = r#"document(||)'<
+    +section{ Sec }<
+        +p{ a }
+        +p{ b }
     >
 >
 "#;

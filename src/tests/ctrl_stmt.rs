@@ -18,7 +18,7 @@ let-mutable x <- 0
 let () = if (1 < 2) then x <- 1 else x <- 2
 in
 
-document (|title = { hello }|) '<>
+document(|title = { hello }|)'<>
 "#;
 
     test_tmpl(text, expect)
@@ -50,7 +50,7 @@ let () =
         x <- 2
 in
 
-document (|title = { hello }|) '<>
+document(|title = { hello }|)'<>
 "#;
 
     test_tmpl(text, expect)
@@ -68,7 +68,7 @@ let-inline \inline =
 in
 
 document(|title = {hello}|)'<
-+p {
++p{
   \inline;
 }
 >"#;
@@ -83,8 +83,8 @@ let-inline \inline =
     { #text; }
 in
 
-document (|title = { hello }|) '<
-    +p { \inline; }
+document(|title = { hello }|)'<
+    +p{ \inline; }
 >
 "#;
 

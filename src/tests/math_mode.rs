@@ -5,8 +5,8 @@ use super::test_tmpl;
 fn empty() {
     let text = r#"document(||)'<+p{${}}>
 "#;
-    let expect = r#"document (||) '<
-    +p { ${} }
+    let expect = r#"document(||)'<
+    +p{ ${} }
 >
 "#;
     test_tmpl(text, expect);
@@ -16,8 +16,8 @@ fn empty() {
 fn spaces_are_kept_as_written() {
     let text = r#"document(||)'<+p{${a+b}}>
 "#;
-    let expect = r#"document (||) '<
-    +p { ${a+b} }
+    let expect = r#"document(||)'<
+    +p{ ${a+b} }
 >
 "#;
     test_tmpl(text, expect);
@@ -27,8 +27,8 @@ fn spaces_are_kept_as_written() {
 fn superscript_and_subscript() {
     let text = r#"document(||)'<+p{${a^2 b_i c_i^2 d^{x y}_{z w}}}>
 "#;
-    let expect = r#"document (||) '<
-    +p { ${a^2 b_i c_i^2 d^{x y}_{z w}} }
+    let expect = r#"document(||)'<
+    +p{ ${a^2 b_i c_i^2 d^{x y}_{z w}} }
 >
 "#;
     test_tmpl(text, expect);
@@ -38,8 +38,8 @@ fn superscript_and_subscript() {
 fn commands_with_arguments() {
     let text = r#"document(||)'<+p{${\frac{a}{b} \sqrt{x}}}>
 "#;
-    let expect = r#"document (||) '<
-    +p { ${\frac{a}{b} \sqrt{x}} }
+    let expect = r#"document(||)'<
+    +p{ ${\frac{a}{b} \sqrt{x}} }
 >
 "#;
     test_tmpl(text, expect);
@@ -49,8 +49,8 @@ fn commands_with_arguments() {
 fn math_list() {
     let text = r#"document(||)'<+p{${| a | b + c |}}>
 "#;
-    let expect = r#"document (||) '<
-    +p { ${| a | b + c |} }
+    let expect = r#"document(||)'<
+    +p{ ${| a | b + c |} }
 >
 "#;
     test_tmpl(text, expect);
@@ -62,8 +62,8 @@ fn multiline_math_breaks_braces() {
   b
   c}}>
 "#;
-    let expect = r#"document (||) '<
-    +p {
+    let expect = r#"document(||)'<
+    +p{
         ${
             a
             b
@@ -79,8 +79,8 @@ fn multiline_math_breaks_braces() {
 fn prime() {
     let text = r#"document(||)'<+p{${a'^2}}>
 "#;
-    let expect = r#"document (||) '<
-    +p { ${a'^2} }
+    let expect = r#"document(||)'<
+    +p{ ${a'^2} }
 >
 "#;
     test_tmpl(text, expect);
@@ -90,8 +90,8 @@ fn prime() {
 fn embedding_in_math() {
     let text = r#"document(||)'<+p{${#x + \y{#z}}}>
 "#;
-    let expect = r#"document (||) '<
-    +p { ${#x + \y{#z}} }
+    let expect = r#"document(||)'<
+    +p{ ${#x + \y{#z}} }
 >
 "#;
     test_tmpl(text, expect);
@@ -101,10 +101,10 @@ fn embedding_in_math() {
 fn all_kinds_of_command_arguments() {
     let text = r#"document(||)'<+p{${\f!{t}!<+p{x}>!(1)![1;2]!(|a=1|) \g?:{x}{y}}}>
 "#;
-    let expect = r#"document (||) '<
-    +p {
+    let expect = r#"document(||)'<
+    +p{
         ${\f!{ t }!<
-            +p { x }
+            +p{ x }
         >!(1)![1; 2]!(|a = 1|) \g?:{x}{y}}
     }
 >

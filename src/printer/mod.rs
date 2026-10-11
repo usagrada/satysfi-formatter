@@ -20,13 +20,15 @@ use satysfi_parser::{Cst, CstText, Item, Rule, Span};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-pub(self) type Doc = RcDoc<'static, ()>;
+type Doc = RcDoc<'static, ()>;
+/// `in` の前後にあるコメント。(コメント, 単独行か)
+type InComment = (String, bool);
 
 pub struct Printer<'a> {
     csttext: &'a CstText,
     final_newline: bool,
+    block_command_space: bool,
     use_tabs: bool,
-    command_space: bool,
     width: usize,
     indent: isize,
     /// `token_multiline` / `math_multiline` の結果
@@ -35,7 +37,7 @@ pub struct Printer<'a> {
 }
 
 /// 子ノードと、その前後にあるコメント。
-pub(self) struct Child<'c> {
+struct Child<'c> {
     pub cst: &'c Cst,
     /// 子の前にある、単独行のコメント
     pub leading: Vec<String>,
@@ -51,7 +53,7 @@ pub(self) struct Child<'c> {
     pub blank_after_leading: bool,
 }
 
-pub(self) struct Children<'c> {
+struct Children<'c> {
     pub items: Vec<Child<'c>>,
     /// 最後の子の後 (または子がないとき) にある、単独行のコメント
     pub dangling: Vec<String>,
@@ -62,14 +64,14 @@ pub(self) struct Children<'c> {
 }
 
 /// 子ノードを Doc にしたもの。コメントは Doc に含まれている。
-pub(self) struct Kid<'c> {
+struct Kid<'c> {
     pub cst: &'c Cst,
     pub doc: Doc,
     /// 前にコメントがあるか (`doc` はコメントで始まる)
     pub commented: bool,
 }
 
-pub(self) struct Kids<'c> {
+struct Kids<'c> {
     pub items: Vec<Kid<'c>>,
     /// 最後の子の後にあるコメント。`finish` で Doc の後ろに付ける。
     pub dangling: Vec<String>,
@@ -99,8 +101,8 @@ impl<'a> Printer<'a> {
             width: config.line_width.max(1),
             indent: config.indent_width.max(1) as isize,
             final_newline: config.final_newline,
+            block_command_space: config.block_command_space,
             use_tabs: config.use_tabs,
-            command_space: config.command_space,
             token_multiline_cache: RefCell::default(),
             math_multiline_cache: RefCell::default(),
         }
@@ -429,7 +431,7 @@ impl<'a> Printer<'a> {
         &self,
         parent: &Cst,
         def: &Cst,
-    ) -> (Vec<(String, bool)>, Vec<(String, bool)>) {
+    ) -> (Vec<InComment>, Vec<InComment>) {
         let in_pos = self.in_keyword_pos(def.span.end);
         let mut before = vec![];
         let mut after = vec![];
@@ -598,19 +600,19 @@ pub fn to_comment_string(text: &str) -> String {
 
 /// 複数行の文字列を、行ごとに hardline で繋いだ Doc にする。
 /// 行頭の空白はそのまま残る。
-pub(self) fn lines(text: &str) -> Doc {
+fn lines(text: &str) -> Doc {
     join(
         text.split('\n').map(|line| Doc::text(line.to_string())),
         Doc::hardline(),
     )
 }
 
-pub(self) fn join(docs: impl IntoIterator<Item = Doc>, sep: Doc) -> Doc {
+fn join(docs: impl IntoIterator<Item = Doc>, sep: Doc) -> Doc {
     Doc::intersperse(docs, sep)
 }
 
 /// 単独行のコメントを doc の前に 1 行ずつ置く。
-pub(self) fn with_leading(comments: Vec<String>, doc: Doc) -> Doc {
+fn with_leading(comments: Vec<String>, doc: Doc) -> Doc {
     let mut result = Doc::nil();
     for comment in comments {
         result = result.append(Doc::text(comment)).append(Doc::hardline());
@@ -620,7 +622,7 @@ pub(self) fn with_leading(comments: Vec<String>, doc: Doc) -> Doc {
 
 /// 子の前の単独行のコメントを 1 行ずつ並べる。
 /// コメントの間と、コメントと子の間にあった空行は 1 行だけ残す。
-pub(self) fn leading_lines(child: &Child) -> Doc {
+fn leading_lines(child: &Child) -> Doc {
     let mut doc = Doc::nil();
     for (comment, blank) in child.leading.iter().zip(&child.leading_blanks) {
         if *blank {
@@ -637,6 +639,6 @@ pub(self) fn leading_lines(child: &Child) -> Doc {
 }
 
 /// 文字列 s を Doc にする。
-pub(self) fn s(text: &str) -> Doc {
+fn s(text: &str) -> Doc {
     Doc::text(text.to_string())
 }

@@ -27,7 +27,7 @@
 //! indent_width = 2
 //! use_tabs = false
 //! final_newline = true
-//! command_space = true
+//! block_command_space = false
 //! ```
 
 use serde::Deserialize;
@@ -48,8 +48,8 @@ pub struct FormatConfig {
     pub use_tabs: bool,
     /// 末尾に改行を入れるか
     pub final_newline: bool,
-    /// コマンドとテキスト引数の間に空白を入れるか (`+p { ... }` / `+p{ ... }`)
-    pub command_space: bool,
+    /// ブロックコマンドのテキスト引数の前に空白を入れるか (`+p { ... }` / `+p{ ... }`)
+    pub block_command_space: bool,
 }
 
 impl FormatConfig {
@@ -64,7 +64,7 @@ impl Default for FormatConfig {
             indent_width: Self::DEFAULT_INDENT_WIDTH,
             use_tabs: false,
             final_newline: true,
-            command_space: true,
+            block_command_space: false,
         }
     }
 }
@@ -77,7 +77,7 @@ pub struct PartialConfig {
     pub indent_width: Option<usize>,
     pub use_tabs: Option<bool>,
     pub final_newline: Option<bool>,
-    pub command_space: Option<bool>,
+    pub block_command_space: Option<bool>,
 }
 
 impl PartialConfig {
@@ -88,7 +88,7 @@ impl PartialConfig {
             indent_width: self.indent_width.or(lower.indent_width),
             use_tabs: self.use_tabs.or(lower.use_tabs),
             final_newline: self.final_newline.or(lower.final_newline),
-            command_space: self.command_space.or(lower.command_space),
+            block_command_space: self.block_command_space.or(lower.block_command_space),
         }
     }
 
@@ -100,7 +100,9 @@ impl PartialConfig {
             indent_width: self.indent_width.unwrap_or(default.indent_width),
             use_tabs: self.use_tabs.unwrap_or(default.use_tabs),
             final_newline: self.final_newline.unwrap_or(default.final_newline),
-            command_space: self.command_space.unwrap_or(default.command_space),
+            block_command_space: self
+                .block_command_space
+                .unwrap_or(default.block_command_space),
         }
     }
 
