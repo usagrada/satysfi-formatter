@@ -15,6 +15,7 @@ mod math;
 mod math_mode;
 mod module;
 mod options;
+mod path_expr;
 mod patterns;
 mod printer;
 mod space;
