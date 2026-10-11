@@ -11,27 +11,27 @@ open CodePrinter
 let-block ctx +newpage = clear-page
 % シェルコマンド
 let-block +cmd arg = '<
-  +code-printer ?:(make-config CodeSyntax.shell CodeTheme.basic-dark 
-    |> set-basic-font-size 9pt 
-    |> set-number-fun CodeDesign.number-fun-null) (arg);
+  +code-printer?:(make-config CodeSyntax.shell CodeTheme.basic-dark
+    |> set-basic-font-size 9pt
+    |> set-number-fun CodeDesign.number-fun-null)(arg);
 >
 % インラインシェルコマンド
 let-inline \cmd arg = {
-\code-printer ?:(make-config CodeSyntax.shell CodeTheme.basic-dark 
-  |> set-basic-font-size 9pt 
-  |> set-number-fun CodeDesign.number-fun-null) (arg);
+  \code-printer?:(make-config CodeSyntax.shell CodeTheme.basic-dark
+    |> set-basic-font-size 9pt
+    |> set-number-fun CodeDesign.number-fun-null)(arg);
 }
 % インラインRustコマンド
 let-inline \cmd-rust arg = {
-\code-printer ?:(make-config CodeSyntax.rust CodeTheme.basic-dark 
-  |> set-basic-font-size 9pt 
-  |> set-number-fun CodeDesign.number-fun-null) (arg);
+  \code-printer?:(make-config CodeSyntax.rust CodeTheme.basic-dark
+    |> set-basic-font-size 9pt
+    |> set-number-fun CodeDesign.number-fun-null)(arg);
 }
 % インラインsatysfiコマンド
 let-inline \cmd-saty arg = {
-\code-printer ?:(make-config CodeSyntax.satysfi CodeTheme.basic-dark 
-  |> set-basic-font-size 9pt 
-  |> set-number-fun CodeDesign.number-fun-null) (arg);
+  \code-printer?:(make-config CodeSyntax.satysfi CodeTheme.basic-dark
+    |> set-basic-font-size 9pt
+    |> set-number-fun CodeDesign.number-fun-null)(arg);
 }
 in
 
@@ -45,9 +45,7 @@ document(|
   +p{
     \SATySFi;を使うに当たって、formatter が無いのが不便だったので、format をするためのツールを作りました。
     \footnote{ このドキュメントは format のテストも兼ねて書いています。 }
-    \footnote{
-      期待するフォーマットが得られない場合は、 Issue や Pull Request いただけると幸いです。
-    }
+    \footnote{ 期待するフォーマットが得られない場合は、 Issue や Pull Request いただけると幸いです。 }
   }
   +section{ formatter の install 方法 }<
     +p{
@@ -171,9 +169,7 @@ let y = [1;   2]
       仕様は `docs/spec.md` にまとめています。
       期待するフォーマットが得られないなど、修正等があれば、 Pull Request や Issue にお願いいたします。
     }
-    +p{
-      Issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。 その際、実際にそれがコンパイル可能である必要はありません。
-    }
+    +p{ Issue でいただく場合、期待するフォーマットのテストをいただけるとスムーズに対応ができると思います。 その際、実際にそれがコンパイル可能である必要はありません。 }
     +subsection{ Pull Request }<
       +p{
         実装した部分のテストケースを書いていただいてから、プルリクエストをいただけると幸いです。
