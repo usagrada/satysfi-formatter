@@ -14,7 +14,7 @@ document(|title = {hello}|)'<+p{% comment
 
 % comment
 document(|title = { hello }|)'<
-    +p {
+    +p{
         % comment
     }
 >
@@ -36,9 +36,8 @@ document(|title = {hello}|)'<+p{hello% comment
 
 % comment
 document(|title = { hello }|)'<
-    +p {
-        hello
-        % comment
+    +p{
+        hello % comment
     }
 >
 "#;
@@ -52,7 +51,7 @@ fn test_comment3() {
   %comment
   
 document(|title = {hello}|)'<+p{hello% comment
-    \listing {
+    \listing{
         * item1
         * item2
         * item3
@@ -64,10 +63,9 @@ document(|title = {hello}|)'<+p{hello% comment
 
 % comment
 document(|title = { hello }|)'<
-    +p {
-        hello
-        % comment
-        \listing {
+    +p{
+        hello% comment
+        \listing{
             * item1
             * item2
             * item3
@@ -85,7 +83,7 @@ fn test_comment4() {
   %comment
   
 document(|title = { hello }|)'<+p{% comment
-    \listing {
+    \listing{
         * item1
         * item2
         * item3
@@ -96,9 +94,9 @@ document(|title = { hello }|)'<+p{% comment
 
 % comment
 document(|title = { hello }|)'<
-    +p {
+    +p{
         % comment
-        \listing {
+        \listing{
             * item1
             * item2
             * item3
@@ -148,8 +146,7 @@ document(|title = { hello }|)'<
     +p % comment
     {
         hello
-        \\
-        % comment
+        \\ % comment
     }
 >
 "#;
@@ -172,7 +169,7 @@ document(|title = {hello}|)'<
 
 document(|title = { hello }|)'<
     % comment
-    +p { hello }
+    +p{ hello }
     % comment
 >
 "#;
@@ -196,9 +193,10 @@ document(|title = {hello}|)'<
 @require: local %comment
 
 document(|title = { hello }|)'<
-    +section { hello } <%
-        +p { hello }
-    >%
+    +section{ hello }<
+        %
+        +p{ hello }
+    > %
 >
 "#;
     test_tmpl(text, expect)

@@ -1,0 +1,18 @@
+{
+  "name": "satysfi-formatter",
+  "image": "mcr.microsoft.com/devcontainers/rust:1-bookworm",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "vadimcn.vscode-lldb",
+        "pickoba.satysfi-workshop"
+      ],
+      "settings": {
+        "rust-analyzer.check.command": "clippy"
+      }
+    }
+  }
+}

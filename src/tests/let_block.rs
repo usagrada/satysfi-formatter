@@ -24,7 +24,7 @@ in
 document(||)'<
     +newpage;
 
-    +p { hello }
+    +p{ hello }
 >
 "#;
     test_tmpl(text, expect)
@@ -51,14 +51,14 @@ document(||)'<
 
 let-block ctx +newpage = clear-page
 let-block ctx +newcmd arg = '<
-    +cmd { arg }
+    +cmd{ arg }
 >
 in
 
 document(||)'<
     +newpage;
 
-    +p { hello }
+    +p{ hello }
 >
 "#;
     test_tmpl(text, expect);
@@ -95,7 +95,7 @@ in
 document(||)'<
     +newpage;
 
-    +p { hello }
+    +p{ hello }
 >
 "#;
     test_tmpl(text, expect);
@@ -125,7 +125,7 @@ in
 document(||)'<
     +newpage;
 
-    +p { hello }
+    +p{ hello }
 >
 "#;
     test_tmpl(text, expect);

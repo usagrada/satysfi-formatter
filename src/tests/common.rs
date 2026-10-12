@@ -10,7 +10,7 @@ document(|title = {hello}|)'<+p{hello world}>"#;
 @require: local
 
 document(|title = { hello }|)'<
-    +p { hello world }
+    +p{ hello world }
 >
 "#;
     test_tmpl(text, expect);
@@ -22,14 +22,14 @@ fn test2() {
   @require: local
   
   
-document(|title = {hello}|)'<+p{hello world}+p { hello world }>"#;
+document(|title = {hello}|)'<+p{hello world}+p{ hello world }>"#;
 
     let expect = r#"@import: hello
 @require: local
 
 document(|title = { hello }|)'<
-    +p { hello world }
-    +p { hello world }
+    +p{ hello world }
+    +p{ hello world }
 >
 "#;
     test_tmpl(text, expect);
@@ -41,13 +41,13 @@ fn test3() {
 @require: local
 
 
-document(|title = {hello}|)'<+p{hello world}+p { \SATYSFI; }>"#;
+document(|title = {hello}|)'<+p{hello world}+p{ \SATYSFI; }>"#;
     let expect = r#"@import: hello
 @require: local
 
 document(|title = { hello }|)'<
-    +p { hello world }
-    +p { \SATYSFI; }
+    +p{ hello world }
+    +p{ \SATYSFI; }
 >
 "#;
     test_tmpl(text, expect);
@@ -58,14 +58,14 @@ fn test4() {
     let text = r#"@import: hello
 @require: local
 
-document(|title = {hello}|)'<+p{hello world}+p {\SATYSFI;format}>"#;
+document(|title = {hello}|)'<+p{hello world}+p{\SATYSFI;format}>"#;
 
     let expect = r#"@import: hello
 @require: local
 
 document(|title = { hello }|)'<
-    +p { hello world }
-    +p { \SATYSFI;format }
+    +p{ hello world }
+    +p{ \SATYSFI;format }
 >
 "#;
     test_tmpl(text, expect);
@@ -76,13 +76,13 @@ fn test5() {
     let text = r#"@import: hello
 @require: local
 
-document(|title = {hello}|)'<+p{hello world}+p {format\SATYSFI;format}>"#;
+document(|title = {hello}|)'<+p{hello world}+p{format\SATYSFI;format}>"#;
     let expect = r#"@import: hello
 @require: local
 
 document(|title = { hello }|)'<
-    +p { hello world }
-    +p { format\SATYSFI;format }
+    +p{ hello world }
+    +p{ format\SATYSFI;format }
 >
 "#;
     test_tmpl(text, expect);
@@ -92,10 +92,10 @@ document(|title = { hello }|)'<
 fn test6() {
     let text = r#"
 
-document(|title = {hello}|)'<+p{hello world}+p {${ax^2 + bx + c = 0}}>"#;
+document(|title = {hello}|)'<+p{hello world}+p{${ax^2 + bx + c = 0}}>"#;
     let expect = r#"document(|title = { hello }|)'<
-    +p { hello world }
-    +p { ${ax^2 + bx + c = 0} }
+    +p{ hello world }
+    +p{ ${ax^2 + bx + c = 0} }
 >
 "#;
     test_tmpl(text, expect);
@@ -105,10 +105,7 @@ document(|title = {hello}|)'<+p{hello world}+p {${ax^2 + bx + c = 0}}>"#;
 fn test7() {
     let text = r#"
 document(|title = {hello}; author = {author};|)'<>"#;
-    let expect = r#"document(|
-    title = { hello };
-    author = { author };
-|)'<>
+    let expect = r#"document(|title = { hello }; author = { author }|)'<>
 "#;
     test_tmpl(text, expect);
 }
@@ -125,10 +122,10 @@ document(|
     show-toc = true;
     title = { title };
 |)'<
-    +section {section} <
-        +p {
+    +section{section} <
+        +p{
             
-            \listing {
+            \listing{
                 * item1
                 * item2
                 * item3
@@ -146,9 +143,9 @@ document(|
     show-toc = true;
     title = { title };
 |)'<
-    +section { section } <
-        +p {
-            \listing {
+    +section{ section }<
+        +p{
+            \listing{
                 * item1
                 * item2
                 * item3
@@ -166,7 +163,7 @@ fn test9() {
   
 document(||)'<
 +section{ section }<
-+p {
++p{
         \listing{
             * item1
             * item2
@@ -176,9 +173,9 @@ document(||)'<
 >>"#;
 
     let expect = r#"document(||)'<
-    +section { section } <
-        +p {
-            \listing {
+    +section{ section }<
+        +p{
+            \listing{
                 * item1
                 * item2
                 * item3
@@ -196,14 +193,14 @@ fn test10() {
   
 document(||)'<
 +section{ section }<
-+p {
++p{
 hello
         world
 }
 >>"#;
     let expect = r#"document(||)'<
-    +section { section } <
-        +p {
+    +section{ section }<
+        +p{
             hello
             world
         }
@@ -218,15 +215,15 @@ fn test11() {
     let text = r#"@import: hello
 @require: local
 
-document(|title = {hello}|)'<+p{hello world}+p {format\SATYSFI;
+document(|title = {hello}|)'<+p{hello world}+p{format\SATYSFI;
 format}>"#;
 
     let expect = r#"@import: hello
 @require: local
 
 document(|title = { hello }|)'<
-    +p { hello world }
-    +p {
+    +p{ hello world }
+    +p{
         format\SATYSFI;
         format
     }
@@ -241,22 +238,25 @@ fn test12() {
     let text = r#"@import: hello
 @require: local
 
-document(|title = {hello}|)'<+p{hello world}+p {format\SATYSFI; 
+document(|title = {hello}|)'<+p{hello world}+p{format\SATYSFI; 
     format}>"#;
 
     let expect = r#"@import: hello
 @require: local
 
 document(|title = { hello }|)'<
-    +p { hello world }
-    +p { format\SATYSFI; format }
+    +p{ hello world }
+    +p{
+        format\SATYSFI;
+        format
+    }
 >
 "#;
     test_tmpl(text, expect);
 }
 
 #[test]
-fn test13(){
+fn test13() {
     let text = r#"@require: local
 
 document(|title = {}|)'<
@@ -272,7 +272,7 @@ document(|title = {}|)'<
     let expect = r#"@require: local
 
 document(|title = {}|)'<
-    +fig-center (vconcat [
+    +fig-center(vconcat [
         gap 10pt;
         textbox { hello }
             |> glass-box ?:(align-center, align-center) 100pt 100pt

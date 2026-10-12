@@ -15,12 +15,7 @@ document(|title = {hello}|)'<
 @require: local
 
 let-mutable x <- 0
-let () =
-    if (1 < 2)
-    then
-        x <- 1
-    else
-        x <- 2
+let () = if (1 < 2) then x <- 1 else x <- 2
 in
 
 document(|title = { hello }|)'<>
@@ -48,8 +43,7 @@ document(|title = {hello}|)'<
 
 let-mutable x <- 0
 let () =
-    if (1 < 2)
-    then
+    if (1 < 2) then
         % always true
         x <- 1
     else
@@ -74,7 +68,7 @@ let-inline \inline =
 in
 
 document(|title = {hello}|)'<
-+p {
++p{
   \inline;
 }
 >"#;
@@ -90,7 +84,7 @@ let-inline \inline =
 in
 
 document(|title = { hello }|)'<
-    +p { \inline; }
+    +p{ \inline; }
 >
 "#;
 
