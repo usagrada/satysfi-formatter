@@ -6,11 +6,11 @@
 ## 1. 概要
 
 `satysfi-formatter` は SATySFi (`.saty` / `.satyh`) のソースコードを整形するツールである。
-[satysfi-parser](https://github.com/monaqa/satysfi-parser) が生成する CST (具象構文木) を入力とし、整形済みの文字列を出力する。
+パーサーには、monaqa さんの [satysfi-parser](https://github.com/monaqa/satysfi-parser) をベースに、コメントや空行を CST から取り出せるようにするなどの拡張を加えたフォーク ([usagrada/satysfi-parser](https://github.com/usagrada/satysfi-parser)) を使う。このパーサーが生成する CST (具象構文木) を入力とし、整形済みの文字列を出力する。
 
 - コマンド名: `satysfi-fmt`
 - ライブラリ: `satysfi_formatter` crate (`format` / `formatting` を公開)
-- 対象: `grammar::program` でパースできる SATySFi コード
+- 対象: 上のパーサーの `grammar::program` でパースできる SATySFi コード
 
 ### 1.1 満たすべき性質
 

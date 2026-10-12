@@ -238,4 +238,4 @@ Dev Container で開発環境を用意できる。手順は [docs/development.md
 
 ## 謝辞
 
-@monaqa さんの [satysfi-parser](https://github.com/monaqa/satysfi-parser) を元に format を行っている。
+@monaqa さんの [satysfi-parser](https://github.com/monaqa/satysfi-parser) をベースに format を行っている。
